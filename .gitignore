@@ -1,0 +1,32 @@
+# Secretos y variables de entorno (Docs: docs/SECURITY.md)
+.env
+.env.*
+.env*
+!.env.example
+!.env.sample
+!.env.template
+
+# Configuraciones locales de agente no compartidas (Gotcha #2)
+*.local.md
+
+# Dependencias y artefactos de compilación
+node_modules/
+dist/
+build/
+coverage/
+.next/
+out/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Archivos temporales, respaldos, editores y logs (clean-state-checklist.md)
+*.tmp
+*.bak
+*.swp
+*~
+*.log
+.DS_Store
+Thumbs.db

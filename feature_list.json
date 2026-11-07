@@ -1,0 +1,25 @@
+{
+  "project": "sebastian-web-portafolio",
+  "features": [
+    {
+      "id": "feat-001",
+      "name": "Inicializar línea base y primer módulo del portafolio web",
+      "description": "Adaptar ARCHITECTURE.md y la estructura inicial del proyecto sebastian web Portafolio bajo las 6 capas arquitectónicas (Types -> Config -> Repo -> Service -> Runtime -> UI) verificando que init.sh pase en verde (100/100).",
+      "area": "architecture-baseline",
+      "user_visible_behavior": "El repositorio arranca en estado limpio (100/100) con arquitectura verificada mecánicamente y listo para desarrollar la primera funcionalidad.",
+      "priority": "P0",
+      "status": "not-started",
+      "dependencies": [],
+      "required_files": [
+        "ARCHITECTURE.md"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100"
+      ],
+      "evidence": "",
+      "notes": "El agente traduce las peticiones naturales del usuario hacia feature_list.json y sprint-contract.md respetando WIP = 1."
+    }
+  ]
+}
