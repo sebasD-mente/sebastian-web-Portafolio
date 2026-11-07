@@ -15,7 +15,18 @@ const TARGET_PATH_KEYS = [
 ];
 const PATCH_TEXT_KEYS = ['input', 'Input', 'patch', 'Patch', 'diff', 'Diff', 'command', 'Command', 'CommandLine'];
 // Red de seguridad Fail-Closed: alias desconocidos con verbo mutante se tratan como escritura.
-const GENERIC_MUTATING_TOOL_RE = /write|edit|replace|create|patch|save|move|copy|delete|remove|rename/i;
+const GENERIC_MUTATING_TOOL_RE = /write|edit|replace|create|patch|save|move|copy|delete|remove|rename|append|update|put|store|set|upload|insert|overwrite|truncate|mkdir|touch|chmod|chown|unlink|(?:^|[^a-z])rm(?:$|[^a-z])/i;
+// Lecturas conocidas: siempre permitidas y evaluadas ANTES de la red genérica (evita falsos positivos por set/put/...).
+const READ_ONLY_TOOLS = new Set([
+  'view_file', 'read_file', 'grep_search', 'list_dir', 'find_by_name', 'codebase_search', 'search_web', 'read_url_content',
+  'view_file_outline', 'view_code_item', 'view_content_chunk', 'list_directory', 'list_directory_with_sizes', 'directory_tree',
+  'read_text_file', 'read_media_file', 'read_multiple_files', 'get_file_info', 'search_files', 'list_allowed_directories',
+  'read_resource', 'list_resources', 'read', 'glob', 'grep', 'ls', 'notebookread', 'webfetch', 'websearch'
+]);
+// Claves con forma de ruta (cualquier herramienta de escritura) y claves de contenido que nunca son rutas.
+const PATH_LIKE_KEY_RE = /path|file|dest|target|output|out$|name$|uri|location/i;
+const CONTENT_KEYS = new Set(['content', 'CodeContent', 'text', 'body', 'data', 'ReplacementContent', 'new_string', 'old_string', 'Instruction', 'Description']);
+const CONTENT_KEY_RE = /content|text|body|data|string|str$|instruction|description|summary|message|prompt|query|code|snippet|comment|patch|diff/i;
 const COMMAND_TOOLS = new Set(['run_command', 'bash', 'execute_command', 'shell']);
 const SEND_MESSAGE_TOOLS = new Set(['send_message', 'sendmessage']);
 const WRAPPER_VERBS = new Set([
@@ -23,7 +34,6 @@ const WRAPPER_VERBS = new Set([
   'eval', 'iex', 'invoke-expression', 'psql', 'mysql', 'sqlite3', 'sqlcmd'
 ]);
 const PRINT_VERBS = new Set(['echo', 'printf', 'write-output', 'write-host']);
-const MCP_MUTATING_TOOL_RE = /(?:write|edit|append|move|copy|create|delete|remove|patch|rename|replace)/i;
 const MCP_EXEC_TOOL_RE = /(?:^|[_.-])(?:query\w*|exec\w*|run\w*|bash|shell|eval|sql\w*)(?:$|[_.-])/i;
 const JSONC_PATH_RE = /(?:^|\/)(?:[jt]sconfig(?:\.[^/]+)?\.json|\.(?:vscode|devcontainer)\/.*\.json)$/i;
 const EXPLICIT_CHECKER_ID_RE = /(?:^|[-_:])(checker|evaluator|evaluador|independent-checker)(?:$|[-_:\d])/i;
@@ -126,6 +136,34 @@ function collectMcpPaths(obj, out = []) {
   return out;
 }
 
+// Recolección generalizada para herramientas de escritura: claves explícitas + toda clave string de forma de ruta
+// (un nivel extra en args/arguments anidados), excluyendo claves de contenido y valores multilínea.
+function collectWriteTargets(obj, out = [], depth = 0) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
+  collectMcpPaths(obj, out);
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === 'string') {
+      if (CONTENT_KEYS.has(k) || CONTENT_KEY_RE.test(k) || !PATH_LIKE_KEY_RE.test(k)) continue;
+      const t = v.trim();
+      if (t && t.length <= 4096 && !/[\r\n]/.test(t)) out.push(t);
+    } else if (depth === 0 && /^(?:args|arguments)$/i.test(k)) {
+      let nested = v;
+      if (typeof nested === 'string') { try { nested = JSON.parse(nested); } catch { nested = null; } }
+      collectWriteTargets(nested, out, 1);
+    }
+  }
+  return out;
+}
+
+function isReadOnlyToolName(name) {
+  const n = String(name || '').toLowerCase();
+  if (READ_ONLY_TOOLS.has(n)) return true;
+  for (const ro of READ_ONLY_TOOLS) if (ro.length > 3 && n.endsWith(`_${ro}`)) return true;
+  return false;
+}
+
+const isMutatingToolName = (name) => !isReadOnlyToolName(name) && GENERIC_MUTATING_TOOL_RE.test(String(name || ''));
+
 // Extrae rutas de parches estilo apply_patch (*** Update/Add/Delete File, *** Move to) y unified diff (--- a/, +++ b/).
 export function extractPatchPaths(patchText) {
   const text = String(patchText || '');
@@ -181,9 +219,9 @@ export function extractToolContext(payload = {}, stdinEmpty = false, env = proce
     const mcpTool = String(args.ToolName ?? args.toolName ?? lowerName).trim();
     let mcpArgs = args.Arguments ?? args.arguments ?? args;
     if (typeof mcpArgs === 'string') { try { mcpArgs = JSON.parse(mcpArgs); } catch { mcpArgs = {}; } }
-    if (MCP_MUTATING_TOOL_RE.test(mcpTool)) {
+    if (isMutatingToolName(mcpTool)) {
       isWriteEdit = true;
-      collectMcpPaths(mcpArgs, rawTargets);
+      collectWriteTargets(mcpArgs, rawTargets);
     }
     if (MCP_EXEC_TOOL_RE.test(mcpTool) && mcpArgs && typeof mcpArgs === 'object') {
       const execVal = ['sql', 'Sql', 'SQL', 'query', 'Query', 'statement', 'Statement', 'command', 'CommandLine', 'Command', 'code', 'Code', 'cmd', 'script']
@@ -197,10 +235,10 @@ export function extractToolContext(payload = {}, stdinEmpty = false, env = proce
   }
 
   const isSendMessage = SEND_MESSAGE_TOOLS.has(lowerName);
-  if (lowerName && !isWriteEdit && !isCommand && !isSendMessage && !isMcpTool && GENERIC_MUTATING_TOOL_RE.test(lowerName)) {
+  if (lowerName && !isWriteEdit && !isCommand && !isSendMessage && !isMcpTool && isMutatingToolName(lowerName)) {
     isWriteEdit = true;
-    collectMcpPaths(args, rawTargets);
   }
+  if (isWriteEdit && !isMcpTool) collectWriteTargets(args, rawTargets);
   if (isWriteEdit && !isMcpTool && lowerName.includes('patch')) {
     for (const txt of collectPatchTexts(args, rawArgString)) rawTargets.push(...extractPatchPaths(txt));
   }
@@ -224,12 +262,43 @@ export function extractToolContext(payload = {}, stdinEmpty = false, env = proce
   return { toolName, lowerName, args, isWriteEdit, isCommand, isSendMessage, targetPaths, commandLine, recipient, message, usedEnvFallback };
 }
 
+// Normalización NTFS/Windows por segmento: quita file://, colapsa \ a /, corta flujos ADS desde ':' (salvo unidad C:
+// o $env: inicial), elimina puntos/espacios finales, pasa a minúsculas y resuelve '.' y '..'.
+export function normalizeTargetPath(rawPath) {
+  let s = unquoteToken(String(rawPath ?? '').trim());
+  if (!s) return '';
+  if (/^file:\/\//i.test(s)) {
+    s = s.replace(/^file:\/\//i, '');
+    try { s = decodeURIComponent(s); } catch { /* keep raw */ }
+    if (/^\/[a-z]:/i.test(s)) s = s.slice(1);
+  }
+  s = s.replace(/\\/g, '/').replace(/^\/\/[?.]\//, '');
+  const prefix = s.startsWith('/') ? '/' : '';
+  const out = [];
+  let rootLen = 0;
+  s.split('/').forEach((seg, i) => {
+    let x = seg;
+    if (i === 0 && /^[a-z]:/i.test(x)) { out.push(x.slice(0, 2).toLowerCase()); rootLen = 1; x = x.slice(2); }
+    else if (i === 0 && /^\$env:/i.test(x)) { out.push(x.toLowerCase()); rootLen = 1; return; }
+    const colon = x.indexOf(':');
+    if (colon >= 0) x = x.slice(0, colon);
+    if (!x || x === '.') return;
+    if (x === '..') {
+      if (out.length > rootLen && out[out.length - 1] !== '..') out.pop();
+      else if (!prefix && rootLen === 0) out.push('..');
+      return;
+    }
+    x = x.replace(/[. ]+$/, '');
+    if (x) out.push(x.toLowerCase());
+  });
+  return prefix + out.join('/');
+}
+
 export function isProtectedTargetPath(rawPath) {
   if (typeof rawPath !== 'string' || !rawPath.trim()) return { blocked: false, reason: null };
-  const unquoted = unquoteToken(rawPath.trim());
-  if (!unquoted) return { blocked: false, reason: null };
-  const normalized = unquoted.replace(/\\/g, '/');
-  const lowerFull = normalized.toLowerCase();
+  const normalized = normalizeTargetPath(rawPath);
+  if (!normalized) return { blocked: false, reason: null };
+  const lowerFull = normalized;
 
   if (
     /^\/(?:etc|usr|bin|sbin|boot)(?:\/|$)/.test(lowerFull)
@@ -242,7 +311,7 @@ export function isProtectedTargetPath(rawPath) {
 
   const segments = normalized.split('/').filter((s) => s && s !== '.');
   for (let i = 0; i < segments.length; i += 1) {
-    const lower = segments[i].toLowerCase();
+    const lower = segments[i];
     if (lower === '.git') return { blocked: true, category: '.git/**', target: rawPath };
     if (lower === 'node_modules') return { blocked: true, category: 'node_modules/**', target: rawPath };
     if ((lower === '.env' || lower.startsWith('.env')) && !(i === segments.length - 1 && SAFE_ENV_TEMPLATES.has(lower))) {
@@ -254,8 +323,7 @@ export function isProtectedTargetPath(rawPath) {
 
 export function isRubricTarget(rawPath) {
   if (typeof rawPath !== 'string' || !rawPath.trim()) return false;
-  const clean = unquoteToken(rawPath.trim()).replace(/\\/g, '/').replace(/\/+$/, '');
-  const base = clean.split('/').pop()?.toLowerCase() || '';
+  const base = normalizeTargetPath(rawPath).split('/').pop() || '';
   return base === 'evaluator-rubric.md';
 }
 
