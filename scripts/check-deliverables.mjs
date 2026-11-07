@@ -1,31 +1,16 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { validateHarnessConfig } from './lib/harness-utils.mjs';
 
-const VALID_MODES = new Set(['auto', 'greenfield', 'brownfield', 'non-dev']);
-const CANONICAL_LAYERS = new Set(['types', 'config', 'repo', 'service', 'runtime', 'ui']);
 const DELIVERABLE_TEXT_EXTS = new Set(['.md', '.txt', '.csv', '.html']);
-
-const DEFAULT_NON_DEV = {
-  deliverableDirs: ['deliverables', 'content', 'research', 'reports'],
-  forbidPlaceholders: true,
-  checkMarkdownLinks: true,
-  minDeliverableWords: 15
-};
+const SCANNABLE_DELIVERABLE_EXTS = new Set(['.md', '.html', '.txt']);
 
 function redPenExit(err, why, fix) {
   console.error(`ERROR: ${err}`);
   console.error(`POR QUÉ: ${why}`);
   console.error(`SOLUCIÓN (FIX): ${fix}`);
   process.exit(1);
-}
-
-function isPlainObject(val) {
-  return Boolean(val) && typeof val === 'object' && !Array.isArray(val);
-}
-
-function isNonEmptyStringArray(val) {
-  return Array.isArray(val) && val.every((item) => typeof item === 'string' && item.trim().length > 0);
 }
 
 function parseCliArgs(argv) {
@@ -52,219 +37,18 @@ function parseCliArgs(argv) {
 }
 
 function validateAndLoadConfig(rootDir) {
-  const configPath = path.join(rootDir, 'harness.config.json');
-  if (!fs.existsSync(configPath)) {
-    return {
-      exists: false,
-      mode: 'auto',
-      nonDev: { ...DEFAULT_NON_DEV }
-    };
+  const res = validateHarnessConfig(rootDir);
+  if (!res.ok) {
+    redPenExit(res.error, res.why, res.fix);
   }
-
-  let parsed = null;
-  try {
-    parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  } catch (err) {
-    redPenExit(
-      `JSON mal formado en 'harness.config.json': ${err.message}.`,
-      'La Puerta 3 requiere un archivo harness.config.json sintácticamente válido para configurar el modo Camaleón.',
-      "Corrige la sintaxis JSON en 'harness.config.json' (comas, llaves o comillas dobles)."
-    );
-  }
-
-  if (!isPlainObject(parsed)) {
-    redPenExit(
-      "La raíz de 'harness.config.json' debe ser un objeto JSON.",
-      'El perfil Camaleón define propiedades estructuradas (mode, layerMap, brownfield, python, nonDev).',
-      "Reemplaza el contenido raíz de 'harness.config.json' por un objeto JSON válido."
-    );
-  }
-
-  const ALLOWED_ROOT_KEYS = new Set(['$schema', 'mode', 'activeStacks', 'layerMap', 'brownfield', 'python', 'nonDev']);
-  for (const k of Object.keys(parsed)) {
-    if (!ALLOWED_ROOT_KEYS.has(k)) {
-      redPenExit(
-        `Clave raíz desconocida '${k}' en 'harness.config.json'.`,
-        'El esquema estricto de harness.config.json rechaza claves desconocidas para evitar errores tipográficos silenciosos.',
-        `Elimina o corrige '${k}' en 'harness.config.json' (claves válidas: mode, activeStacks, layerMap, brownfield, python, nonDev).`
-      );
-    }
-  }
-
-  if (typeof parsed.mode !== 'string' || !VALID_MODES.has(parsed.mode)) {
-    redPenExit(
-      `Valor inválido para 'mode' en 'harness.config.json' (${JSON.stringify(parsed.mode)}).`,
-      "El campo 'mode' solo admite uno de los 4 modos canónicos: 'auto', 'greenfield', 'brownfield' o 'non-dev'.",
-      'Actualiza "mode" en harness.config.json a "auto", "greenfield", "brownfield" o "non-dev".'
-    );
-  }
-
-  if (parsed.activeStacks !== undefined) {
-    if (!Array.isArray(parsed.activeStacks) || !parsed.activeStacks.every((s) => typeof s === 'string')) {
-      redPenExit(
-        "El campo 'activeStacks' en 'harness.config.json' debe ser un arreglo de strings.",
-        'activeStacks enumera opcionalmente los stacks activos detectados o fijados por el agente.',
-        'Define "activeStacks": [] (o lista de strings como ["node", "python"]) en harness.config.json.'
-      );
-    }
-  }
-
-  if (parsed.layerMap !== undefined) {
-    if (!isPlainObject(parsed.layerMap)) {
-      redPenExit(
-        "El bloque 'layerMap' en 'harness.config.json' debe ser un objeto JSON.",
-        'layerMap mapea las 6 capas canónicas hacia nombres de carpetas del proyecto.',
-        'Asegúrate de que "layerMap" sea un objeto con claves types, config, repo, service, runtime y ui.'
-      );
-    }
-    for (const [k, v] of Object.entries(parsed.layerMap)) {
-      const cleanKey = String(k || '').trim();
-      const isCanonicalArray = CANONICAL_LAYERS.has(cleanKey.toLowerCase()) && isNonEmptyStringArray(v);
-      const isReverseString = Boolean(cleanKey) && typeof v === 'string' && CANONICAL_LAYERS.has(v.trim().toLowerCase());
-      if (!isCanonicalArray && !isReverseString) {
-        redPenExit(
-          `Entrada inválida 'layerMap.${k}' en 'harness.config.json'.`,
-          'Cada entrada de layerMap debe usar el formato canónico { "<capa>": ["carpeta1", ...] } (types, config, repo, service, runtime, ui) o el mapeo directo { "<carpeta>": "<capa>" }.',
-          `Corrige 'layerMap.${k}' en 'harness.config.json' usando las 6 capas canónicas y nombres de directorio no vacíos.`
-        );
-      }
-    }
-  }
-
-  if (parsed.brownfield !== undefined) {
-    if (!isPlainObject(parsed.brownfield)) {
-      redPenExit(
-        "El bloque 'brownfield' en 'harness.config.json' debe ser un objeto JSON.",
-        'La configuración brownfield controla tolerancias graduales en repositorios heredados.',
-        'Define "brownfield" como objeto JSON con enabled, allowUnmappedDirs, allowEmptyDirs y maxLegacyLayerViolations.'
-      );
-    }
-    const ALLOWED_BF_KEYS = new Set(['enabled', 'allowUnmappedDirs', 'allowEmptyDirs', 'maxLegacyLayerViolations']);
-    for (const k of Object.keys(parsed.brownfield)) {
-      if (!ALLOWED_BF_KEYS.has(k)) {
-        redPenExit(
-          `Clave desconocida 'brownfield.${k}' en 'harness.config.json'.`,
-          'El bloque brownfield solo admite enabled, allowUnmappedDirs, allowEmptyDirs y maxLegacyLayerViolations.',
-          `Elimina o corrige 'brownfield.${k}' en 'harness.config.json'.`
-        );
-      }
-    }
-    for (const boolKey of ['enabled', 'allowUnmappedDirs', 'allowEmptyDirs']) {
-      if (parsed.brownfield[boolKey] !== undefined && typeof parsed.brownfield[boolKey] !== 'boolean') {
-        redPenExit(
-          `El campo 'brownfield.${boolKey}' en 'harness.config.json' debe ser booleano.`,
-          'Las banderas de modo brownfield deben ser true o false.',
-          `Cambia 'brownfield.${boolKey}' a un valor booleano (true o false) en 'harness.config.json'.`
-        );
-      }
-    }
-    if (
-      parsed.brownfield.maxLegacyLayerViolations !== undefined
-      && (!Number.isInteger(parsed.brownfield.maxLegacyLayerViolations) || parsed.brownfield.maxLegacyLayerViolations < 0)
-    ) {
-      redPenExit(
-        "El campo 'brownfield.maxLegacyLayerViolations' en 'harness.config.json' debe ser un entero >= 0.",
-        'El umbral de violaciones heredadas representa un conteo exacto no negativo.',
-        'Configura "maxLegacyLayerViolations" con un entero >= 0 (ej. 0) en harness.config.json.'
-      );
-    }
-  }
-
-  if (parsed.python !== undefined) {
-    if (!isPlainObject(parsed.python)) {
-      redPenExit(
-        "El bloque 'python' en 'harness.config.json' debe ser un objeto JSON.",
-        'El bloque python configura requireVenvForPip, packageRoots y enforceAstChecks.',
-        'Define "python" como un objeto JSON válido en harness.config.json.'
-      );
-    }
-    const ALLOWED_PY_KEYS = new Set(['requireVenvForPip', 'packageRoots', 'enforceAstChecks']);
-    for (const k of Object.keys(parsed.python)) {
-      if (!ALLOWED_PY_KEYS.has(k)) {
-        redPenExit(
-          `Clave desconocida 'python.${k}' en 'harness.config.json'.`,
-          'El bloque python solo admite requireVenvForPip, packageRoots y enforceAstChecks.',
-          `Elimina o corrige 'python.${k}' en 'harness.config.json'.`
-        );
-      }
-    }
-    for (const boolKey of ['requireVenvForPip', 'enforceAstChecks']) {
-      if (parsed.python[boolKey] !== undefined && typeof parsed.python[boolKey] !== 'boolean') {
-        redPenExit(
-          `El campo 'python.${boolKey}' en 'harness.config.json' debe ser booleano.`,
-          'Las opciones booleanas del inspector Python solo aceptan true o false.',
-          `Corrige 'python.${boolKey}' a true o false en 'harness.config.json'.`
-        );
-      }
-    }
-    if (parsed.python.packageRoots !== undefined && !isNonEmptyStringArray(parsed.python.packageRoots)) {
-      redPenExit(
-        "El campo 'python.packageRoots' en 'harness.config.json' debe ser un arreglo de strings no vacíos.",
-        'packageRoots indica las carpetas raíz de paquetes Python (ej. ["src", "app", "backend"]).',
-        'Configura "packageRoots" como un arreglo de strings no vacíos en harness.config.json.'
-      );
-    }
-  }
-
-  if (parsed.nonDev !== undefined) {
-    if (!isPlainObject(parsed.nonDev)) {
-      redPenExit(
-        "El bloque 'nonDev' en 'harness.config.json' debe ser un objeto JSON.",
-        'El bloque nonDev gobierna las reglas de calidad documental y entregables no-código.',
-        'Define "nonDev" como un objeto JSON válido en harness.config.json.'
-      );
-    }
-    const ALLOWED_ND_KEYS = new Set(['deliverableDirs', 'forbidPlaceholders', 'checkMarkdownLinks', 'minDeliverableWords']);
-    for (const k of Object.keys(parsed.nonDev)) {
-      if (!ALLOWED_ND_KEYS.has(k)) {
-        redPenExit(
-          `Clave desconocida 'nonDev.${k}' en 'harness.config.json'.`,
-          'El bloque nonDev solo admite deliverableDirs, forbidPlaceholders, checkMarkdownLinks y minDeliverableWords.',
-          `Elimina o corrige 'nonDev.${k}' en 'harness.config.json'.`
-        );
-      }
-    }
-    if (parsed.nonDev.deliverableDirs !== undefined && !isNonEmptyStringArray(parsed.nonDev.deliverableDirs)) {
-      redPenExit(
-        "El campo 'nonDev.deliverableDirs' en 'harness.config.json' debe ser un arreglo de strings no vacíos.",
-        'deliverableDirs define los directorios donde residen los entregables documentales.',
-        'Configura "deliverableDirs" como un arreglo de strings no vacíos (ej. ["deliverables", "reports"]).'
-      );
-    }
-    for (const boolKey of ['forbidPlaceholders', 'checkMarkdownLinks']) {
-      if (parsed.nonDev[boolKey] !== undefined && typeof parsed.nonDev[boolKey] !== 'boolean') {
-        redPenExit(
-          `El campo 'nonDev.${boolKey}' en 'harness.config.json' debe ser booleano.`,
-          'Las reglas de calidad documental esperan valores booleanos true o false.',
-          `Actualiza 'nonDev.${boolKey}' a true o false en 'harness.config.json'.`
-        );
-      }
-    }
-    if (
-      parsed.nonDev.minDeliverableWords !== undefined
-      && (!Number.isInteger(parsed.nonDev.minDeliverableWords) || parsed.nonDev.minDeliverableWords < 0)
-    ) {
-      redPenExit(
-        "El campo 'nonDev.minDeliverableWords' en 'harness.config.json' debe ser un entero >= 0.",
-        'minDeliverableWords establece el mínimo de palabras reales exigido a entregables terminados en modo non-dev.',
-        'Configura "minDeliverableWords" con un entero >= 0 (ej. 15) en harness.config.json.'
-      );
-    }
-  }
-
   return {
-    exists: true,
-    mode: parsed.mode,
-    nonDev: {
-      deliverableDirs: parsed.nonDev?.deliverableDirs ?? DEFAULT_NON_DEV.deliverableDirs,
-      forbidPlaceholders: parsed.nonDev?.forbidPlaceholders ?? DEFAULT_NON_DEV.forbidPlaceholders,
-      checkMarkdownLinks: parsed.nonDev?.checkMarkdownLinks ?? DEFAULT_NON_DEV.checkMarkdownLinks,
-      minDeliverableWords: parsed.nonDev?.minDeliverableWords ?? DEFAULT_NON_DEV.minDeliverableWords
-    }
+    exists: res.config.exists,
+    mode: res.config.mode,
+    nonDev: res.config.nonDev
   };
 }
 
-function walkMarkdownFiles(dirPath, rootDir, out = []) {
+function walkDeliverableFiles(dirPath, rootDir, out = []) {
   if (!fs.existsSync(dirPath)) return out;
   let stat = null;
   try {
@@ -278,8 +62,8 @@ function walkMarkdownFiles(dirPath, rootDir, out = []) {
     if (entry.name === '.git' || entry.name === 'node_modules') continue;
     const full = path.join(dirPath, entry.name);
     if (entry.isDirectory()) {
-      walkMarkdownFiles(full, rootDir, out);
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+      walkDeliverableFiles(full, rootDir, out);
+    } else if (entry.isFile() && SCANNABLE_DELIVERABLE_EXTS.has(path.extname(entry.name).toLowerCase())) {
       out.push(path.relative(rootDir, full).replace(/\\/g, '/'));
     }
   }
@@ -300,10 +84,11 @@ function stripCodePreservingLines(content, ext) {
   const cleanedLines = lines.map((line) => {
     const trimmed = line.trimStart();
     if (!fenceChar) {
-      const m = trimmed.match(/^(`{3,}|~{3,})/);
+      const m = trimmed.match(/^(`{3,})(?!.*`)|^(~{3,})/);
       if (m) {
-        fenceChar = m[1][0];
-        fenceLen = m[1].length;
+        const fence = m[1] || m[2];
+        fenceChar = fence[0];
+        fenceLen = fence.length;
         return '';
       }
       // Strip inline code spans preserving rest of line
@@ -320,19 +105,22 @@ function stripCodePreservingLines(content, ext) {
 }
 
 // Español-safe placeholder detector:
-// NUNCA marca la palabra común española "todo" / "Todo" ("Todo funciona bien", "sobre todo", "TODO EL SISTEMA").
+// NUNCA marca la palabra común española "todo" / "Todo" ("Todo funciona bien", "sobre todo", "TODO EL EQUIPO").
 // Solo marca marcadores reales de trabajo incompleto:
-// TODO:, [TODO], TODO(...), FIXME, TBD, [PENDIENTE], [POR COMPLETAR], [RELLENAR], [INSERTAR...], lorem ipsum.
+// TODO:, [TODO], TODO(...), FIXME (insensible a mayúsculas), TBD (insensible a mayúsculas),
+// [PENDIENTE], [POR COMPLETAR], [RELLENAR], [INSERTAR...], lorem ipsum y comentarios HTML <!-- PENDIENTE / TODO / FIXME / TBD -->.
 const PLACEHOLDER_RULES = [
   { label: 'TODO:', re: /\bTODO\s*:/ },
-  { label: '[TODO]', re: /\[\s*TODO(?:\b|[:\s\]])/ },
+  { label: '[TODO]', re: /\[\s*TODO\s*(?:\]|:)/ },
   { label: 'TODO(...)', re: /\bTODO\s*\(/ },
-  { label: '<!-- TODO -->', re: /<!--\s*TODO\s*-->/ },
-  { label: 'FIXME', re: /\bFIXME\b/ },
-  { label: 'TBD', re: /\bTBD\b/ },
+  { label: 'FIXME', re: /\bFIXME\b/i },
+  { label: 'TBD', re: /\bTBD\b/i },
   { label: '[PENDIENTE / POR COMPLETAR / RELLENAR / INSERTAR]', re: /\[\s*(?:PENDIENTE|POR\s+COMPLETAR|RELLENAR|INSERTAR[^\]]*)\s*\]/i },
   { label: 'lorem ipsum', re: /\blorem\s+ipsum\b/i }
 ];
+
+const HTML_COMMENT_UPPER_TODO_RE = /\bTODO\b/;
+const HTML_COMMENT_PLACEHOLDER_RE = /\b(?:FIXME|TBD|PENDIENTE|POR\s+COMPLETAR|RELLENAR|INSERTAR)\b/i;
 
 function checkPlaceholdersInFile(rootDir, relPath) {
   const fullPath = path.join(rootDir, relPath);
@@ -340,8 +128,22 @@ function checkPlaceholdersInFile(rootDir, relPath) {
   const ext = path.extname(relPath).toLowerCase();
   const raw = fs.readFileSync(fullPath, 'utf8');
   const stripped = stripCodePreservingLines(raw, ext);
-  const lines = stripped.split('\n');
 
+  for (const commentMatch of stripped.matchAll(/<!--([\s\S]*?)-->/g)) {
+    const commentBody = commentMatch[1];
+    const hit = commentBody.match(HTML_COMMENT_UPPER_TODO_RE) || commentBody.match(HTML_COMMENT_PLACEHOLDER_RE);
+    if (hit) {
+      const tokenOffset = commentMatch.index + 4 + (hit.index || 0);
+      const lineNum = stripped.slice(0, tokenOffset).split('\n').length;
+      redPenExit(
+        `Marcador incompleto '${hit[0].trim()}' oculto en comentario HTML dentro de '${relPath}' (línea ${lineNum}).`,
+        'La Puerta 3 de calidad documental prohíbe dejar placeholders pendientes incluso dentro de comentarios HTML <!-- ... -->.',
+        `Resuelve y elimina el comentario con '${hit[0].trim()}' en '${relPath}:${lineNum}' antes de entregar el documento.`
+      );
+    }
+  }
+
+  const lines = stripped.split('\n');
   for (let idx = 0; idx < lines.length; idx += 1) {
     const line = lines[idx];
     for (const rule of PLACEHOLDER_RULES) {
@@ -361,7 +163,7 @@ function normalizeLinkTarget(rawTarget) {
   let target = rawTarget.trim();
   if (!target) return null;
   if (target.startsWith('<')) {
-    const closeIdx = target.indexOf('>');
+    const closeIdx = target.lastIndexOf('>');
     if (closeIdx > 0) {
       target = target.slice(1, closeIdx).trim();
     }
@@ -383,6 +185,118 @@ function normalizeLinkTarget(rawTarget) {
   }
 }
 
+function findClosingLinkParenAfterDest(line, startIdx) {
+  let p = startIdx;
+  while (p < line.length && (line[p] === ' ' || line[p] === '\t')) p += 1;
+  if (p < line.length && line[p] === ')') return p;
+  if (p >= line.length || p === startIdx) return -1;
+
+  const q = line[p];
+  if (q === '"' || q === "'") {
+    p += 1;
+    while (p < line.length && line[p] !== q) {
+      if (line[p] === '\\') p += 2;
+      else p += 1;
+    }
+    if (p >= line.length) return -1;
+    p += 1;
+  } else if (q === '(') {
+    p += 1;
+    while (p < line.length && line[p] !== ')') {
+      if (line[p] === '\\') p += 2;
+      else p += 1;
+    }
+    if (p >= line.length) return -1;
+    p += 1;
+  } else {
+    return -1;
+  }
+
+  while (p < line.length && (line[p] === ' ' || line[p] === '\t')) p += 1;
+  return p < line.length && line[p] === ')' ? p : -1;
+}
+
+function extractMarkdownLinkTargets(line) {
+  const candidates = [];
+  const refDefRe = /^[ ]{0,3}\[[^\]]+\]:\s*(<[^>\n]+>|\S+)/;
+  const refMatch = line.match(refDefRe);
+  if (refMatch) {
+    candidates.push(refMatch[1]);
+  }
+
+  for (let i = 0; i < line.length; i += 1) {
+    if (line[i] === '\\') {
+      i += 1;
+      continue;
+    }
+    if (line[i] !== '[') continue;
+
+    let bracketDepth = 1;
+    let j = i + 1;
+    while (j < line.length && bracketDepth > 0) {
+      if (line[j] === '\\') {
+        j += 2;
+        continue;
+      }
+      if (line[j] === '<' && /\]\(\s*$/.test(line.slice(i + 1, j))) {
+        const closeAngle = line.indexOf('>', j + 1);
+        if (closeAngle !== -1) {
+          j = closeAngle + 1;
+          continue;
+        }
+      }
+      if (line[j] === '[') bracketDepth += 1;
+      else if (line[j] === ']') bracketDepth -= 1;
+      j += 1;
+    }
+
+    if (bracketDepth !== 0 || j >= line.length || line[j] !== '(') continue;
+
+    let k = j + 1;
+    while (k < line.length && (line[k] === ' ' || line[k] === '\t')) k += 1;
+    if (k >= line.length) continue;
+
+    if (line[k] === '<') {
+      let m = k + 1;
+      while (m < line.length && line[m] !== '>') {
+        if (line[m] === '\\') m += 2;
+        else m += 1;
+      }
+      if (m < line.length && line[m] === '>' && findClosingLinkParenAfterDest(line, m + 1) !== -1) {
+        candidates.push(line.slice(k, m + 1));
+      }
+    } else {
+      let parenDepth = 0;
+      let m = k;
+      while (m < line.length) {
+        const ch = line[m];
+        if (ch === '\\') {
+          m += 2;
+          continue;
+        }
+        if (ch === ' ' || ch === '\t') break;
+        if (ch === '(') {
+          parenDepth += 1;
+          m += 1;
+          continue;
+        }
+        if (ch === ')') {
+          if (parenDepth === 0) break;
+          parenDepth -= 1;
+          m += 1;
+          continue;
+        }
+        m += 1;
+      }
+      if (m > k && findClosingLinkParenAfterDest(line, m) !== -1) {
+        candidates.push(line.slice(k, m));
+      }
+    }
+  }
+
+  return candidates;
+}
+
 function checkMarkdownLinksInFile(rootDir, relPath) {
   const fullPath = path.join(rootDir, relPath);
   if (!fs.existsSync(fullPath) || path.extname(relPath).toLowerCase() !== '.md') return;
@@ -391,21 +305,8 @@ function checkMarkdownLinksInFile(rootDir, relPath) {
   const lines = stripped.split('\n');
   const baseDir = path.dirname(fullPath);
 
-  const inlineLinkRe = /!?\[[^\]]*\]\(([^)\n]+)\)/g;
-  const refDefRe = /^[ ]{0,3}\[[^\]]+\]:\s*(\S+)/;
-
   for (let idx = 0; idx < lines.length; idx += 1) {
-    const line = lines[idx];
-    const candidates = [];
-
-    for (const match of line.matchAll(inlineLinkRe)) {
-      candidates.push(match[1]);
-    }
-    const refMatch = line.match(refDefRe);
-    if (refMatch) {
-      candidates.push(refMatch[1]);
-    }
-
+    const candidates = extractMarkdownLinkTargets(lines[idx]);
     for (const rawCand of candidates) {
       const cleanRel = normalizeLinkTarget(rawCand);
       if (!cleanRel) continue;
@@ -425,42 +326,63 @@ function checkMarkdownLinksInFile(rootDir, relPath) {
 }
 
 function countRealWords(text, ext) {
-  let cleaned = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, ' ');
-  if (ext === '.html') {
-    cleaned = cleaned
-      .replace(/<(?:script|style)\b[^>]*>[\s\S]*?<\/(?:script|style)>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ');
-  }
-  cleaned = cleaned.replace(/https?:\/\/\S+/g, ' ');
+  let cleaned = String(text || '').replace(/\r\n?/g, '\n');
+  // 1. Frontmatter YAML inicial
+  cleaned = cleaned.replace(/^---\n[\s\S]*?\n---(?:\n|$)/, ' ');
+  // 2. Bloques no-prosa HTML (<script>, <style>, <pre>, <code>)
+  cleaned = cleaned.replace(/<(?:script|style|pre|code)\b[^>]*>[\s\S]*?<\/(?:script|style|pre|code)>/gi, ' ');
+  // 3. Bloques de código cercados (``` y ~~~) y spans de código inline (`[^`]*`)
+  cleaned = stripCodePreservingLines(cleaned, ext === '.html' ? '.html' : '.md');
+  cleaned = cleaned.replace(/`[^`]*`/g, ' ');
+  // 4. Comentarios HTML (<!-- ... -->)
+  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, ' ');
+  // 5. Destinos de enlaces/imágenes Markdown, referencias y URLs (https?://, mailto:)
+  cleaned = cleaned
+    .replace(/^[ ]{0,3}\[[^\]]+\]:\s*(?:<[^>\n]+>|\S+).*$/gm, ' ')
+    .replace(/(\]\()(?:\s*<[^>\n]*>|\s*[^)\n]*)(\))/g, '$1$2')
+    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/mailto:\S+/gi, ' ');
+  // 6. Etiquetas HTML residuales (<[^>]+>) y separadores Markdown
+  cleaned = cleaned
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/^\s*(?:[-*_]\s*){3,}$/gm, ' ')
+    .replace(/^\s*\|?(?:\s*:?-{2,}:?\s*\|)+\s*(?::?-{2,}:?\s*)?$/gm, ' ');
+
   const matches = cleaned.match(/[\p{L}\p{N}]+/gu);
   return matches ? matches.length : 0;
 }
 
-function loadDoneNonDevFiles(rootDir) {
+function loadTrackedNonDevFiles(rootDir) {
   const flPath = path.join(rootDir, 'feature_list.json');
-  if (!fs.existsSync(flPath)) return [];
+  if (!fs.existsSync(flPath)) return { active: [], done: [] };
   let parsed = null;
   try {
     parsed = JSON.parse(fs.readFileSync(flPath, 'utf8'));
   } catch {
-    return [];
+    return { active: [], done: [] };
   }
-  if (!Array.isArray(parsed?.features)) return [];
+  if (!Array.isArray(parsed?.features)) return { active: [], done: [] };
 
-  const items = [];
+  const active = [];
+  const done = [];
   for (const feat of parsed.features) {
-    if (!feat || feat.status !== 'done') continue;
+    if (!feat || (feat.status !== 'done' && feat.status !== 'in-progress')) continue;
     if (!Array.isArray(feat.required_files)) continue;
     for (const reqFile of feat.required_files) {
       if (typeof reqFile !== 'string' || !reqFile.trim()) continue;
       const norm = reqFile.trim().replace(/\\/g, '/');
       const ext = path.extname(norm).toLowerCase();
       if (DELIVERABLE_TEXT_EXTS.has(ext)) {
-        items.push({ featureId: feat.id || 'unknown', relPath: norm, ext });
+        const entry = { featureId: feat.id || 'unknown', relPath: norm, ext };
+        if (feat.status === 'done') {
+          done.push(entry);
+        } else {
+          active.push(entry);
+        }
       }
     }
   }
-  return items;
+  return { active, done };
 }
 
 function main() {
@@ -473,21 +395,26 @@ function main() {
   const cfg = validateAndLoadConfig(root);
   const { mode, nonDev } = cfg;
 
-  const deliverableMdFiles = [];
+  const deliverableFiles = [];
   for (const dirRel of nonDev.deliverableDirs) {
-    walkMarkdownFiles(path.join(root, dirRel), root, deliverableMdFiles);
+    walkDeliverableFiles(path.join(root, dirRel), root, deliverableFiles);
   }
 
-  const shouldInspectDeliverables = mode === 'non-dev' || deliverableMdFiles.length > 0;
+  const shouldInspectDeliverables = mode === 'non-dev' || deliverableFiles.length > 0;
   const inspectedSet = new Set();
 
   if (shouldInspectDeliverables) {
-    for (const mdRel of deliverableMdFiles) {
-      inspectedSet.add(mdRel);
+    for (const docRel of deliverableFiles) {
+      inspectedSet.add(docRel);
     }
 
-    const doneTaskFiles = mode === 'non-dev' ? loadDoneNonDevFiles(root) : [];
-    for (const item of doneTaskFiles) {
+    const tracked = mode === 'non-dev' ? loadTrackedNonDevFiles(root) : { active: [], done: [] };
+    for (const item of tracked.active) {
+      if (fs.existsSync(path.join(root, item.relPath))) {
+        inspectedSet.add(item.relPath);
+      }
+    }
+    for (const item of tracked.done) {
       inspectedSet.add(item.relPath);
     }
 
@@ -501,7 +428,7 @@ function main() {
     }
 
     if (mode === 'non-dev') {
-      for (const item of doneTaskFiles) {
+      for (const item of tracked.done) {
         const fullPath = path.join(root, item.relPath);
         if (!fs.existsSync(fullPath)) {
           redPenExit(

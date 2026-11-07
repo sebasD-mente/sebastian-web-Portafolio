@@ -19,14 +19,14 @@
 
 ## Round Log
 
-### Round 0 (Baseline Universal Chameleon Harness v2.0 Certificada)
-- **Maker Approach:** Sincronización y certificación integral de **Universal Chameleon Harness v2.0** en `sebastian web Portafolio` (`harness.config.json`, `check-python.mjs`, `check-deliverables.mjs`, `detectGlobalPipInstall`, `init.sh` políglota aditivo y `Stop` E2E).
-- **Basic Check (`bash ./init.sh`):** `Pass (Exit code 0 — 3 Puertas aditivas en verde, 0 CRLF)`
-- **Independent Checker Verdict:** `Baseline v2.0 ready (6/6 E2E scenarios PASS + 12/12 adversarial vectors DEFENDED)`
+### Round 0 (Baseline Universal Chameleon Harness v2.1 Certificada)
+- **Maker Approach:** Sincronización y certificación integral de **Universal Chameleon Harness v2.1** en `sebastian web Portafolio` tras campaña Red-Team (4 agentes / 400+ ataques + 5 tareas simuladas) y sellado Blue-Team (`PreInvocation`, `harness-guards.mjs`, `check-python.mjs`, `check-deliverables.mjs`, `check-architecture.sh` y `Stop` ejecutando `HARNESS_SKIP_INSTALL=1 bash ./init.sh` incluso con árbol Git limpio).
+- **Basic Check (`bash ./init.sh`):** `Pass (Exit code 0 — 3 Puertas aditivas en verde, 0 CRLF / 0 BOM)`
+- **Independent Checker Verdict:** `Baseline v2.1 ready (6/6 E2E scenarios PASS + 12/12 adversarial vectors DEFENDED + Red-Team 1..4 regression suite PASS)`
 - **Net Passing Checks Count:** `25 / 25 (Overall: 100/100)`
 - **Issues Found by Checker:** `None`
 - **Human intervention needed:** `No`
-- **Git Action (Ratchet):** `Baseline upgraded to v2.0-universal-chameleon`
+- **Git Action (Ratchet):** `Baseline upgraded to v2.1-redteam-sealed`
 - **Next Round Adjustment:** `Listo para planificar feat-001 del portafolio web de Sebas o iniciar Round 1 bajo /goal.`
 
 ---
@@ -35,7 +35,7 @@
 
 | Metric | Value |
 | :--- | :--- |
-| **Rounds completed** | `0` (`iteration: 1` baseline v2.0 lista, `WIP = 0`) |
+| **Rounds completed** | `0` (`iteration: 1` baseline v2.1 lista, `WIP = 0`) |
 | **Passed rounds** | `0` |
 | **Failed rounds** | `0` |
 | **Total issues found** | `0` |
@@ -51,7 +51,7 @@
 > **Convención Determinista de `commit_hash` (`Anti-Paradoja SHA-1`)**: Un archivo incluido dentro de un commit no puede contener el SHA-1 de ese mismo commit antes de crearlo. Para impedir hashes inventados o etiquetas inconsistentes, la columna `commit_hash` usa **exclusivamente** uno de estos 4 formatos:
 > 1. `<sha7>` (ej. `a1b2c3d`): SHA-1 corto real de `git log`, sellado para todas las rondas previas ya confirmadas al abrir o cerrar la siguiente ronda.
 > 2. `HEAD->commit(feat-00X)`: Marcador transitorio determinista registrado durante el cierre previo al `git commit` de la tarea activa `feat-00X` cuando el *Ratchet* avanza (`ratchet_status = kept`).
-> 3. `(reverted)`: Experimento descartado cuyo árbol se restauró al último commit verde con `git restore --worktree --staged .` (o `git checkout -- .`) y `ratchet_status = reverted`.
+> 3. `(reverted)`: Experimento descartado (`discard`) cuyo árbol rastreado se restauró al último commit verde con `git restore --worktree --staged .` (o `git checkout -- .`), revisando acto seguido `git status --porcelain` para eliminar individualmente con `rm <archivo>` cualquier archivo nuevo no rastreado (`??`) creado en la iteración fallida (ya que `git clean -fd` y `rm -rf` están bloqueados por seguridad en `PreToolUse`), y marcando `ratchet_status = reverted`.
 > 4. `(revised-in-place)`: Pasada intermedia con veredicto `REVISAR` (`ratchet_status = revised`) corregida dentro de la tarea activa antes de lanzar una nueva instancia `Checker` `one-shot`.
 
 ```tsv
@@ -59,10 +59,11 @@ timestamp	commit_hash	harness_score	checks_passed	ratchet_status	description
 2026-11-07T08:38	2fc7fe5	100/100	25/25	kept	baseline: instalar Plantilla-Maestra-Arnes en sebastian-web-portafolio en estado limpio Dia 1 (WIP=0)
 2026-11-07T09:07	77afc0a	100/100	25/25	kept	security: blindar 12 vectores adversariales, stacks web, comillas anidadas y 0 CRLF
 2026-11-07T10:49	c066cff	100/100	25/25	kept	feat(harness): evolucionar a Universal Chameleon Harness v2.0 (6/6 E2E + 12/12 ADV PASS, WIP=0)
-2026-11-07T11:10	HEAD->commit(feat-000)	100/100	25/25	kept	fix(harness): endurecer escaneo AST Python de secretos y bordes de pip global (12/12 Checker polish)
+2026-11-07T11:12	88f300b	100/100	25/25	kept	fix(harness): endurecer escaneo AST Python de secretos y bordes de pip global (12/12 Checker polish)
+2026-11-07T12:25	HEAD->commit(feat-000)	100/100	25/25	kept	fix(harness): sellar hallazgos Red-Team v2.1 en hooks, AST Python, entregables y Puerta 1 (WIP=0)
 ```
 
-*(Nota operativa: si una ronda futura falla la verificación o recibe `❌ Fail` irreversible del Checker `one-shot`, se restaura el árbol limpio al último commit verde mediante `git restore --worktree --staged .` o `git checkout -- .` —compatible con `PreToolUse`— y se añade aquí una fila con `commit_hash = (reverted)` y `ratchet_status = reverted` documentando qué enfoque falló).*
+*(Nota operativa de `discard` / Rollback limpio: si una ronda futura falla la verificación o recibe `❌ Fail` irreversible del Checker `one-shot`, al ejecutar `discard` restaura primero los cambios rastreados con `git restore --worktree --staged .` —o `git checkout -- .`—, revisa obligatoriamente `git status --porcelain` y elimina uno por uno con `rm <archivo>` cualquier archivo nuevo no rastreado creado durante la iteración fallida —dado que `git clean -fd` y `rm -rf` están bloqueados por seguridad en `PreToolUse`—; finalmente añade aquí una fila con `commit_hash = (reverted)` y `ratchet_status = reverted` documentando qué enfoque falló).*
 
 ---
 

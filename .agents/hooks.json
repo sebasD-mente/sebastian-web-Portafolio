@@ -1,9 +1,16 @@
 {
   "harness-safety-gate": {
     "enabled": true,
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "node ../scripts/harness-hooks.mjs pre-invocation --agy",
+        "timeout": 10
+      }
+    ],
     "PreToolUse": [
       {
-        "matcher": "write_file|edit_file|Write|Edit|MultiEdit|create_file|replace_file_content|multi_replace_file_content|run_command|Bash|send_message|call_mcp_tool|mcp_.*",
+        "matcher": "run_command|bash|execute_command|shell|Bash|write_file|edit_file|write|edit|multiedit|Write|Edit|MultiEdit|create_file|replace_file_content|multi_replace_file_content|send_message|sendmessage|SendMessage|call_mcp_tool|mcp_.*",
         "hooks": [
           {
             "type": "command",
@@ -15,7 +22,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "write_file|edit_file|Write|Edit|MultiEdit|create_file|replace_file_content|multi_replace_file_content|call_mcp_tool|mcp_.*",
+        "matcher": "run_command|bash|execute_command|shell|Bash|write_file|edit_file|write|edit|multiedit|Write|Edit|MultiEdit|create_file|replace_file_content|multi_replace_file_content|send_message|sendmessage|SendMessage|call_mcp_tool|mcp_.*",
         "hooks": [
           {
             "type": "command",

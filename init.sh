@@ -16,6 +16,10 @@ has_pkg_script() {
   node -e "const s = require('./package.json').scripts || {}; process.exit(Object.prototype.hasOwnProperty.call(s, process.argv[1]) && s[process.argv[1]] ? 0 : 1);" "$script_name" >/dev/null 2>&1
 }
 
+has_pkg_dependencies() {
+  node -e "const p = require('./package.json'); const d = [p.dependencies, p.devDependencies, p.optionalDependencies]; process.exit(d.some((o) => o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length > 0) ? 0 : 1);" >/dev/null 2>&1
+}
+
 run_pm_script() {
   local pm="$1"
   local script_name="$2"
@@ -77,11 +81,17 @@ echo "Ruta actual: $PWD"
 bootstrap_python_venv
 
 echo "=== 2. [PUERTA 1: ESTÁTICA] Archivos Críticos, Sintaxis y Límites Arquitectónicos (6 Capas) ==="
-for file in "AGENTS.md" "feature_list.json" "progress.md" "session-handoff.md" "clean-state-checklist.md" "memory/INDEX.md" "ARCHITECTURE.md" "scripts/check-architecture.sh" "scripts/feature-list.schema.json" ".gitignore"; do
-  if [ ! -f "$file" ]; then
-    echo "ERROR: Falta el archivo crítico '$file' en el repositorio."
-    echo "POR QUÉ: El agente no puede operar ni verificar límites arquitectónicos sin su sistema de registro completo."
-    echo "SOLUCIÓN (FIX): Restaura o crea el archivo '$file' siguiendo la especificación de AGENTS.md y ARCHITECTURE.md antes de continuar."
+for req_file in "AGENTS.md" "feature_list.json" "progress.md" "session-handoff.md" "clean-state-checklist.md" "memory/INDEX.md" "ARCHITECTURE.md" "scripts/check-architecture.sh" "scripts/feature-list.schema.json" ".gitignore"; do
+  if [ ! -f "$req_file" ] || [ ! -s "$req_file" ]; then
+    if [ ! -e "$req_file" ]; then
+      echo "ERROR: Falta el archivo crítico '$req_file' en el repositorio."
+    elif [ ! -f "$req_file" ]; then
+      echo "ERROR: La ruta crítica '$req_file' no es un archivo regular."
+    else
+      echo "ERROR: El archivo crítico '$req_file' está vacío (0 bytes)."
+    fi
+    echo "POR QUÉ: El agente no puede operar ni verificar límites arquitectónicos con artefactos críticos inexistentes o truncados a 0 bytes."
+    echo "SOLUCIÓN (FIX): Restaura o completa el archivo '$req_file' siguiendo la especificación de AGENTS.md y ARCHITECTURE.md antes de continuar."
     exit 1
   fi
 done
@@ -131,15 +141,17 @@ else
     fi
 
     if [ -z "$INSTALL_CMD" ] && [ "${HARNESS_SKIP_INSTALL:-0}" != "1" ]; then
-      if [ ! -d "node_modules" ] || [ "${HARNESS_FORCE_INSTALL:-0}" = "1" ]; then
+      if [ "${HARNESS_FORCE_INSTALL:-0}" = "1" ] || { [ ! -d "node_modules" ] && has_pkg_dependencies; }; then
         echo "=== Instalando dependencias con $PM ==="
         if [ "$PM" = "npm" ]; then
           npm install
         else
           "$PM" install
         fi
-      else
+      elif [ -d "node_modules" ]; then
         echo "=== Dependencias detectadas en node_modules/ (usa HARNESS_FORCE_INSTALL=1 para reinstalar) ==="
+      else
+        echo "=== package.json sin dependencias externas declaradas; omitiendo '$PM install' (usa HARNESS_FORCE_INSTALL=1 para forzar) ==="
       fi
     fi
 
@@ -325,7 +337,13 @@ else
     dotnet test
   fi
 
-  if compgen -G "*.ps1" >/dev/null || compgen -G "scripts/*.ps1" >/dev/null; then
+  ps_files=()
+  while IFS= read -r psf; do
+    psf="${psf%$'\r'}"
+    [ -n "$psf" ] && ps_files+=("${psf#./}")
+  done < <(find . -maxdepth 6 \( -path "./.git" -o -path "./node_modules" -o -path "./.venv" -o -path "./venv" -o -path "./env" -o -path "./dist" -o -path "./build" \) -prune -o -type f -name "*.ps1" -print 2>/dev/null || true)
+
+  if [ "${#ps_files[@]}" -gt 0 ]; then
     STACKS_RAN=$((STACKS_RAN + 1))
     echo "=== Verificando sintaxis AST de scripts PowerShell (*.ps1) ==="
     PS_BIN=""
@@ -337,36 +355,28 @@ else
       PS_BIN="powershell.exe"
     fi
     if [ -n "$PS_BIN" ]; then
-      ps_files=()
-      for psf in *.ps1 scripts/*.ps1; do
-        if [ -f "$psf" ]; then
-          ps_files+=("$psf")
-        fi
-      done
-      if [ "${#ps_files[@]}" -gt 0 ]; then
-        ps_ast_err="$(HARNESS_PS_FILES="$(printf '%s\n' "${ps_files[@]}")" "$PS_BIN" -NoProfile -NonInteractive -Command '
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-          $files = ($env:HARNESS_PS_FILES -split "\r?\n") | Where-Object { $_ -ne "" }
-          foreach ($f in $files) {
-            $full = (Resolve-Path -LiteralPath $f).Path
-            $tokens = $null
-            $errs = $null
-            [void][System.Management.Automation.Language.Parser]::ParseFile($full, [ref]$tokens, [ref]$errs)
-            if ($errs -and $errs.Count -gt 0) {
-              $e = $errs[0]
-              $msg = ($e.Message -replace "[\r\n|]+", " ").Trim()
-              Write-Output "$f|$($e.Extent.StartLineNumber)|$msg"
-              exit 0
-            }
+      ps_ast_err="$(HARNESS_PS_FILES="$(printf '%s\n' "${ps_files[@]}")" "$PS_BIN" -NoProfile -NonInteractive -Command '
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        $files = ($env:HARNESS_PS_FILES -split "\r?\n") | Where-Object { $_ -ne "" }
+        foreach ($f in $files) {
+          $full = (Resolve-Path -LiteralPath $f).Path
+          $tokens = $null
+          $errs = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($full, [ref]$tokens, [ref]$errs)
+          if ($errs -and $errs.Count -gt 0) {
+            $e = $errs[0]
+            $msg = ($e.Message -replace "[\r\n|]+", " ").Trim()
+            Write-Output "$f|$($e.Extent.StartLineNumber)|$msg"
+            exit 0
           }
-        ' | tr -d '\r')"
-        if [ -n "$ps_ast_err" ]; then
-          IFS="|" read -r ps_err_file ps_err_line ps_err_msg <<< "$ps_ast_err"
-          echo "ERROR: Error de sintaxis PowerShell en '$ps_err_file' (línea $ps_err_line): $ps_err_msg"
-          echo "POR QUÉ: La Puerta 3 valida el AST de scripts .ps1 sin ejecutarlos para impedir fallos de parseo en producción."
-          echo "SOLUCIÓN (FIX): Corrige la sintaxis en '$ps_err_file' cerca de la línea $ps_err_line y vuelve a ejecutar 'bash ./init.sh'."
-          exit 1
-        fi
+        }
+      ' | tr -d '\r')"
+      if [ -n "$ps_ast_err" ]; then
+        IFS="|" read -r ps_err_file ps_err_line ps_err_msg <<< "$ps_ast_err"
+        echo "ERROR: Error de sintaxis PowerShell en '$ps_err_file' (línea $ps_err_line): $ps_err_msg"
+        echo "POR QUÉ: La Puerta 3 valida el AST de scripts .ps1 sin ejecutarlos para impedir fallos de parseo en producción."
+        echo "SOLUCIÓN (FIX): Corrige la sintaxis en '$ps_err_file' cerca de la línea $ps_err_line y vuelve a ejecutar 'bash ./init.sh'."
+        exit 1
       fi
     fi
   fi

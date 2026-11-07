@@ -2,6 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { validateHarnessConfig } from './lib/harness-utils.mjs';
 
 const SKIP_DIRS = new Set([
   '.git',
@@ -16,17 +17,6 @@ const SKIP_DIRS = new Set([
   '.mypy_cache',
   '.ruff_cache'
 ]);
-
-const DEFAULT_LAYER_MAP = {
-  types: ['types', 'schemas', 'interfaces', 'contracts', 'domain'],
-  config: ['config', 'settings', 'constants'],
-  repo: ['repo', 'repositories', 'db', 'data', 'adapters', 'clients', 'models'],
-  service: ['service', 'services', 'usecases', 'core', 'logic'],
-  runtime: ['runtime', 'server', 'cli', 'workers', 'jobs', 'api', 'middleware'],
-  ui: ['ui', 'components', 'pages', 'views', 'app', 'routes', 'templates', 'screens']
-};
-
-const DEFAULT_PACKAGE_ROOTS = ['src', 'app', 'backend'];
 
 function redPenExit(err, why, fix) {
   console.error(`ERROR: ${err}`);
@@ -107,73 +97,20 @@ function locatePython3(rootDir) {
 }
 
 function loadPythonHarnessConfig(rootDir) {
-  const configPath = path.join(rootDir, 'harness.config.json');
-  const baseLists = Object.fromEntries(Object.entries(DEFAULT_LAYER_MAP).map(([k, v]) => [k, [...v]]));
-  const directLayerEntries = [];
-  const resolved = {
-    mode: 'auto',
-    layerMap: baseLists,
-    directLayerEntries,
-    packageRoots: [...DEFAULT_PACKAGE_ROOTS],
-    enforceAstChecks: true,
-    maxLegacyLayerViolations: 0
+  const res = validateHarnessConfig(rootDir);
+  if (!res.ok) {
+    redPenExit(res.error, res.why, res.fix);
+  }
+  const cfg = res.config;
+  return {
+    mode: cfg.mode,
+    layerMap: cfg.layerMap,
+    directLayerEntries: cfg.directLayerEntries,
+    appExplicitlyMapped: cfg.appExplicitlyMapped,
+    packageRoots: cfg.python.packageRoots,
+    enforceAstChecks: cfg.python.enforceAstChecks,
+    maxLegacyLayerViolations: cfg.brownfield.maxLegacyLayerViolations
   };
-
-  if (!fs.existsSync(configPath)) return resolved;
-
-  let parsed = null;
-  try {
-    parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  } catch (err) {
-    redPenExit(
-      `El archivo 'harness.config.json' contiene JSON inválido (${err.message}).`,
-      'El inspector Python necesita leer la configuración Camaleón para resolver packageRoots, layerMap y tolerancia brownfield.',
-      "Corrige la sintaxis JSON de 'harness.config.json' en la raíz del proyecto."
-    );
-  }
-
-  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    if (typeof parsed.mode === 'string') resolved.mode = parsed.mode;
-    if (parsed.layerMap && typeof parsed.layerMap === 'object' && !Array.isArray(parsed.layerMap)) {
-      const validCanon = new Set(Object.keys(DEFAULT_LAYER_MAP));
-      for (const [rawKey, rawVal] of Object.entries(parsed.layerMap)) {
-        const cleanKey = String(rawKey || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
-        if (!cleanKey) continue;
-        const lowerKey = cleanKey.toLowerCase();
-        if (Array.isArray(rawVal) && validCanon.has(lowerKey)) {
-          const items = rawVal.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, ''));
-          const claimedLower = new Set(items.map((x) => x.toLowerCase()));
-          for (const other of validCanon) {
-            if (other !== lowerKey) {
-              resolved.layerMap[other] = resolved.layerMap[other].filter((a) => !claimedLower.has(a.toLowerCase()));
-            }
-          }
-          resolved.layerMap[lowerKey] = items;
-        } else if (typeof rawVal === 'string' && validCanon.has(rawVal.trim().toLowerCase())) {
-          const target = rawVal.trim().toLowerCase();
-          for (const other of validCanon) {
-            resolved.layerMap[other] = resolved.layerMap[other].filter((a) => a.toLowerCase() !== lowerKey);
-          }
-          directLayerEntries.push([cleanKey, target]);
-        }
-      }
-    }
-    if (parsed.python && typeof parsed.python === 'object' && !Array.isArray(parsed.python)) {
-      if (Array.isArray(parsed.python.packageRoots)) {
-        resolved.packageRoots = parsed.python.packageRoots.filter((x) => typeof x === 'string' && x.trim());
-      }
-      if (typeof parsed.python.enforceAstChecks === 'boolean') {
-        resolved.enforceAstChecks = parsed.python.enforceAstChecks;
-      }
-    }
-    if (parsed.brownfield && typeof parsed.brownfield === 'object' && !Array.isArray(parsed.brownfield)) {
-      if (Number.isInteger(parsed.brownfield.maxLegacyLayerViolations) && parsed.brownfield.maxLegacyLayerViolations >= 0) {
-        resolved.maxLegacyLayerViolations = parsed.brownfield.maxLegacyLayerViolations;
-      }
-    }
-  }
-
-  return resolved;
 }
 
 const PYTHON_AST_INSPECTOR = String.raw`
@@ -188,6 +125,7 @@ root = payload["root"]
 files = payload["files"]
 layer_map = payload["layerMap"]
 direct_entries = payload.get("directLayerEntries", [])
+app_explicitly_mapped = bool(payload.get("appExplicitlyMapped", False))
 package_roots = payload["packageRoots"]
 check_layers = payload["checkLayers"]
 
@@ -265,7 +203,7 @@ REAL_SECRET_PREFIX_RE = re.compile(
 )
 
 SECRET_VAR_RE = re.compile(
-    r"^(?:[A-Za-z0-9]+_)*(?:API_KEY|APIKEY|API_SECRET|SECRET_KEY|ACCESS_TOKEN|AUTH_TOKEN|BEARER_TOKEN|PRIVATE_KEY|CLIENT_SECRET|JWT_SECRET|WEBHOOK_SECRET)$",
+    r"^(?:[A-Za-z0-9]+_)*(?:API_KEY|APIKEY|API_SECRET|SECRET_KEY|ACCESS_TOKEN|AUTH_TOKEN|BEARER_TOKEN|PRIVATE_KEY|CLIENT_SECRET|JWT_SECRET|WEBHOOK_SECRET|PASSWORD|PASSWD)$",
     re.IGNORECASE,
 )
 
@@ -275,6 +213,7 @@ DB_URL_VAR_RE = re.compile(
 )
 
 URL_CRED_RE = re.compile(r"^[a-zA-Z0-9+.-]+://([^:/@\s]+):([^@\s]+)@")
+AUTH_SCHEME_PREFIX_RE = re.compile(r"^(?:Bearer|Token|Basic)\s+", re.IGNORECASE)
 
 DUMMY_DB_PASSWORDS = {
     "postgres",
@@ -308,24 +247,44 @@ def is_placeholder_value(val, min_len=8):
     return False
 
 
-def strip_pkg_root(parts):
-    if len(parts) > 1 and parts[0] in package_roots_set:
-        return parts[1:]
-    return parts
-
-
-def detect_layer(parts):
-    full_joined = "/".join(p.lower() for p in parts)
-    trimmed = strip_pkg_root(parts)
-    trimmed_joined = "/".join(p.lower() for p in trimmed)
+def raw_detect_layer(parts_seq):
+    if not parts_seq:
+        return None
+    joined = "/".join(p.lower() for p in parts_seq)
     for pref, canon in prefix_to_layer:
-        if full_joined == pref or full_joined.startswith(pref + "/") or trimmed_joined == pref or trimmed_joined.startswith(pref + "/"):
+        if joined == pref or joined.startswith(pref + "/"):
             return canon
-    for seg in trimmed:
+    for seg in parts_seq:
         canon = alias_to_layer.get(seg.lower())
         if canon:
             return canon
     return None
+
+
+def strip_pkg_root(parts):
+    if len(parts) > 1 and parts[0] in package_roots_set:
+        sub_layer = raw_detect_layer(parts[1:])
+        if sub_layer is not None:
+            return parts[1:]
+        first_low = parts[0].lower()
+        is_mapped_layer_dir = (
+            first_low in alias_to_layer
+            or any(pref == first_low for pref, _ in prefix_to_layer)
+        )
+        if not is_mapped_layer_dir or (first_low == "app" and not app_explicitly_mapped):
+            return parts[1:]
+    return parts
+
+
+def detect_layer(parts):
+    if not parts:
+        return None
+    full_joined = "/".join(p.lower() for p in parts)
+    for pref, canon in prefix_to_layer:
+        if full_joined == pref or full_joined.startswith(pref + "/"):
+            return canon
+    trimmed = strip_pkg_root(parts)
+    return raw_detect_layer(trimmed)
 
 
 def is_local_top(top_seg):
@@ -376,9 +335,56 @@ def extract_target_names(target):
     return names
 
 
+def reconstruct_joined_str(jnode):
+    parts = []
+    lit_chunks = []
+    for part in jnode.values:
+        if isinstance(part, ast.Constant) and isinstance(part.value, str):
+            parts.append(part.value)
+            lit_chunks.append(part.value)
+        elif isinstance(part, ast.FormattedValue) and isinstance(part.value, ast.Constant) and isinstance(part.value.value, str):
+            parts.append(part.value.value)
+            lit_chunks.append(part.value.value)
+        else:
+            parts.append("{expr}")
+    return "".join(parts), lit_chunks
+
+
+def has_embedded_url_secret(raw_val):
+    m_url = URL_CRED_RE.match(raw_val)
+    if not m_url:
+        return False
+    pwd = m_url.group(2)
+    pwd_literal = pwd.replace("{expr}", "").strip()
+    if len(pwd_literal) < 4:
+        return False
+    if pwd_literal.lower() in DUMMY_DB_PASSWORDS:
+        return False
+    if is_placeholder_value(pwd_literal, min_len=4):
+        return False
+    return True
+
+
 syntax_errors = []
 layer_violations = []
+seen_layer_violations = set()
 secret_findings = []
+
+
+def record_layer_violation(rel_file, lineno, src_layer, dst_layer, module_spec, display_spec):
+    dedup_key = (rel_file, src_layer, dst_layer, module_spec)
+    if dedup_key in seen_layer_violations:
+        return
+    seen_layer_violations.add(dedup_key)
+    layer_violations.append({
+        "file": rel_file,
+        "line": lineno,
+        "sourceLayer": src_layer,
+        "targetLayer": dst_layer,
+        "moduleSpec": module_spec,
+        "spec": display_spec,
+    })
+
 
 for rel_path in files:
     full_path = os.path.join(root, *rel_path.split("/"))
@@ -405,7 +411,7 @@ for rel_path in files:
     if check_layers and not in_tests_dir:
         file_stem = os.path.splitext(raw_parts[-1])[0]
         source_parts = dir_parts + ([] if file_stem == "__init__" else [file_stem])
-        source_layer = detect_layer(source_parts)
+        source_layer = detect_layer(dir_parts) or detect_layer(source_parts)
 
         if source_layer:
             forbidden_targets = FORBIDDEN[source_layer]
@@ -416,13 +422,14 @@ for rel_path in files:
                         if mod_parts and is_local_top(mod_parts[0]):
                             target_layer = detect_layer(mod_parts)
                             if target_layer and target_layer != source_layer and target_layer in forbidden_targets:
-                                layer_violations.append({
-                                    "file": rel_path,
-                                    "line": getattr(node, "lineno", 1),
-                                    "sourceLayer": source_layer,
-                                    "targetLayer": target_layer,
-                                    "spec": f"import {alias.name}",
-                                })
+                                record_layer_violation(
+                                    rel_path,
+                                    getattr(node, "lineno", 1),
+                                    source_layer,
+                                    target_layer,
+                                    alias.name,
+                                    f"import {alias.name}",
+                                )
                 elif isinstance(node, ast.ImportFrom):
                     mod_parts = [p for p in (node.module or "").split(".") if p]
                     level = node.level or 0
@@ -431,75 +438,93 @@ for rel_path in files:
                         base = dir_parts[: max(0, len(dir_parts) - up)]
                         base_mod = base + mod_parts
                         target_layer = detect_layer(base_mod)
+                        dots = "." * level
                         if target_layer:
                             if target_layer != source_layer and target_layer in forbidden_targets:
-                                dots = "." * level
-                                layer_violations.append({
-                                    "file": rel_path,
-                                    "line": getattr(node, "lineno", 1),
-                                    "sourceLayer": source_layer,
-                                    "targetLayer": target_layer,
-                                    "spec": f"from {dots}{node.module or ''} import ...",
-                                })
+                                record_layer_violation(
+                                    rel_path,
+                                    getattr(node, "lineno", 1),
+                                    source_layer,
+                                    target_layer,
+                                    f"{dots}{node.module or ''}",
+                                    f"from {dots}{node.module or ''} import ...",
+                                )
                         elif not is_leaf_py_module(base_mod):
                             for alias in node.names:
                                 if alias.name == "*":
                                     continue
                                 tl = detect_layer(base_mod + [alias.name])
                                 if tl and tl != source_layer and tl in forbidden_targets:
-                                    dots = "." * level
-                                    layer_violations.append({
-                                        "file": rel_path,
-                                        "line": getattr(node, "lineno", 1),
-                                        "sourceLayer": source_layer,
-                                        "targetLayer": tl,
-                                        "spec": f"from {dots}{node.module or ''} import {alias.name}",
-                                    })
+                                    mod_spec = f"{dots}{node.module}.{alias.name}" if node.module else f"{dots} import {alias.name}"
+                                    record_layer_violation(
+                                        rel_path,
+                                        getattr(node, "lineno", 1),
+                                        source_layer,
+                                        tl,
+                                        mod_spec,
+                                        f"from {dots}{node.module or ''} import {alias.name}",
+                                    )
                     else:
                         if mod_parts and is_local_top(mod_parts[0]):
                             target_layer = detect_layer(mod_parts)
                             if target_layer:
                                 if target_layer != source_layer and target_layer in forbidden_targets:
-                                    layer_violations.append({
-                                        "file": rel_path,
-                                        "line": getattr(node, "lineno", 1),
-                                        "sourceLayer": source_layer,
-                                        "targetLayer": target_layer,
-                                        "spec": f"from {node.module} import ...",
-                                    })
+                                    record_layer_violation(
+                                        rel_path,
+                                        getattr(node, "lineno", 1),
+                                        source_layer,
+                                        target_layer,
+                                        node.module or "",
+                                        f"from {node.module} import ...",
+                                    )
                             elif not is_leaf_py_module(mod_parts):
                                 for alias in node.names:
                                     if alias.name == "*":
                                         continue
                                     tl = detect_layer(mod_parts + [alias.name])
                                     if tl and tl != source_layer and tl in forbidden_targets:
-                                        layer_violations.append({
-                                            "file": rel_path,
-                                            "line": getattr(node, "lineno", 1),
-                                            "sourceLayer": source_layer,
-                                            "targetLayer": tl,
-                                            "spec": f"from {node.module} import {alias.name}",
-                                        })
+                                        record_layer_violation(
+                                            rel_path,
+                                            getattr(node, "lineno", 1),
+                                            source_layer,
+                                            tl,
+                                            f"{node.module}.{alias.name}",
+                                            f"from {node.module} import {alias.name}",
+                                        )
 
-    # C. Detección de secretos quemados en AST: asignaciones, kwargs, dicts y tokens de alta certeza (fuera de tests)
+    # C. Detección de secretos quemados en AST: asignaciones, firmas def/async def, f-strings, kwargs, dicts y tokens de alta certeza (fuera de tests)
     lower_fname = raw_parts[-1].lower()
     is_test_file = in_tests_dir or lower_fname.startswith("test_") or lower_fname.endswith("_test.py")
     if not is_test_file:
         flagged_const_ids = set()
 
-        def inspect_named_secret(var_name, val_node, fallback_lineno, context_kind):
+        def mark_node_flagged(vnode):
+            flagged_const_ids.add(id(vnode))
+            if isinstance(vnode, ast.JoinedStr):
+                for sub in ast.walk(vnode):
+                    flagged_const_ids.add(id(sub))
+
+        def inspect_named_secret(var_name, val_node, fallback_lineno, context_kind="asignación literal dura en variable sensible"):
             if not isinstance(var_name, str) or not var_name.strip():
                 return False
-            if not (isinstance(val_node, ast.Constant) and isinstance(val_node.value, str)):
+
+            is_fstring = False
+            if isinstance(val_node, ast.Constant) and isinstance(val_node.value, str):
+                raw_val = val_node.value.strip()
+            elif isinstance(val_node, ast.JoinedStr):
+                reconstructed, _ = reconstruct_joined_str(val_node)
+                raw_val = reconstructed.strip()
+                is_fstring = True
+            else:
                 return False
-            raw_val = val_node.value.strip()
+
             if not raw_val:
                 return False
             lineno = getattr(val_node, "lineno", None) or fallback_lineno or 1
 
             m_tok = REAL_SECRET_PREFIX_RE.search(raw_val)
             if m_tok and not is_placeholder_value(m_tok.group(0), min_len=10):
-                flagged_const_ids.add(id(val_node))
+                mark_node_flagged(val_node)
                 secret_findings.append({
                     "file": rel_path,
                     "line": lineno,
@@ -508,35 +533,54 @@ for rel_path in files:
                 })
                 return True
 
-            if DB_URL_VAR_RE.match(var_name):
-                m_url = URL_CRED_RE.match(raw_val)
-                if m_url:
-                    pwd = m_url.group(2)
-                    if pwd.lower() not in DUMMY_DB_PASSWORDS and not is_placeholder_value(pwd, min_len=4):
-                        flagged_const_ids.add(id(val_node))
+            if has_embedded_url_secret(raw_val):
+                mark_node_flagged(val_node)
+                secret_findings.append({
+                    "file": rel_path,
+                    "line": lineno,
+                    "var": var_name,
+                    "kind": "credenciales literales embebidas en URL de conexión",
+                })
+                return True
+
+            if SECRET_VAR_RE.match(var_name):
+                if raw_val.startswith(("/", "./", "../", "http://", "https://")):
+                    return False
+                stripped_auth = AUTH_SCHEME_PREFIX_RE.sub("", raw_val).strip()
+                if not stripped_auth or " " in stripped_auth:
+                    return False
+                if not is_fstring:
+                    if (
+                        not is_placeholder_value(stripped_auth, min_len=8)
+                        and not re.match(r"^[A-Z][A-Z0-9_]+$", stripped_auth)
+                    ):
+                        mark_node_flagged(val_node)
                         secret_findings.append({
                             "file": rel_path,
                             "line": lineno,
                             "var": var_name,
-                            "kind": "credenciales literales embebidas en URL de conexión",
+                            "kind": context_kind,
                         })
                         return True
-
-            if SECRET_VAR_RE.match(var_name):
-                if (
-                    not is_placeholder_value(raw_val, min_len=8)
-                    and " " not in raw_val
-                    and not re.match(r"^[A-Z][A-Z0-9_]+$", raw_val)
-                    and not raw_val.startswith(("/", "./", "../", "http://", "https://"))
-                ):
-                    flagged_const_ids.add(id(val_node))
-                    secret_findings.append({
-                        "file": rel_path,
-                        "line": lineno,
-                        "var": var_name,
-                        "kind": context_kind,
-                    })
-                    return True
+                else:
+                    non_expr_parts = [
+                        seg.strip("_-:./")
+                        for seg in stripped_auth.split("{expr}")
+                        if seg.strip("_-:./")
+                    ]
+                    for seg in non_expr_parts:
+                        if (
+                            not is_placeholder_value(seg, min_len=8)
+                            and not re.match(r"^[A-Z][A-Z0-9_]+$", seg)
+                        ):
+                            mark_node_flagged(val_node)
+                            secret_findings.append({
+                                "file": rel_path,
+                                "line": lineno,
+                                "var": var_name,
+                                "kind": f"{context_kind} (f-string con secreto literal)",
+                            })
+                            return True
             return False
 
         for node in ast.walk(tree):
@@ -552,6 +596,26 @@ for rel_path in files:
                 for var_name in extract_target_names(node.target):
                     if inspect_named_secret(var_name, node.value, node_line, "asignación literal dura en variable sensible"):
                         break
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                pos_args = list(getattr(node.args, "posonlyargs", [])) + list(node.args.args)
+                pos_defaults = list(node.args.defaults)
+                if pos_defaults:
+                    for arg_obj, default_node in zip(pos_args[-len(pos_defaults):], pos_defaults):
+                        if default_node is not None:
+                            inspect_named_secret(
+                                arg_obj.arg,
+                                default_node,
+                                getattr(default_node, "lineno", node_line),
+                                "valor por defecto literal en parámetro sensible de función",
+                            )
+                for arg_obj, default_node in zip(node.args.kwonlyargs, node.args.kw_defaults):
+                    if default_node is not None:
+                        inspect_named_secret(
+                            arg_obj.arg,
+                            default_node,
+                            getattr(default_node, "lineno", node_line),
+                            "valor por defecto literal en parámetro keyword-only sensible",
+                        )
             elif isinstance(node, ast.keyword) and isinstance(node.arg, str):
                 inspect_named_secret(node.arg, node.value, node_line, "argumento keyword literal en parámetro sensible")
             elif isinstance(node, ast.Dict):
@@ -563,9 +627,52 @@ for rel_path in files:
                             getattr(k_node, "lineno", node_line),
                             "valor literal duro en clave sensible de diccionario",
                         )
+            elif isinstance(node, ast.Call):
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr in ("getenv", "get", "setdefault")
+                    and len(node.args) >= 1
+                    and isinstance(node.args[0], ast.Constant)
+                    and isinstance(node.args[0].value, str)
+                ):
+                    default_arg = node.args[1] if len(node.args) >= 2 else None
+                    if default_arg is None:
+                        for kw in node.keywords:
+                            if kw.arg == "default":
+                                default_arg = kw.value
+                                break
+                    if default_arg is not None:
+                        inspect_named_secret(
+                            node.args[0].value,
+                            default_arg,
+                            getattr(default_arg, "lineno", node_line),
+                            "valor fallback literal en variable sensible de entorno",
+                        )
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in flagged_const_ids:
+            if isinstance(node, ast.JoinedStr) and id(node) not in flagged_const_ids:
+                reconstructed, _ = reconstruct_joined_str(node)
+                raw_val = reconstructed.strip()
+                if not raw_val:
+                    continue
+                m_tok = REAL_SECRET_PREFIX_RE.search(raw_val)
+                if m_tok and not is_placeholder_value(m_tok.group(0), min_len=12):
+                    mark_node_flagged(node)
+                    secret_findings.append({
+                        "file": rel_path,
+                        "line": getattr(node, "lineno", 1),
+                        "var": "<f-string>",
+                        "kind": "prefijo de token de alta certeza detectado en f-string",
+                    })
+                elif has_embedded_url_secret(raw_val):
+                    mark_node_flagged(node)
+                    secret_findings.append({
+                        "file": rel_path,
+                        "line": getattr(node, "lineno", 1),
+                        "var": "<f-string>",
+                        "kind": "credenciales literales embebidas en URL de conexión (f-string)",
+                    })
+            elif isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in flagged_const_ids:
                 raw_val = node.value.strip()
                 if not raw_val:
                     continue
@@ -576,6 +683,13 @@ for rel_path in files:
                         "line": getattr(node, "lineno", 1),
                         "var": "<literal>",
                         "kind": "prefijo de token de alta certeza detectado en constante string",
+                    })
+                elif has_embedded_url_secret(raw_val):
+                    secret_findings.append({
+                        "file": rel_path,
+                        "line": getattr(node, "lineno", 1),
+                        "var": "<literal>",
+                        "kind": "credenciales literales embebidas en URL de conexión",
                     })
 
 print(json.dumps({
@@ -592,6 +706,8 @@ function main() {
     process.exit(0);
   }
 
+  const cfg = loadPythonHarnessConfig(root);
+
   const pyFiles = collectPythonFiles(root);
   if (pyFiles.length === 0) {
     process.exit(0);
@@ -606,7 +722,6 @@ function main() {
     );
   }
 
-  const cfg = loadPythonHarnessConfig(root);
   const checkLayers = !(cfg.mode === 'non-dev' || cfg.enforceAstChecks === false);
 
   const payload = JSON.stringify({
@@ -614,6 +729,7 @@ function main() {
     files: pyFiles,
     layerMap: cfg.layerMap,
     directLayerEntries: cfg.directLayerEntries,
+    appExplicitlyMapped: cfg.appExplicitlyMapped,
     packageRoots: cfg.packageRoots,
     checkLayers
   });

@@ -1,14 +1,14 @@
 # Session Handoff
 
 ## Current Objective
-- **Goal:** Repositorio `sebastian web Portafolio` actualizado y certificado con **Universal Chameleon Harness v2.0** (`12/12` vectores adversariales defendidos + `6/6` escenarios E2E en verde), listo para planificar e implementar `feat-001` del portafolio web de Sebas.
-- **Current status:** `clean-state` (`WIP = 0`; `Overall: 100/100`; `0 CRLF`)
-- **Branch / commit:** `main` (Universal Chameleon Harness v2.0 certificado)
+- **Goal:** Repositorio `sebastian web Portafolio` actualizado y certificado con **Universal Chameleon Harness v2.1** (tras campaña Red-Team de 4 agentes / 400+ ataques y sellado Blue-Team `A`/`B`/`C`), listo para planificar e implementar `feat-001` del portafolio web de Sebas.
+- **Current status:** `clean-state` (`WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `28/28` SHA-256 paridad con plantilla maestra)
+- **Branch / commit:** `main` (Universal Chameleon Harness v2.1 certificado)
 
 ## Completed This Session
-- [x] Auditoría de costuras e integración quirúrgica de los módulos v2.0 sobre `Plantilla-Maestra-Arnes` (`layerMap` unificado, auto-bootstrap `.venv` previo a Puerta 1, compatibilidad `unittest` Python 3.14 y hook `Stop` E2E).
-- [x] Ejecución en sandbox aislado (`os.tmpdir()`) de los 6 escenarios E2E (`universal-e2e-audit.mjs` -> `6/6 PASS`) y los `12/12` vectores adversariales (`adversarial-audit.mjs` -> `12/12 DEFENDED`).
-- [x] Sincronización completa de **Universal Chameleon Harness v2.0** hacia `sebastian web Portafolio` preservando la identidad del proyecto (`feature_list.json`, `loop-state.md` con `iteration: 1` y `WIP = 0`, y `Addendum v2.0` en `docs/design-docs/adversarial-audit-day1.md`).
+- [x] Verificación de costuras e integración de los 12 archivos sellados por Blue-Team `A`, `B` y `C` sobre `Plantilla-Maestra-Arnes` (`harness-hooks.mjs = 220/280L`, `0` violaciones en `scripts/lib/*.mjs`, `validateHarnessConfig` 100% alineado con `check-architecture.sh`).
+- [x] Sincronización quirúrgica `28/28` SHA-256 hacia `sebastian web Portafolio` preservando la identidad del proyecto (`feature_list.json` con `feat-001` en `not-started` y `WIP = 0`, `loop-state.md` con protocolo `discard` para archivos `untracked` y `Addendum v2.1` en `docs/design-docs/adversarial-audit-day1.md`).
+- [x] Ejecución en verde de `universal-e2e-audit.mjs` (`6/6 PASS`), `adversarial-audit.mjs` (`12/12 DEFENDED`) y batería cruzada de vectores críticos Red-Team 1..4 en `os.tmpdir()`.
 
 ## Verification Evidence
 

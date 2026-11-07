@@ -7,6 +7,31 @@ export const HARNESS_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.
 export const FEATURE_LIST_SCHEMA_PATH = path.join(HARNESS_ROOT, 'scripts', 'feature-list.schema.json');
 export const SUBSYSTEMS = ['instructions', 'state', 'verification', 'scope', 'lifecycle'];
 export const CANONICAL_FEATURE_STATUSES = ['not-started', 'in-progress', 'blocked', 'done'];
+export const CANONICAL_LAYERS = ['types', 'config', 'repo', 'service', 'runtime', 'ui'];
+export const DEFAULT_LAYER_MAP = {
+  types: ['types', 'schemas', 'interfaces', 'contracts', 'domain'],
+  config: ['config', 'settings', 'constants'],
+  repo: ['repo', 'repositories', 'db', 'data', 'adapters', 'clients', 'models'],
+  service: ['service', 'services', 'usecases', 'core', 'logic'],
+  runtime: ['runtime', 'server', 'cli', 'workers', 'jobs', 'api', 'middleware'],
+  ui: ['ui', 'components', 'pages', 'views', 'app', 'routes', 'templates', 'screens']
+};
+
+const VALID_CONFIG_MODES = new Set(['auto', 'greenfield', 'brownfield', 'non-dev']);
+const CANONICAL_LAYER_SET = new Set(CANONICAL_LAYERS);
+const ALLOWED_CONFIG_ROOT_KEYS = new Set(['mode', 'activeStacks', 'layerMap', 'brownfield', 'python', 'nonDev']);
+const ALLOWED_BROWNFIELD_KEYS = new Set(['enabled', 'allowUnmappedDirs', 'allowEmptyDirs', 'maxLegacyLayerViolations']);
+const ALLOWED_PYTHON_KEYS = new Set(['requireVenvForPip', 'packageRoots', 'enforceAstChecks']);
+const ALLOWED_NON_DEV_KEYS = new Set(['deliverableDirs', 'forbidPlaceholders', 'checkMarkdownLinks', 'minDeliverableWords']);
+const DEFAULT_PACKAGE_ROOTS = ['src', 'app', 'backend'];
+const DEFAULT_DELIVERABLE_DIRS = ['deliverables', 'content', 'research', 'reports'];
+const RESERVED_CONFIG_DIRS = new Set([
+  '.git', 'node_modules', '.venv', 'venv', 'env', 'dist', 'build', 'coverage',
+  '.next', '.astro', '.svelte-kit', 'scripts', 'docs', 'memory', '.agents',
+  'tests', 'test', '__pycache__', 'deliverables'
+]);
+const FORBIDDEN_SINGLE_LAYER_DIRS = new Set([...RESERVED_CONFIG_DIRS, 'src', 'backend', 'packages', 'apps']);
+
 const ALLOWED_FEATURE_STATUSES = new Set(CANONICAL_FEATURE_STATUSES);
 const ALLOWED_ROOT_KEYS = new Set(['project', 'features']);
 const ALLOWED_FEATURE_KEYS = new Set([
@@ -70,33 +95,588 @@ export async function writeText(filePath, contents) {
   await writeFile(filePath, contents, 'utf8');
 }
 
-function resolveHarnessMode(byPath, root) {
-  try {
-    const inline = byPath.get('harness.config.json');
-    if (typeof inline === 'string' && inline.trim()) {
-      const parsed = JSON.parse(inline);
-      if (typeof parsed?.mode === 'string' && parsed.mode.trim()) return parsed.mode.trim();
+function isPlainConfigObject(val) {
+  return Boolean(val) && typeof val === 'object' && !Array.isArray(val);
+}
+
+function cloneDefaultLayerMap() {
+  return Object.fromEntries(CANONICAL_LAYERS.map((layer) => [layer, [...DEFAULT_LAYER_MAP[layer]]]));
+}
+
+function isSafeRelativeConfigDir(rawDir) {
+  if (typeof rawDir !== 'string') return false;
+  const trimmed = rawDir.trim();
+  if (!trimmed || trimmed.includes('\0')) return false;
+  if (trimmed.startsWith('/') || trimmed.startsWith('\\') || /^[a-zA-Z]:/.test(trimmed)) return false;
+  const cleaned = trimmed.replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/^\/+|\/+$/g, '');
+  if (!cleaned) return false;
+  return !cleaned.split('/').some((seg) => !seg || seg === '.' || seg === '..');
+}
+
+function normalizeConfigDir(rawDir) {
+  return rawDir.trim().replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/^\/+|\/+$/g, '');
+}
+
+function failConfig(error, why, fix) {
+  return { ok: false, config: null, error, why, fix };
+}
+
+export function validateHarnessConfig(root = process.cwd(), inlineRaw = undefined) {
+  const resolvedRoot = path.resolve(root);
+  const cfgPath = path.join(resolvedRoot, 'harness.config.json');
+  let rawText = '';
+
+  if (inlineRaw !== undefined) {
+    if (typeof inlineRaw !== 'string') {
+      return failConfig(
+        "El contenido proporcionado para 'harness.config.json' no es texto UTF-8 válido.",
+        'La configuración Camaleón debe leerse de forma determinista y Fail-Closed.',
+        "Asegúrate de que 'harness.config.json' sea un archivo JSON UTF-8 sin BOM y con saltos LF."
+      );
     }
-    const cfgPath = path.join(path.resolve(root), 'harness.config.json');
-    if (existsSync(cfgPath) && statSync(cfgPath).isFile()) {
-      const parsed = JSON.parse(readFileSync(cfgPath, 'utf8'));
-      if (typeof parsed?.mode === 'string' && parsed.mode.trim()) return parsed.mode.trim();
+    if (inlineRaw.startsWith('\uFEFF')) {
+      return failConfig(
+        "Se detectó marca UTF-8 BOM (0xEF 0xBB 0xBF) en 'harness.config.json'.",
+        "El invariante de portabilidad del arnés exige archivos JSON en UTF-8 puro sin BOM.",
+        "Guarda 'harness.config.json' en codificación UTF-8 sin BOM y saltos de línea LF."
+      );
     }
-  } catch {
-    return 'auto';
+    if (inlineRaw.includes('\r')) {
+      return failConfig(
+        "Saltos de línea CRLF ('\\r') detectados en 'harness.config.json'.",
+        'Todos los manifiestos y configuraciones del arnés exigen saltos de línea LF puros (0 CRLF).',
+        "Normaliza 'harness.config.json' a LF puro eliminando todos los bytes '\\r' (0x0D)."
+      );
+    }
+    rawText = inlineRaw;
+  } else {
+    if (!existsSync(cfgPath)) {
+      const layerMap = cloneDefaultLayerMap();
+      return {
+        ok: true,
+        config: {
+          exists: false,
+          mode: 'auto',
+          activeStacks: [],
+          layerMap,
+          directLayerEntries: [],
+          appExplicitlyMapped: false,
+          collapsiblePackageRoots: [...DEFAULT_PACKAGE_ROOTS],
+          brownfield: {
+            enabled: false,
+            allowUnmappedDirs: true,
+            allowEmptyDirs: false,
+            maxLegacyLayerViolations: 0
+          },
+          python: {
+            requireVenvForPip: true,
+            packageRoots: [...DEFAULT_PACKAGE_ROOTS],
+            enforceAstChecks: true
+          },
+          nonDev: {
+            deliverableDirs: [...DEFAULT_DELIVERABLE_DIRS],
+            forbidPlaceholders: true,
+            checkMarkdownLinks: true,
+            minDeliverableWords: 15
+          }
+        },
+        error: null,
+        why: null,
+        fix: null
+      };
+    }
+
+    let st = null;
+    try {
+      st = statSync(cfgPath);
+    } catch (err) {
+      return failConfig(
+        `No se pudo inspeccionar 'harness.config.json' (${err.message}).`,
+        'El validador Fail-Closed requiere acceso de lectura determinista a harness.config.json.',
+        "Verifica permisos y que 'harness.config.json' sea un archivo regular válido."
+      );
+    }
+    if (!st.isFile()) {
+      return failConfig(
+        "La ruta 'harness.config.json' no es un archivo regular.",
+        'harness.config.json debe ser un archivo JSON plano en la raíz del proyecto.',
+        "Elimina el directorio o nodo inválido 'harness.config.json' y crea un archivo JSON válido."
+      );
+    }
+
+    let rawBuf = null;
+    try {
+      rawBuf = readFileSync(cfgPath);
+    } catch (err) {
+      return failConfig(
+        `No se pudo leer 'harness.config.json' (${err.message}).`,
+        'El arnés aplica política Fail-Closed cuando la configuración no puede leerse.',
+        "Verifica los permisos de lectura de 'harness.config.json'."
+      );
+    }
+
+    if (rawBuf.length >= 3 && rawBuf[0] === 0xef && rawBuf[1] === 0xbb && rawBuf[2] === 0xbf) {
+      return failConfig(
+        "Se detectó marca UTF-8 BOM (0xEF 0xBB 0xBF) en 'harness.config.json'.",
+        'El invariante de portabilidad multiplataforma prohíbe UTF-8 BOM en manifiestos y scripts del arnés.',
+        "Guarda 'harness.config.json' en UTF-8 puro sin BOM."
+      );
+    }
+    if (rawBuf.includes(0x0d)) {
+      return failConfig(
+        "Saltos de línea CRLF ('\\r') detectados en 'harness.config.json'.",
+        'Los artefactos de configuración del arnés deben mantenerse en LF puro (0 CRLF).',
+        "Convierte 'harness.config.json' a LF puro eliminando los bytes '\\r' (0x0D)."
+      );
+    }
+
+    rawText = rawBuf.toString('utf8');
+    if (rawText.startsWith('\uFEFF')) {
+      return failConfig(
+        "Se detectó carácter BOM ('\\uFEFF') al inicio de 'harness.config.json'.",
+        'El invariante de portabilidad prohíbe BOM en archivos JSON del arnés.',
+        "Elimina el carácter BOM inicial de 'harness.config.json'."
+      );
+    }
   }
-  return 'auto';
+
+  if (!rawText.trim()) {
+    return failConfig(
+      "El archivo 'harness.config.json' está vacío.",
+      'Un archivo harness.config.json de 0 bytes o en blanco viola el contrato Fail-Closed de configuración.',
+      "Escribe un objeto JSON válido en 'harness.config.json' o elimínalo para usar los valores por defecto."
+    );
+  }
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (err) {
+    return failConfig(
+      `JSON mal formado en 'harness.config.json' (${err.message}).`,
+      'El arnés requiere un archivo harness.config.json sintácticamente válido bajo política Fail-Closed.',
+      "Corrige la sintaxis JSON en 'harness.config.json' (comas, llaves o comillas dobles)."
+    );
+  }
+
+  if (!isPlainConfigObject(parsed)) {
+    return failConfig(
+      "La raíz de 'harness.config.json' debe ser un objeto JSON plano.",
+      'No se admiten arreglos, null ni valores primitivos como raíz de harness.config.json.',
+      "Reemplaza la raíz de 'harness.config.json' por un objeto JSON con claves válidas."
+    );
+  }
+
+  for (const key of Object.keys(parsed)) {
+    if (!ALLOWED_CONFIG_ROOT_KEYS.has(key)) {
+      return failConfig(
+        `Clave raíz desconocida '${key}' en 'harness.config.json'.`,
+        'El esquema estricto de harness.config.json rechaza propiedades desconocidas para impedir errores silenciosos.',
+        `Elimina '${key}' de 'harness.config.json' (claves raíz permitidas: mode, activeStacks, layerMap, brownfield, python, nonDev).`
+      );
+    }
+  }
+
+  let mode = 'auto';
+  if (parsed.mode !== undefined) {
+    if (typeof parsed.mode !== 'string' || !VALID_CONFIG_MODES.has(parsed.mode)) {
+      return failConfig(
+        `Valor inválido para 'mode' en 'harness.config.json' (${JSON.stringify(parsed.mode)}).`,
+        "El campo 'mode' solo admite exactamente 'auto', 'greenfield', 'brownfield' o 'non-dev'.",
+        'Actualiza "mode" en harness.config.json a "auto", "greenfield", "brownfield" o "non-dev".'
+      );
+    }
+    mode = parsed.mode;
+  }
+
+  let activeStacks = [];
+  if (parsed.activeStacks !== undefined) {
+    if (
+      !Array.isArray(parsed.activeStacks)
+      || !parsed.activeStacks.every((item) => typeof item === 'string' && item.trim().length > 0)
+    ) {
+      return failConfig(
+        "El campo 'activeStacks' en 'harness.config.json' debe ser un arreglo de strings no vacíos.",
+        'activeStacks enumera opcionalmente stacks activos sin entradas vacías ni tipos no textuales.',
+        'Define "activeStacks" como [] o un arreglo de strings no vacíos (ej. ["node", "python"]).'
+      );
+    }
+    activeStacks = parsed.activeStacks.map((item) => item.trim());
+  }
+
+  const mergedLayerMap = cloneDefaultLayerMap();
+  const directLayerEntries = [];
+  let appExplicitlyMapped = false;
+
+  if (parsed.layerMap !== undefined) {
+    if (!isPlainConfigObject(parsed.layerMap)) {
+      return failConfig(
+        "El bloque 'layerMap' en 'harness.config.json' debe ser un objeto JSON plano.",
+        'layerMap mapea las 6 capas canónicas (types, config, repo, service, runtime, ui) a directorios del proyecto.',
+        'Define "layerMap" como objeto JSON usando { "<capa>": ["dir1"] } o { "<dir>": "<capa>" }.'
+      );
+    }
+
+    const explicitByLower = new Map();
+    for (const [rawKey, rawVal] of Object.entries(parsed.layerMap)) {
+      if (typeof rawKey !== 'string' || !rawKey.trim() || rawKey.includes('\0')) {
+        return failConfig(
+          "Clave vacía o inválida dentro de 'layerMap' en 'harness.config.json'.",
+          'Todas las claves de layerMap deben ser nombres de capa canónicos o rutas relativas no vacías.',
+          "Elimina o corrige las claves vacías en 'layerMap' dentro de 'harness.config.json'."
+        );
+      }
+      const trimmedKey = rawKey.trim();
+
+      if (Array.isArray(rawVal)) {
+        if (!CANONICAL_LAYER_SET.has(trimmedKey)) {
+          return failConfig(
+            `Capa desconocida 'layerMap.${trimmedKey}' en 'harness.config.json'.`,
+            'El formato canónico { "<capa>": ["dir1"] } solo acepta las 6 capas: types, config, repo, service, runtime y ui.',
+            `Usa una de las 6 capas canónicas en lugar de '${trimmedKey}' o el formato invertido { "${trimmedKey}": "<capa>" }.`
+          );
+        }
+        if (rawVal.length === 0 || !rawVal.every((item) => isSafeRelativeConfigDir(item))) {
+          return failConfig(
+            `Valor inválido o vacío en 'layerMap.${trimmedKey}' dentro de 'harness.config.json'.`,
+            'Cada arreglo en layerMap debe contener al menos un nombre de directorio relativo no vacío y sin recorrido ".." ni rutas absolutas.',
+            `Define 'layerMap.${trimmedKey}' como un arreglo no vacío de directorios válidos (ej. ["${trimmedKey}"]).`
+          );
+        }
+        for (const item of rawVal) {
+          const cleanAlias = normalizeConfigDir(item);
+          const lowerAlias = cleanAlias.toLowerCase();
+          if (CANONICAL_LAYER_SET.has(lowerAlias) && lowerAlias !== trimmedKey) {
+            return failConfig(
+              `Colisión ambigua en 'layerMap.${trimmedKey}': no se puede reasignar la capa canónica '${cleanAlias}' hacia '${trimmedKey}'.`,
+              'Los 6 nombres canónicos (types, config, repo, service, runtime, ui) están reservados a su propia capa arquitectónica.',
+              `Elimina '${cleanAlias}' de 'layerMap.${trimmedKey}' en 'harness.config.json'.`
+            );
+          }
+          if (!cleanAlias.includes('/') && FORBIDDEN_SINGLE_LAYER_DIRS.has(lowerAlias)) {
+            return failConfig(
+              `Colisión ambigua en 'layerMap.${trimmedKey}': el directorio contenedor o reservado '${cleanAlias}' no puede mapearse como capa.`,
+              'Mapear raíces contenedoras (src, backend, packages, apps) o carpetas del arnés (scripts, tests, docs) ciega el escáner de subcapas.',
+              `Mapea subdirectorios de dominio específicos en lugar de '${cleanAlias}' dentro de 'harness.config.json'.`
+            );
+          }
+          const prev = explicitByLower.get(lowerAlias);
+          if (prev && prev.layer !== trimmedKey) {
+            return failConfig(
+              `Colisión ambigua en 'layerMap': el directorio '${cleanAlias}' está asignado tanto a '${prev.layer}' como a '${trimmedKey}'.`,
+              'Un mismo directorio no puede pertenecer simultáneamente a dos capas arquitectónicas distintas.',
+              `Asigna '${cleanAlias}' a una única capa canónica dentro de 'layerMap'.`
+            );
+          }
+          explicitByLower.set(lowerAlias, { alias: cleanAlias, layer: trimmedKey });
+          if (lowerAlias === 'app' && trimmedKey !== 'ui') {
+            appExplicitlyMapped = true;
+          }
+        }
+      } else if (typeof rawVal === 'string') {
+        if (!isSafeRelativeConfigDir(trimmedKey)) {
+          return failConfig(
+            `Directorio inválido 'layerMap.${trimmedKey}' en 'harness.config.json'.`,
+            'Las claves de directorio en el formato invertido de layerMap deben ser rutas relativas seguras y no vacías.',
+            `Corrige '${trimmedKey}' en 'layerMap' usando un nombre de directorio relativo válido.`
+          );
+        }
+        const targetLayer = rawVal.trim();
+        if (!CANONICAL_LAYER_SET.has(targetLayer)) {
+          return failConfig(
+            `Capa destino inválida '${rawVal}' para 'layerMap.${trimmedKey}' en 'harness.config.json'.`,
+            'El formato invertido { "<dir>": "<capa>" } solo admite como destino types, config, repo, service, runtime o ui.',
+            `Cambia el valor de 'layerMap.${trimmedKey}' a una de las 6 capas canónicas.`
+          );
+        }
+        const cleanDir = normalizeConfigDir(trimmedKey);
+        const lowerDir = cleanDir.toLowerCase();
+        if (CANONICAL_LAYER_SET.has(lowerDir) && lowerDir !== targetLayer) {
+          return failConfig(
+            `Colisión ambigua en 'layerMap': no se puede reasignar la capa canónica '${cleanDir}' hacia '${targetLayer}'.`,
+            'Los 6 nombres canónicos (types, config, repo, service, runtime, ui) están reservados a su propia capa arquitectónica.',
+            `Elimina o corrige '${cleanDir}' dentro de 'layerMap' en 'harness.config.json'.`
+          );
+        }
+        if (!cleanDir.includes('/') && FORBIDDEN_SINGLE_LAYER_DIRS.has(lowerDir)) {
+          return failConfig(
+            `Colisión ambigua en 'layerMap': el directorio contenedor o reservado '${cleanDir}' no puede mapearse como capa.`,
+            'Mapear raíces contenedoras (src, backend, packages, apps) o carpetas del arnés ciega la resolución de capas reales.',
+            `Elimina '${cleanDir}' de 'layerMap' y mapea las carpetas internas de negocio.`
+          );
+        }
+        const prev = explicitByLower.get(lowerDir);
+        if (prev && prev.layer !== targetLayer) {
+          return failConfig(
+            `Colisión ambigua en 'layerMap': el directorio '${cleanDir}' está asignado tanto a '${prev.layer}' como a '${targetLayer}'.`,
+            'Un mismo directorio no puede pertenecer simultáneamente a dos capas arquitectónicas distintas.',
+            `Asigna '${cleanDir}' a una única capa canónica dentro de 'layerMap'.`
+          );
+        }
+        explicitByLower.set(lowerDir, { alias: cleanDir, layer: targetLayer });
+        directLayerEntries.push([cleanDir, targetLayer]);
+        if (lowerDir === 'app' && targetLayer !== 'ui') {
+          appExplicitlyMapped = true;
+        }
+      } else {
+        return failConfig(
+          `Tipo inválido en 'layerMap.${trimmedKey}' dentro de 'harness.config.json'.`,
+          'Cada entrada de layerMap debe ser un arreglo no vacío de strings ({ "<capa>": ["dir1"] }) o un string de capa canónica ({ "<dir>": "<capa>" }).',
+          `Corrige el tipo de 'layerMap.${trimmedKey}' en 'harness.config.json'.`
+        );
+      }
+    }
+
+    for (const [lowerAlias, { alias, layer }] of explicitByLower.entries()) {
+      for (const other of CANONICAL_LAYERS) {
+        if (other !== layer) {
+          mergedLayerMap[other] = mergedLayerMap[other].filter((item) => item.toLowerCase() !== lowerAlias);
+        }
+      }
+      if (!mergedLayerMap[layer].some((item) => item.toLowerCase() === lowerAlias)) {
+        mergedLayerMap[layer].push(alias);
+      }
+    }
+  }
+
+  const brownfield = {
+    enabled: false,
+    allowUnmappedDirs: true,
+    allowEmptyDirs: false,
+    maxLegacyLayerViolations: 0
+  };
+  if (parsed.brownfield !== undefined) {
+    if (!isPlainConfigObject(parsed.brownfield)) {
+      return failConfig(
+        "El bloque 'brownfield' en 'harness.config.json' debe ser un objeto JSON plano.",
+        'brownfield agrupa las banderas de adopción gradual en repositorios heredados.',
+        'Define "brownfield" como objeto JSON con enabled, allowUnmappedDirs, allowEmptyDirs y maxLegacyLayerViolations.'
+      );
+    }
+    for (const key of Object.keys(parsed.brownfield)) {
+      if (!ALLOWED_BROWNFIELD_KEYS.has(key)) {
+        return failConfig(
+          `Clave desconocida 'brownfield.${key}' en 'harness.config.json'.`,
+          'El bloque brownfield solo admite enabled, allowUnmappedDirs, allowEmptyDirs y maxLegacyLayerViolations.',
+          `Elimina '${key}' de 'brownfield' en 'harness.config.json'.`
+        );
+      }
+    }
+    for (const boolKey of ['enabled', 'allowUnmappedDirs', 'allowEmptyDirs']) {
+      if (parsed.brownfield[boolKey] !== undefined) {
+        if (typeof parsed.brownfield[boolKey] !== 'boolean') {
+          return failConfig(
+            `El campo 'brownfield.${boolKey}' en 'harness.config.json' debe ser booleano (true o false).`,
+            'No se admiten strings como "false" ni números en banderas booleanas de configuración.',
+            `Cambia 'brownfield.${boolKey}' a true o false sin comillas en 'harness.config.json'.`
+          );
+        }
+        brownfield[boolKey] = parsed.brownfield[boolKey];
+      }
+    }
+    if (parsed.brownfield.maxLegacyLayerViolations !== undefined) {
+      const maxViol = parsed.brownfield.maxLegacyLayerViolations;
+      if (!Number.isInteger(maxViol) || maxViol < 0) {
+        return failConfig(
+          "El campo 'brownfield.maxLegacyLayerViolations' en 'harness.config.json' debe ser un entero >= 0.",
+          'El tope del trinquete brownfield requiere un número entero no negativo exacto.',
+          'Configura "maxLegacyLayerViolations" con un entero >= 0 (ej. 0) en harness.config.json.'
+        );
+      }
+      brownfield.maxLegacyLayerViolations = maxViol;
+    }
+  }
+
+  const python = {
+    requireVenvForPip: true,
+    packageRoots: [...DEFAULT_PACKAGE_ROOTS],
+    enforceAstChecks: true
+  };
+  if (parsed.python !== undefined) {
+    if (!isPlainConfigObject(parsed.python)) {
+      return failConfig(
+        "El bloque 'python' en 'harness.config.json' debe ser un objeto JSON plano.",
+        'python configura requireVenvForPip, packageRoots y enforceAstChecks.',
+        'Define "python" como un objeto JSON plano en harness.config.json.'
+      );
+    }
+    for (const key of Object.keys(parsed.python)) {
+      if (!ALLOWED_PYTHON_KEYS.has(key)) {
+        return failConfig(
+          `Clave desconocida 'python.${key}' en 'harness.config.json'.`,
+          'El bloque python solo admite requireVenvForPip, packageRoots y enforceAstChecks.',
+          `Elimina '${key}' de 'python' en 'harness.config.json'.`
+        );
+      }
+    }
+    for (const boolKey of ['requireVenvForPip', 'enforceAstChecks']) {
+      if (parsed.python[boolKey] !== undefined) {
+        if (typeof parsed.python[boolKey] !== 'boolean') {
+          return failConfig(
+            `El campo 'python.${boolKey}' en 'harness.config.json' debe ser booleano (true o false).`,
+            'No se admiten strings ni otros tipos en banderas booleanas del bloque python.',
+            `Corrige 'python.${boolKey}' a true o false en 'harness.config.json'.`
+          );
+        }
+        python[boolKey] = parsed.python[boolKey];
+      }
+    }
+    if (parsed.python.packageRoots !== undefined) {
+      if (
+        !Array.isArray(parsed.python.packageRoots)
+        || parsed.python.packageRoots.length === 0
+        || !parsed.python.packageRoots.every((item) => isSafeRelativeConfigDir(item))
+      ) {
+        return failConfig(
+          "El campo 'python.packageRoots' en 'harness.config.json' debe ser un arreglo no vacío de directorios relativos no vacíos.",
+          'packageRoots no admite arreglos vacíos, entradas vacías, rutas absolutas ni segmentos "..".',
+          'Configura "packageRoots" como un arreglo de strings no vacíos (ej. ["src", "app", "backend"]).'
+        );
+      }
+      for (const rawRoot of parsed.python.packageRoots) {
+        const cleanRoot = normalizeConfigDir(rawRoot);
+        if (RESERVED_CONFIG_DIRS.has(cleanRoot.toLowerCase())) {
+          return failConfig(
+            `Raíz reservada inválida '${rawRoot}' en 'python.packageRoots' dentro de 'harness.config.json'.`,
+            'Las carpetas internas del arnés o entornos (.venv, scripts, tests, docs, node_modules) no pueden declararse como packageRoots.',
+            `Retira '${rawRoot}' de 'python.packageRoots' en 'harness.config.json'.`
+          );
+        }
+      }
+      python.packageRoots = parsed.python.packageRoots.map((item) => normalizeConfigDir(item));
+    }
+  }
+
+  const resolvedSegToLayer = new Map();
+  for (const canon of CANONICAL_LAYERS) {
+    resolvedSegToLayer.set(canon, canon);
+    for (const alias of mergedLayerMap[canon]) {
+      resolvedSegToLayer.set(alias.toLowerCase(), canon);
+    }
+  }
+  for (const pr of python.packageRoots) {
+    const lowPr = pr.toLowerCase();
+    if (resolvedSegToLayer.has(lowPr)) {
+      const mappedLayer = resolvedSegToLayer.get(lowPr);
+      const isStandardAppDefault = lowPr === 'app' && mappedLayer === 'ui' && !appExplicitlyMapped;
+      if (!isStandardAppDefault) {
+        return failConfig(
+          `Colisión ambigua en 'harness.config.json': '${pr}' figura simultáneamente en 'python.packageRoots' y como carpeta mapeada a la capa '${mappedLayer}' en 'layerMap'.`,
+          'Declarar una carpeta mapeada de capa como packageRoot ciega o distorsiona la detección del flujo direccional de 6 capas.',
+          `Usa raíces contenedoras separadas en 'python.packageRoots' (ej. src, backend) y deja '${pr}' únicamente en 'layerMap'.`
+        );
+      }
+    }
+  }
+
+  const nonDev = {
+    deliverableDirs: [...DEFAULT_DELIVERABLE_DIRS],
+    forbidPlaceholders: true,
+    checkMarkdownLinks: true,
+    minDeliverableWords: 15
+  };
+  if (parsed.nonDev !== undefined) {
+    if (!isPlainConfigObject(parsed.nonDev)) {
+      return failConfig(
+        "El bloque 'nonDev' en 'harness.config.json' debe ser un objeto JSON plano.",
+        'nonDev gobierna la validación de entregables documentales.',
+        'Define "nonDev" como un objeto JSON plano en harness.config.json.'
+      );
+    }
+    for (const key of Object.keys(parsed.nonDev)) {
+      if (!ALLOWED_NON_DEV_KEYS.has(key)) {
+        return failConfig(
+          `Clave desconocida 'nonDev.${key}' en 'harness.config.json'.`,
+          'El bloque nonDev solo admite deliverableDirs, forbidPlaceholders, checkMarkdownLinks y minDeliverableWords.',
+          `Elimina '${key}' de 'nonDev' en 'harness.config.json'.`
+        );
+      }
+    }
+    if (parsed.nonDev.deliverableDirs !== undefined) {
+      if (
+        !Array.isArray(parsed.nonDev.deliverableDirs)
+        || parsed.nonDev.deliverableDirs.length === 0
+        || !parsed.nonDev.deliverableDirs.every((item) => isSafeRelativeConfigDir(item))
+      ) {
+        return failConfig(
+          "El campo 'nonDev.deliverableDirs' en 'harness.config.json' debe ser un arreglo no vacío de directorios relativos no vacíos.",
+          'deliverableDirs no admite arreglos vacíos, strings vacíos, tipos no textuales ni rutas fuera del repositorio.',
+          'Configura "deliverableDirs" como un arreglo de strings no vacíos (ej. ["deliverables", "reports"]).'
+        );
+      }
+      nonDev.deliverableDirs = parsed.nonDev.deliverableDirs.map((item) => normalizeConfigDir(item));
+    }
+    for (const boolKey of ['forbidPlaceholders', 'checkMarkdownLinks']) {
+      if (parsed.nonDev[boolKey] !== undefined) {
+        if (typeof parsed.nonDev[boolKey] !== 'boolean') {
+          return failConfig(
+            `El campo 'nonDev.${boolKey}' en 'harness.config.json' debe ser booleano (true o false).`,
+            'Las reglas de calidad documental exigen valores booleanos estrictos.',
+            `Actualiza 'nonDev.${boolKey}' a true o false en 'harness.config.json'.`
+          );
+        }
+        nonDev[boolKey] = parsed.nonDev[boolKey];
+      }
+    }
+    if (parsed.nonDev.minDeliverableWords !== undefined) {
+      const minWords = parsed.nonDev.minDeliverableWords;
+      if (!Number.isInteger(minWords) || minWords < 0) {
+        return failConfig(
+          "El campo 'nonDev.minDeliverableWords' en 'harness.config.json' debe ser un entero >= 0.",
+          'minDeliverableWords representa el mínimo exacto no negativo de palabras reales por entregable.',
+          'Configura "minDeliverableWords" con un entero >= 0 (ej. 15) en harness.config.json.'
+        );
+      }
+      nonDev.minDeliverableWords = minWords;
+    }
+  }
+
+  const mappedLowerDirs = new Set(CANONICAL_LAYERS);
+  for (const canon of CANONICAL_LAYERS) {
+    for (const alias of mergedLayerMap[canon]) {
+      mappedLowerDirs.add(alias.toLowerCase());
+    }
+  }
+
+  const collapsiblePackageRoots = python.packageRoots.filter((pkgRoot) => {
+    const low = pkgRoot.toLowerCase();
+    if (low === 'app' && !appExplicitlyMapped) return true;
+    return !mappedLowerDirs.has(low);
+  });
+
+  return {
+    ok: true,
+    config: {
+      exists: true,
+      mode,
+      activeStacks,
+      layerMap: mergedLayerMap,
+      directLayerEntries,
+      appExplicitlyMapped,
+      collapsiblePackageRoots,
+      brownfield,
+      python,
+      nonDev
+    },
+    error: null,
+    why: null,
+    fix: null
+  };
 }
 
 export function scoreHarness(files, root = process.cwd()) {
   const byPath = new Map(files.map((file) => [file.path, file.content]));
   const allText = files.map((file) => `${file.path}\n${file.content}`).join('\n\n');
-  const agents = byPath.get('AGENTS.md') || byPath.get('CLAUDE.md') || '';
-  const featureList = byPath.get('feature_list.json') || byPath.get('feature-list.json') || '';
+  const agents = byPath.has('AGENTS.md') ? (byPath.get('AGENTS.md') || '') : (byPath.get('CLAUDE.md') || '');
+  const featureList = byPath.has('feature_list.json') ? (byPath.get('feature_list.json') || '') : (byPath.get('feature-list.json') || '');
   const progress = byPath.get('progress.md') || '';
   const init = byPath.get('init.sh') || '';
   const handoff = byPath.get('session-handoff.md') || '';
-  const isNonDev = resolveHarnessMode(byPath, root) === 'non-dev';
+  const handoffOrProgress = byPath.has('session-handoff.md') ? handoff : progress;
+  const cfgValidation = byPath.has('harness.config.json')
+    ? validateHarnessConfig(root, byPath.get('harness.config.json'))
+    : validateHarnessConfig(root);
+  const isNonDev = cfgValidation.ok && cfgValidation.config.mode === 'non-dev';
 
   const startupNeedles = isNonDev
     ? ['Startup Workflow', 'Before writing code', 'Before modifying', 'Antes de modificar']
@@ -118,10 +698,10 @@ export function scoreHarness(files, root = process.cwd()) {
     ],
     state: [
       hasFile(byPath, ['feature_list.json', 'feature-list.json'], 'Feature tracker exists'),
-      jsonFeatureList(featureList, root, 'Feature tracker has structured tasks, enforces Pass-State Gating, and verifies physical deliverables on disk'),
+      stateAndConfigCheck(featureList, root, cfgValidation, 'Feature tracker has structured tasks, enforces Pass-State Gating, and verifies physical deliverables on disk'),
       hasFile(byPath, ['progress.md'], 'Progress log exists'),
       structuredHas(progress, ['Current State', 'What', 'Next'], 'Progress log supports restart'),
-      structuredHas(handoff || progress, ['Blockers', 'Files', 'Next Session'], 'Handoff captures blockers/files/next step')
+      structuredHas(handoffOrProgress, ['Blockers', 'Files', 'Next Session'], 'Handoff captures blockers/files/next step')
     ],
     verification: [
       hasFile(byPath, ['init.sh'], 'Verification entrypoint exists'),
@@ -161,11 +741,32 @@ export function scoreHarness(files, root = process.cwd()) {
   const overall = Math.round((total / (SUBSYSTEMS.length * 5)) * 100);
   const ranked = Object.entries(subsystems).sort((a, b) => a[1].score - b[1].score);
   const bottleneck = ranked[0][1].score === 5 ? null : ranked[0][0];
-  return { overall, bottleneck, subsystems };
+  return cfgValidation.ok
+    ? { overall, bottleneck, subsystems }
+    : {
+      overall,
+      bottleneck,
+      subsystems,
+      configError: {
+        error: cfgValidation.error,
+        why: cfgValidation.why,
+        fix: cfgValidation.fix
+      }
+    };
+}
+
+function stateAndConfigCheck(featureListText, root, cfgValidation, message) {
+  if (!cfgValidation.ok) {
+    return { pass: false, message: `${message} (ERROR en harness.config.json: ${cfgValidation.error})` };
+  }
+  return jsonFeatureList(featureListText, root, message);
 }
 
 function hasFile(byPath, names, message) {
-  return { pass: names.some((name) => byPath.has(name)), message };
+  return {
+    pass: names.some((name) => byPath.has(name) && (byPath.get(name) || '').trim().length > 0),
+    message
+  };
 }
 
 function textHas(text, needles, message) {

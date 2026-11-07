@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-07 10:46
-**Session ID:** sesion-002 (Actualización y Certificación a Universal Chameleon Harness v2.0)
+**Last Updated:** 2026-11-07 12:26
+**Session ID:** sesion-003 (Sellado Red-Team / Blue-Team Universal Chameleon Harness v2.1)
 **Active Feature:** Ninguna (`WIP = 0`; listo para planificar e iniciar `feat-001` del portafolio web de Sebas)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
@@ -12,7 +12,8 @@
 
 ### What's Done
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y cierre adversarial Día 1 (`12/12 DEFENDED`, `27/27 PASS`).
-- [x] Evolución, sincronización quirúrgica y certificación de **Universal Chameleon Harness v2.0** (`v2.0-universal-chameleon`) en `sebastian web Portafolio`: `harness.config.json`, `scripts/check-python.mjs`, `scripts/check-deliverables.mjs`, candado `detectGlobalPipInstall` en `scripts/lib/harness-guards.mjs`, `init.sh` políglota aditivo, paridad total de `layerMap`, hook `Stop` E2E sobre árbol limpio y actualización de `docs/design-docs/adversarial-audit-day1.md` (`Overall: 100/100`, `25/25 PASS`, `6/6` escenarios E2E PASS, `12/12` vectores adversariales DEFENDED, `0 CRLF`).
+- [x] Evolución y certificación de **Universal Chameleon Harness v2.0** (`6/6` escenarios E2E PASS, `12/12` vectores adversariales DEFENDED).
+- [x] Sellado integral **Red-Team / Blue-Team v2.1** tras campaña de 4 agentes Red-Team (400+ ataques + 5 tareas simuladas) y 3 cirujanos Blue-Team (`A`, `B`, `C`): `.agents/hooks.json` (`PreInvocation` plano), `scripts/lib/harness-guards.mjs`, `scripts/harness-hooks.mjs` (`220/280L` con `init.sh` en `Stop`), `scripts/lib/harness-utils.mjs`, `scripts/check-python.mjs` (AST en `defaults`/`f-strings`/`os.environ`), `scripts/check-deliverables.mjs` (`countRealWords` inmune a HTML comments/URLs), `scripts/check-architecture.sh` (links `memory/INDEX.md`, `0 CRLF`/`0 BOM`), `scripts/feature-list.schema.json`, `loop-state.md`, `docs/SECURITY.md` y `Addendum v2.1` en `docs/design-docs/adversarial-audit-day1.md` (`28/28` paridad SHA-256, `Overall: 100/100`, `0 CRLF`, `0 BOM`).
 
 ### What's In Progress
 - Ninguna tarea en curso (`WIP = 0`).
