@@ -130,7 +130,7 @@
               "properties": {
                 "evidence": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 10
                 }
               }
             }

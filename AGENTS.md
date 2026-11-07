@@ -27,7 +27,8 @@ Before writing code or modifying any project deliverable:
 
 ## Required Artifacts
 
-- `.gitignore` — Protección de secretos (`.env*`), overrides locales (`*.local.md`), dependencias, builds y temporales.
+- `.gitignore` — Protección de secretos (`.env*`), overrides locales (`*.local.md`), telemetría (`.agents/.runtime/`), builds y temporales.
+- `.gitattributes` — Garantía multiplataforma de fin de línea `LF` (`0 CRLF`) en `git clone` y `git worktree`, más reglas binarias para activos web.
 - `feature_list.json` — Fuente única de verdad para estado (`not-started`, `in-progress`, `blocked`, `done`), DAG, `verification` y `evidence`.
 - `scripts/feature-list.schema.json` — Esquema JSON Draft-07 canónico con `Pass-State Gating` y campos `area`/`user_visible_behavior`.
 - `progress.md` — Registro maestro de continuidad, decisiones (`por qué` + `Alternatives considered`) y estado actual.
@@ -42,8 +43,10 @@ Before writing code or modifying any project deliverable:
 - `evaluator-rubric.md` — Rúbrica objetiva de 0 a 12 puntos exclusiva para el Agente Evaluador (*Checker*) `one-shot` en contexto aislado (`zero-inheritance`).
 - `docs/QUALITY_SCORE.md` — Semáforo de salud (`A-D`) por dominio/capa y registro de Estudios de Ablación.
 - `docs/SECURITY.md` — Presupuesto de contexto (`Write-Select-Compress-Isolate`), 5 niveles de compactación, 4 capas de extensión, `Fail-Closed`, `Turn Event Pipeline`, Bootstrap en 4 etapas y `Model-Visible Means Logged`.
-- `.agents/hooks.json` — Candados deterministas nativos de ciclo de vida (`PreToolUse`, `PostToolUse` y `Stop`).
-- `scripts/harness-hooks.mjs` — Runner Node.js multiplataforma (`stdin`/`stdout` JSON) de hooks nativos y Candado 3 `one-shot`.
+- `.agents/hooks.json` — Candados deterministas nativos de ciclo de vida (`PreToolUse`, `PostToolUse` y `Stop`, incluyendo herramientas MCP).
+- `scripts/harness-hooks.mjs` — Runner Node.js multiplataforma (`stdin`/`stdout` JSON) de hooks nativos, auditoría `RuntimeLogEntry` y Candado 3 `one-shot`.
+- `scripts/lib/harness-guards.mjs` — Políticas puras `Fail-Closed` de rutas protegidas, comandos destructivos, aislamiento de rúbrica y clasificación `Checker`.
+- `docs/design-docs/adversarial-audit-day1.md` — Auditoría adversarial Día 1 (`12/12` vectores controlados), límites residuales y guía para stacks web modernos.
 - `goal.md` — Loop Basado en Objetivo (`/goal`) con 3 categorías de archivos y Disyuntor de 4 Candados (`4-Lock Circuit Breaker`).
 - `maker-prompt.md` — Instrucciones operativas por ronda para el Agente Constructor (*Maker*).
 - `checker-prompt.md` — Instrucciones operativas para el Agente Evaluador Independiente (*Checker*) `one-shot` bajo `zero-inheritance`.

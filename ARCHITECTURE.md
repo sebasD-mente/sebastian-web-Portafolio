@@ -39,11 +39,11 @@ flowchart LR
 | Capa | Responsabilidad | Carpeta en Aplicación (`src/`) | Artefactos del Arnés |
 | :--- | :--- | :--- | :--- |
 | **1. `Types`** | Contratos de datos, interfaces puras (`Service Definitions`) y esquemas sin lógica ni dependencias superiores | `src/types/` | `scripts/feature-list.schema.json`, esquema de `feature_list.json`, `GraphState` en `graph.md` |
-| **2. `Config`** | Variables de entorno validadas, fronteras de *feature flags*, reglas de higiene y constantes que solo dependen de `Types` | `src/config/` | `.gitignore`, `AGENTS.md`, `ARCHITECTURE.md`, `docs/SECURITY.md`, `.agents/hooks.json`, `goal.md` |
+| **2. `Config`** | Variables de entorno validadas, fronteras de *feature flags*, reglas de higiene y constantes que solo dependen de `Types` | `src/config/` | `.gitignore`, `.gitattributes`, `AGENTS.md`, `ARCHITECTURE.md`, `docs/SECURITY.md`, `.agents/hooks.json`, `goal.md` |
 | **3. `Repo`** | Acceso a bases de datos, APIs externas, sistema de archivos o `Service Providers` concretos que solo dependen de `Types` y `Config` | `src/repo/` | Funciones I/O (`readText`, `readJson`, `writeText`, `loadHarnessFiles`) en `scripts/lib/harness-utils.mjs` |
-| **4. `Service`** | Reglas puras de negocio y validación sin acoplarse a `Runtime` ni `UI` | `src/service/` | Funciones puras (`scoreHarness`, `validateFeatureListObject`) en `scripts/lib/harness-utils.mjs` |
+| **4. `Service`** | Reglas puras de negocio y validación sin acoplarse a `Runtime` ni `UI` | `src/service/` | Funciones puras en `scripts/lib/harness-utils.mjs` y políticas de seguridad en `scripts/lib/harness-guards.mjs` |
 | **5. `Runtime`** | Inicialización ordenada (*Bootstrap*), servidores, workers, rutas CLI, runner de hooks (`stdin`/`stdout` JSON) y orquestación de las 3 puertas | `src/runtime/` | `init.sh`, `scripts/check-architecture.sh`, `scripts/validate-harness.mjs`, `scripts/harness-hooks.mjs` |
-| **6. `UI`** | Componentes visuales, vistas web o formateadores CLI que consumen `Service`/`Runtime` (y contratos puros de `Types`) sin saltar a `Config` ni `Repo` | `src/ui/` | Formateadores (`formatScoreReport`, `htmlReport`) en `scripts/lib/harness-utils.mjs` y salida Bolígrafo Rojo |
+| **6. `UI`** | Componentes visuales, vistas/rutas web o formateadores CLI que consumen `Service`/`Runtime` (y contratos puros de `Types`) sin saltar a `Config` ni `Repo` | `src/ui/` (y superficies web mapeadas: `src/{components,pages,views,app,routes}/` o `app/`, incluyendo `.astro/.vue/.svelte/.mdx`) | Formateadores (`formatScoreReport`, `htmlReport`) en `scripts/lib/harness-utils.mjs` y salida Bolígrafo Rojo |
 
 ### Reglas Duras de Dependencia (Invariantes)
 

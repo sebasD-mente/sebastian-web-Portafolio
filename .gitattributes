@@ -1,0 +1,36 @@
+# Forzar LF (0 CRLF) en todos los scripts, código fuente y artefactos del arnés en cualquier OS / git clone / git worktree
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.astro text eol=lf
+*.vue text eol=lf
+*.svelte text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+
+# Activos binarios comunes en proyectos web (portafolio)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.mp4 binary
+*.webm binary

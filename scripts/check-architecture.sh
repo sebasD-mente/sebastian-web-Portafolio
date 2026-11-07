@@ -43,8 +43,8 @@ for lib_file in scripts/lib/*.mjs; do
   fi
 done
 
-# Verificación mecánica precisa en Node.js para módulos de aplicación en src/ (ESM, CommonJS y Python)
-if [ -d "src" ]; then
+# Verificación mecánica precisa en Node.js para módulos de aplicación en src/ y app/ (ESM, CommonJS, Astro/Vue/Svelte/MDX y Python)
+if [ -d "src" ] || [ -d "app" ]; then
   src_layer_violation="$(node -e '
     const fs = require("node:fs");
     const path = require("node:path");
@@ -57,10 +57,23 @@ if [ -d "src" ]; then
       runtime: new Set(["ui"]),
       ui: new Set(["config", "repo"])
     };
-    const ALL_LAYERS = new Set(Object.keys(FORBIDDEN_BY_LAYER));
-    const LAYER_SEG_RE = /(^|\/)(types|config|repo|service|runtime|ui)(\/|$)/;
-    const CODE_EXT_RE = /\.(?:[cm]?js|tsx?|jsx|py)$/i;
-    const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "__pycache__"]);
+    const DIR_TO_LAYER = {
+      types: "types",
+      config: "config",
+      repo: "repo",
+      service: "service",
+      runtime: "runtime",
+      ui: "ui",
+      components: "ui",
+      pages: "ui",
+      views: "ui",
+      app: "ui",
+      routes: "ui"
+    };
+    const ALL_SEGMENTS = new Set(Object.keys(DIR_TO_LAYER));
+    const LAYER_SEG_RE = /(^|\/)(types|config|repo|service|runtime|ui|components|pages|views|app|routes)(\/|$)/;
+    const CODE_EXT_RE = /\.(?:[cm]?js|tsx?|jsx|astro|vue|svelte|mdx|py)$/i;
+    const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", ".astro", "__pycache__"]);
 
     function stripJsComments(code) {
       let out = "", i = 0, quote = "";
@@ -140,12 +153,13 @@ if [ -d "src" ]; then
         const clean = stripJsComments(code);
         for (const m of clean.matchAll(/\b(?:import|export)\s+(?:type\s+)?(?:[^;\x27"`]*?\s+from\s+)[\x27"]([^\x27"]+)[\x27"]/g)) specs.push(m[1]);
         for (const m of clean.matchAll(/\bimport\s+[\x27"]([^\x27"]+)[\x27"]/g)) specs.push(m[1]);
-        for (const m of clean.matchAll(/\b(?:import|require)\s*\(\s*[\x27"]([^\x27"]+)[\x27"]\s*\)/g)) specs.push(m[1]);
+        for (const m of clean.matchAll(/\b(?:import|require)\s*\(\s*[\x27"`]([^\x27"`$]+)[\x27"`]\s*\)/g)) specs.push(m[1]);
       }
       return specs;
     }
 
     function walkFiles(dir, out = []) {
+      if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return out;
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         if (SKIP_DIRS.has(entry.name)) continue;
         const full = path.join(dir, entry.name);
@@ -155,27 +169,40 @@ if [ -d "src" ]; then
       return out;
     }
 
-    for (const [sourceLayer, forbiddenSet] of Object.entries(FORBIDDEN_BY_LAYER)) {
-      const layerDir = path.join("src", sourceLayer);
-      if (!fs.existsSync(layerDir) || !fs.statSync(layerDir).isDirectory()) continue;
-      for (const filePath of walkFiles(layerDir)) {
-        const relFromSrc = path.relative("src", path.dirname(filePath)).replace(/\\/g, "/");
+    function inferLayerFromSegments(segs) {
+      for (const s of segs) {
+        if (ALL_SEGMENTS.has(s)) return DIR_TO_LAYER[s];
+      }
+      return "";
+    }
+
+    const roots = ["src", "app"].filter((r) => fs.existsSync(r) && fs.statSync(r).isDirectory());
+    for (const scanRoot of roots) {
+      for (const filePath of walkFiles(scanRoot)) {
+        const relFromRoot = scanRoot === "app"
+          ? path.posix.join("app", path.relative("app", path.dirname(filePath)).replace(/\\/g, "/"))
+          : path.relative("src", path.dirname(filePath)).replace(/\\/g, "/");
+        const sourceLayer = inferLayerFromSegments(relFromRoot.split("/").filter(Boolean));
+        if (!sourceLayer) continue;
+        const forbiddenSet = FORBIDDEN_BY_LAYER[sourceLayer];
         const specs = extractSpecifiers(fs.readFileSync(filePath, "utf8"), path.extname(filePath).toLowerCase());
         for (const rawSpec of specs) {
           const spec = rawSpec.trim().replace(/\\/g, "/").split(/[?#]/)[0];
-          const isInternal = /^(?:\.\/|\.\.\/|@\/|~\/|src\/|\.\.?$)/.test(spec);
+          const aliasMatch = spec.match(/^[@#](types|config|repo|service|runtime|ui|components|pages|views|app|routes)(\/.*|$)/);
+          const isInternal = Boolean(aliasMatch) || /^(?:\.\/|\.\.\/|@\/|~\/|#\/|src\/|app\/|\.\.?$)/.test(spec);
           if (!isInternal) continue;
 
           let normalized = "";
-          if (spec.startsWith(".")) {
-            normalized = path.posix.normalize(path.posix.join(relFromSrc, spec)).replace(/^(?:\.\.\/)+(?:src\/)?/, "");
+          if (aliasMatch) {
+            normalized = aliasMatch[1] + (aliasMatch[2] || "");
+          } else if (spec.startsWith(".")) {
+            normalized = path.posix.normalize(path.posix.join(relFromRoot, spec)).replace(/^(?:\.\.\/)+(?:src\/)?/, "");
           } else {
-            normalized = path.posix.normalize(spec.replace(/^(?:@\/|~\/|src\/)/, ""));
+            normalized = path.posix.normalize(spec.replace(/^(?:@\/|~\/|#\/|src\/)/, ""));
           }
 
           if (!LAYER_SEG_RE.test(normalized) && !LAYER_SEG_RE.test(spec)) continue;
-          const segs = normalized.split("/").filter(Boolean);
-          let targetLayer = ALL_LAYERS.has(segs[0]) ? segs[0] : (segs.find((s) => ALL_LAYERS.has(s)) || "");
+          const targetLayer = inferLayerFromSegments(normalized.split("/").filter(Boolean));
           if (targetLayer && targetLayer !== sourceLayer && forbiddenSet.has(targetLayer)) {
             console.log(`${filePath.replace(/\\/g, "/")}|${sourceLayer}|${targetLayer}|${rawSpec}`);
             process.exit(0);
@@ -526,17 +553,79 @@ if ! node -e '
       if (!baseRequired.every((req) => f[req] !== undefined)) process.exit(1);
       if (typeof f.id !== "string" || !idRe.test(f.id)) process.exit(1);
       if (!statusEnum.includes(f.status)) process.exit(1);
-      if (f.status === "done" && (typeof f.evidence !== "string" || f.evidence.trim().length === 0)) process.exit(1);
+      if (f.status === "done" && (typeof f.evidence !== "string" || f.evidence.trim().length < 10)) process.exit(1);
     }
   }
 ' >/dev/null 2>&1; then
   red_pen_error \
     "Violación de esquema entre 'scripts/feature-list.schema.json' y 'feature_list.json'." \
-    "El rastreador de tareas debe exigir los 7 campos obligatorios en items.required, los 4 estados canónicos (not-started, in-progress, blocked, done), area/user_visible_behavior y evidencia no vacía en 'done'." \
+    "El rastreador de tareas debe exigir los 7 campos obligatorios en items.required, los 4 estados canónicos (not-started, in-progress, blocked, done), area/user_visible_behavior y evidencia ejecutable (>= 10 caracteres) en 'done'." \
     "Verifica que 'scripts/feature-list.schema.json' conserve items.required completo + los 4 estados y que 'feature_list.json' cumpla estrictamente ese esquema."
 fi
 
-echo "--- [Vigilante Arquitectónico] 5. Escáner de Higiene y Estado Limpio (cleanup-scanner: .gitignore, secretos, artefactos y árbol fuente) ---"
+echo "--- [Vigilante Arquitectónico] 5. Escáner de Higiene y Estado Limpio (cleanup-scanner: .gitignore, .gitattributes, 0 CRLF, JSON, secretos, artefactos y árbol fuente) ---"
+if [ ! -f ".gitattributes" ] || ! grep -Fq "eol=lf" ".gitattributes"; then
+  red_pen_error \
+    "Violación de portabilidad multiplataforma: falta '.gitattributes' o no impone 'eol=lf' en la raíz." \
+    "En Windows con core.autocrlf=true, un 'git clone' o 'git worktree' sin '.gitattributes' convierte los scripts POSIX (.sh) y artefactos a CRLF rompiendo el invariante 0 CRLF de sprint-contract.md." \
+    "Crea o restaura '.gitattributes' con '* text=auto eol=lf' y reglas explícitas 'eol=lf' para *.sh, *.mjs, *.json y *.md."
+fi
+
+crlf_script="$(node -e '
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const targets = ["init.sh", ".agents/hooks.json"];
+  for (const dir of ["scripts", "scripts/lib"]) {
+    if (!fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir)) {
+      const p = path.join(dir, f);
+      if (fs.statSync(p).isFile()) targets.push(p);
+    }
+  }
+  for (const t of targets) {
+    if (fs.existsSync(t) && fs.readFileSync(t).includes(13)) {
+      console.log(t.replace(/\\/g, "/"));
+      process.exit(0);
+    }
+  }
+')"
+if [ -n "$crlf_script" ]; then
+  red_pen_error \
+    "Saltos de línea CRLF detectados en el artefacto ejecutable '$crlf_script'." \
+    "Los scripts POSIX y runners del arnés deben mantenerse en LF puro (0 CRLF) para funcionar de forma idéntica en Windows, Linux, WSL y contenedores CI." \
+    "Normaliza '$crlf_script' a LF puro eliminando los bytes '\\r' (0x0D)."
+fi
+
+invalid_json_file="$(node -e '
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const skipDirs = new Set([".git", "node_modules", "dist", "build", ".next", ".astro", "coverage"]);
+  const jsoncRe = /(?:^|\/)(?:[jt]sconfig(?:\.[^/]+)?\.json|\.vscode\/.*\.json)$/i;
+  function walk(dir, depth) {
+    if (depth > 4 || !fs.existsSync(dir)) return null;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (skipDirs.has(e.name)) continue;
+      const full = path.join(dir, e.name);
+      const rel = full.replace(/\\/g, "/");
+      if (e.isDirectory()) {
+        const hit = walk(full, depth + 1);
+        if (hit) return hit;
+      } else if (e.isFile() && e.name.toLowerCase().endsWith(".json") && !jsoncRe.test(rel)) {
+        try { JSON.parse(fs.readFileSync(full, "utf8")); } catch (err) { return `${rel}|${err.message}`; }
+      }
+    }
+    return null;
+  }
+  const bad = walk(".", 0);
+  if (bad) console.log(bad);
+')"
+if [ -n "$invalid_json_file" ]; then
+  IFS="|" read -r bad_json_path bad_json_err <<< "$invalid_json_file"
+  red_pen_error \
+    "Archivo JSON corrupto en el repositorio: '$bad_json_path' ($bad_json_err)." \
+    "En Antigravity, stderr de PostToolUse no detiene el turno; Puerta 1 actúa como red de seguridad dura para impedir JSON inválido en manifiestos o configuraciones." \
+    "Corrige el error de sintaxis JSON en '$bad_json_path' antes de continuar."
+fi
 if [ ! -f ".gitignore" ]; then
   red_pen_error \
     "Violación estructural: no se encontró '.gitignore' en la raíz del proyecto." \
@@ -572,7 +661,7 @@ while IFS= read -r env_file; do
       "docs/SECURITY.md prohíbe exponer archivos '.env*' reales fuera de las plantillas seguras (.env.example, .env.sample, .env.template)." \
       "Elimina la excepción '!$env_base' de '.gitignore' o renombra la plantilla sin secretos a '.env.example'."
   fi
-done < <(find . -maxdepth 4 -type f \( -name ".env" -o -name ".env.*" \) -not -path "./.git/*" -not -path "./node_modules/*" 2>/dev/null || true)
+done < <(find . -maxdepth 4 -type f -name ".env*" -not -path "./.git/*" -not -path "./node_modules/*" 2>/dev/null || true)
 
 temp_files="$(find . -maxdepth 4 -type f \( -name "*.tmp" -o -name "*.bak" -o -name "*.swp" -o -name "*~" \) -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./dist/*" -not -path "./build/*" 2>/dev/null || true)"
 if [ -n "$temp_files" ]; then

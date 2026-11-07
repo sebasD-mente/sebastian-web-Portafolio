@@ -6,8 +6,9 @@
 !.env.sample
 !.env.template
 
-# Configuraciones locales de agente no compartidas (Gotcha #2)
+# Configuraciones locales de agente no compartidas (Gotcha #2) y telemetría local de hooks
 *.local.md
+.agents/.runtime/
 
 # Dependencias y artefactos de compilación
 node_modules/

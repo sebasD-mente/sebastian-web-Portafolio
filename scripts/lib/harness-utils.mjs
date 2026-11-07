@@ -7,12 +7,24 @@ export const HARNESS_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.
 export const FEATURE_LIST_SCHEMA_PATH = path.join(HARNESS_ROOT, 'scripts', 'feature-list.schema.json');
 export const SUBSYSTEMS = ['instructions', 'state', 'verification', 'scope', 'lifecycle'];
 export const CANONICAL_FEATURE_STATUSES = ['not-started', 'in-progress', 'blocked', 'done'];
-const ALLOWED_FEATURE_STATUSES = new Set([
-  ...CANONICAL_FEATURE_STATUSES,
-  'not_started',
-  'in_progress',
-  'passing'
+const ALLOWED_FEATURE_STATUSES = new Set(CANONICAL_FEATURE_STATUSES);
+const ALLOWED_ROOT_KEYS = new Set(['project', 'features']);
+const ALLOWED_FEATURE_KEYS = new Set([
+  'id',
+  'name',
+  'title',
+  'description',
+  'area',
+  'user_visible_behavior',
+  'priority',
+  'status',
+  'dependencies',
+  'required_files',
+  'verification',
+  'evidence',
+  'notes'
 ]);
+const FEATURE_ID_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export function parseArgs(argv) {
   const args = { _: [] };
@@ -197,6 +209,9 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return { valid: false, reason: 'feature_list.json root must be a JSON object' };
   }
+  if (!Object.keys(parsed).every((k) => ALLOWED_ROOT_KEYS.has(k))) {
+    return { valid: false, reason: 'feature_list.json contains unsupported root properties' };
+  }
   if (parsed.project !== undefined && (typeof parsed.project !== 'string' || parsed.project.trim().length === 0)) {
     return { valid: false, reason: 'project field must be a non-empty string when present' };
   }
@@ -204,10 +219,14 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
     return { valid: false, reason: 'feature_list.json must contain at least 1 feature' };
   }
 
+  const resolvedRoot = path.resolve(root);
   const seenIds = new Set();
   for (const f of parsed.features) {
-    if (!f || typeof f !== 'object' || typeof f.id !== 'string' || f.id.trim().length === 0) {
-      return { valid: false, reason: 'every feature must define a non-empty string id' };
+    if (!f || typeof f !== 'object' || Array.isArray(f) || typeof f.id !== 'string' || !FEATURE_ID_RE.test(f.id)) {
+      return { valid: false, reason: 'every feature must define a lowercase kebab-case id (e.g. feat-001)' };
+    }
+    if (!Object.keys(f).every((k) => ALLOWED_FEATURE_KEYS.has(k))) {
+      return { valid: false, reason: `feature '${f.id}' contains unsupported properties` };
     }
     if (seenIds.has(f.id)) {
       return { valid: false, reason: `duplicate feature id '${f.id}'` };
@@ -216,9 +235,9 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
   }
 
   for (const feature of parsed.features) {
-    const label = feature.name ?? feature.title;
-    const hasBaseFields = typeof label === 'string'
-      && label.trim().length > 0
+    const hasBaseFields = typeof feature.name === 'string'
+      && feature.name.trim().length > 0
+      && (feature.title === undefined || (typeof feature.title === 'string' && feature.title.trim().length > 0))
       && typeof feature.description === 'string'
       && feature.description.trim().length > 0
       && typeof feature.status === 'string'
@@ -227,12 +246,17 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
       && feature.dependencies.every((depId) => typeof depId === 'string' && depId !== feature.id && seenIds.has(depId))
       && Array.isArray(feature.required_files)
       && feature.required_files.length > 0
-      && feature.required_files.every((relPath) => typeof relPath === 'string' && relPath.trim().length > 0)
+      && feature.required_files.every((relPath) => {
+        if (typeof relPath !== 'string' || relPath.trim().length === 0 || path.isAbsolute(relPath)) return false;
+        const full = path.resolve(resolvedRoot, relPath);
+        const rel = path.relative(resolvedRoot, full);
+        return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel);
+      })
       && Array.isArray(feature.verification)
       && feature.verification.length > 0
       && feature.verification.every((step) => typeof step === 'string' && step.trim().length > 0);
     if (!hasBaseFields) {
-      return { valid: false, reason: `feature '${feature.id}' is missing required fields, uses an invalid status, or references an unknown dependency` };
+      return { valid: false, reason: `feature '${feature.id}' is missing required fields, uses an invalid status, escapes repo root in required_files, or references an unknown dependency` };
     }
 
     if (feature.area !== undefined && (typeof feature.area !== 'string' || feature.area.trim().length === 0)) {
@@ -252,18 +276,20 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
       }
     }
 
-    const isPassingOrDone = feature.status === 'done' || feature.status === 'passing';
-    const hasEvidenceIfDone = !isPassingOrDone || (typeof feature.evidence === 'string' && feature.evidence.trim().length > 0);
+    const isDone = feature.status === 'done';
+    const hasEvidenceIfDone = !isDone || (typeof feature.evidence === 'string' && feature.evidence.trim().length >= 10);
     if (!hasEvidenceIfDone) {
-      return { valid: false, reason: `feature '${feature.id}' is marked done without verification evidence` };
+      return { valid: false, reason: `feature '${feature.id}' is marked done without executable verification evidence (min 10 chars)` };
     }
 
-    const hasPhysicalFilesIfDone = !isPassingOrDone || feature.required_files.every((relPath) => {
-      const full = path.join(root, relPath);
-      return existsSync(full) && statSync(full).size > 0;
+    const hasPhysicalFilesIfDone = !isDone || feature.required_files.every((relPath) => {
+      const full = path.resolve(resolvedRoot, relPath);
+      if (!existsSync(full)) return false;
+      const st = statSync(full);
+      return st.isFile() && st.size > 0;
     });
     if (!hasPhysicalFilesIfDone) {
-      return { valid: false, reason: `feature '${feature.id}' is marked done with missing or empty required_files on disk` };
+      return { valid: false, reason: `feature '${feature.id}' is marked done with missing, non-file, or empty required_files on disk` };
     }
   }
 

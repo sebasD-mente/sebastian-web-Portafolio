@@ -72,18 +72,23 @@ elif [ -f "package.json" ]; then
     PM="npm"
   fi
 
-  if [ -z "$INSTALL_CMD" ]; then
-    echo "=== Instalando dependencias con $PM ==="
-    if [ "$PM" = "npm" ]; then
-      npm install
+  if [ -z "$INSTALL_CMD" ] && [ "${HARNESS_SKIP_INSTALL:-0}" != "1" ]; then
+    if [ ! -d "node_modules" ] || [ "${HARNESS_FORCE_INSTALL:-0}" = "1" ]; then
+      echo "=== Instalando dependencias con $PM ==="
+      if [ "$PM" = "npm" ]; then
+        npm install
+      else
+        "$PM" install
+      fi
     else
-      "$PM" install
+      echo "=== Dependencias detectadas en node_modules/ (usa HARNESS_FORCE_INSTALL=1 para reinstalar) ==="
     fi
   fi
 
   if has_pkg_script "check"; then
     run_pm_script "$PM" "check"
-  elif has_pkg_script "typecheck"; then
+  fi
+  if has_pkg_script "typecheck"; then
     run_pm_script "$PM" "typecheck"
   elif has_pkg_script "type-check"; then
     run_pm_script "$PM" "type-check"
