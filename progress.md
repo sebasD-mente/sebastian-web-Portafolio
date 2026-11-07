@@ -14,6 +14,7 @@
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y cierre adversarial Día 1 (`12/12 DEFENDED`, `27/27 PASS`).
 - [x] Evolución y certificación de **Universal Chameleon Harness v2.0** (`6/6` escenarios E2E PASS, `12/12` vectores adversariales DEFENDED).
 - [x] Sellado integral **Red-Team / Blue-Team v2.1** tras campaña de 4 agentes Red-Team (400+ ataques + 5 tareas simuladas) y 3 cirujanos Blue-Team (`A`, `B`, `C`): `.agents/hooks.json` (`PreInvocation` plano), `scripts/lib/harness-guards.mjs`, `scripts/harness-hooks.mjs` (`220/280L` con `init.sh` en `Stop`), `scripts/lib/harness-utils.mjs`, `scripts/check-python.mjs` (AST en `defaults`/`f-strings`/`os.environ`), `scripts/check-deliverables.mjs` (`countRealWords` inmune a HTML comments/URLs), `scripts/check-architecture.sh` (links `memory/INDEX.md`, `0 CRLF`/`0 BOM`), `scripts/feature-list.schema.json`, `loop-state.md`, `docs/SECURITY.md` y `Addendum v2.1` en `docs/design-docs/adversarial-audit-day1.md` (`28/28` paridad SHA-256, `Overall: 100/100`, `0 CRLF`, `0 BOM`).
+- [x] Corrección final del arnés (auditor independiente F1/F2): alias de escritura del IDE (`write_to_file`, `replace_file_content`, `multi_replace_file_content`, `apply_patch`, ...) y red Fail-Closed genérica en `scripts/lib/harness-guards.mjs`, `PreToolUse` con `matcher: "*"` en `.agents/hooks.json`, `allowRubric` perezoso en `scripts/harness-hooks.mjs` (`221/280L`), `docs/SECURITY.md` actualizado y suites de auditoría aisladas en clon temporal (`universal-e2e-audit.mjs` `8/8`, `adversarial-audit.mjs` `12/12`, paridad `28/28` SHA-256).
 
 ### What's In Progress
 - Ninguna tarea en curso (`WIP = 0`).
@@ -41,7 +42,7 @@
 - [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas y 0 CRLF)`
 - [x] Architecture & Red-Pen check: `bash scripts/check-architecture.sh` -> `OK: Límites arquitectónicos, invariantes de 6 capas, Auto-Memoria, Seguridad e higiene estructural verificados sin violaciones.`
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `command and output verified: Overall: 100/100 (25/25 checks PASS)`
-- [x] Universal E2E & Adversarial Matrix: `universal-e2e-audit.mjs` (`6/6 PASS`) + `adversarial-audit.mjs` (`12/12 DEFENDED`)
+- [x] Universal E2E & Adversarial Matrix: `universal-e2e-audit.mjs` (`8/8 PASS`, incl. `SCN-08` alias IDE) + `adversarial-audit.mjs` (`12/12 DEFENDED`), ambas sobre clon temporal sin tocar el repo vivo
 
 ## Notes for Next Session
 Ejecuta `bash ./init.sh` (en Windows PowerShell vía Git Bash: `& "C:\Program Files\Git\bin\bash.exe" ./init.sh`) al iniciar la sesión, revisa `harness.config.json` y `docs/design-docs/adversarial-audit-day1.md`, y planifica `feat-001` del portafolio web de Sebas respetando `WIP = 1`.

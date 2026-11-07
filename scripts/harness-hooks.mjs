@@ -64,13 +64,14 @@ export function evaluatePreToolUse(stdinState, env = process.env) {
   if (stdinState.empty && !ctx.usedEnvFallback) {
     return deny('empty-stdin', redPenReason('Payload vacío en stdin durante PreToolUse.', 'El modelo Fail-Closed de docs/SECURITY.md prohíbe aprobar llamadas a herramientas sin contexto JSON.', 'Envía el objeto JSON de PreToolUse por stdin.'));
   }
-  const allowRubric = env.HARNESS_ALLOW_RUBRIC_EDIT === '1' || isCheckerSession(payload);
+  let rubricOk = null; // perezoso: con matcher "*" las lecturas no deben pagar el escaneo del transcript
+  const allowRubric = () => (rubricOk ??= env.HARNESS_ALLOW_RUBRIC_EDIT === '1' || isCheckerSession(payload));
   for (const target of ctx.isWriteEdit ? ctx.targetPaths : []) {
     const c = isProtectedTargetPath(target);
     if (c.blocked) {
       return deny({ tool: ctx.toolName, target }, redPenReason(`Escritura bloqueada en '${c.target}' (${c.category}).`, 'docs/SECURITY.md prohíbe editar .git/**, node_modules/**, .env* o rutas del sistema.', 'Usa .env.example / .env.sample / .env.template o solicita autorización al usuario.'));
     }
-    if (isRubricTarget(target) && !allowRubric) {
+    if (isRubricTarget(target) && !allowRubric()) {
       return deny({ tool: ctx.toolName, target }, redPenReason("Edición directa de 'evaluator-rubric.md' bloqueada en sesión Maker.", 'AGENTS.md y evaluator-rubric.md exigen aislamiento zero-inheritance: solo un sub-agente Checker one-shot aislado o el humano puede calificar la rúbrica.', 'Lanza una instancia invoke_subagent Checker one-shot virgen para evaluar y actualizar evaluator-rubric.md.'));
     }
   }
@@ -79,7 +80,7 @@ export function evaluatePreToolUse(stdinState, env = process.env) {
     if (c.blocked) {
       return deny({ tool: ctx.toolName, cmd: ctx.commandLine }, redPenReason(`Comando destructivo o escritura protegida bloqueada ('${c.rule}').`, 'docs/SECURITY.md prohíbe borrados recursivos forzados, reescrituras destructivas Git, mutaciones por shell a .env*/.git/** o SQL masivo sin WHERE.', 'Usa alternativas seguras como git restore --worktree --staged ., .env.example o DELETE FROM ... WHERE ....'));
     }
-    if (!allowRubric && touchesRubricViaShell(ctx.commandLine)) {
+    if (touchesRubricViaShell(ctx.commandLine) && !allowRubric()) {
       return deny({ tool: ctx.toolName, cmd: ctx.commandLine }, redPenReason("Mutación por shell de 'evaluator-rubric.md' bloqueada en sesión Maker.", 'AGENTS.md y evaluator-rubric.md exigen aislamiento zero-inheritance: solo un sub-agente Checker one-shot aislado puede calificar la rúbrica.', 'Lanza una instancia invoke_subagent Checker one-shot virgen para evaluar y actualizar evaluator-rubric.md.'));
     }
     const pipCheck = detectGlobalPipInstall(ctx.commandLine, { targetRoot, env });

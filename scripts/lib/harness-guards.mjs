@@ -4,9 +4,18 @@ import path from 'node:path';
 
 export const SAFE_ENV_TEMPLATES = new Set(['.env.example', '.env.sample', '.env.template']);
 const WRITE_EDIT_TOOLS = new Set([
-  'write_file', 'edit_file', 'write', 'edit', 'multiedit',
-  'create_file', 'replace_file_content', 'multi_replace_file_content'
+  'write_file', 'edit_file', 'write', 'edit', 'multiedit', 'notebookedit',
+  'create_file', 'replace_file_content', 'multi_replace_file_content',
+  'write_to_file', 'str_replace_editor', 'str_replace_based_edit_tool', 'edit_notebook', 'apply_patch'
 ]);
+// Claves de ruta reconocidas en argumentos de herramientas (IDE Antigravity, Claude Code, Codex, MCP).
+const TARGET_PATH_KEYS = [
+  'TargetFile', 'targetFile', 'target_file', 'AbsolutePath', 'absolutePath', 'file_path', 'filePath',
+  'path', 'Path', 'notebook_path', 'notebookPath', 'File', 'file'
+];
+const PATCH_TEXT_KEYS = ['input', 'Input', 'patch', 'Patch', 'diff', 'Diff', 'command', 'Command', 'CommandLine'];
+// Red de seguridad Fail-Closed: alias desconocidos con verbo mutante se tratan como escritura.
+const GENERIC_MUTATING_TOOL_RE = /write|edit|replace|create|patch|save|move|copy|delete|remove|rename/i;
 const COMMAND_TOOLS = new Set(['run_command', 'bash', 'execute_command', 'shell']);
 const SEND_MESSAGE_TOOLS = new Set(['send_message', 'sendmessage']);
 const WRAPPER_VERBS = new Set([
@@ -101,7 +110,7 @@ export function appendAuditLog(targetRoot, action, startMs, inputSummary, output
 
 function collectMcpPaths(obj, out = []) {
   if (!obj || typeof obj !== 'object') return out;
-  const pathKeys = ['path', 'Path', 'source', 'destination', 'file_path', 'filePath', 'target', 'TargetFile', 'AbsolutePath'];
+  const pathKeys = [...TARGET_PATH_KEYS, 'source', 'destination', 'target'];
   for (const k of pathKeys) {
     if (typeof obj[k] === 'string' && obj[k].trim()) out.push(obj[k].trim());
   }
@@ -117,15 +126,44 @@ function collectMcpPaths(obj, out = []) {
   return out;
 }
 
+// Extrae rutas de parches estilo apply_patch (*** Update/Add/Delete File, *** Move to) y unified diff (--- a/, +++ b/).
+export function extractPatchPaths(patchText) {
+  const text = String(patchText || '');
+  if (!text.trim()) return [];
+  const out = [];
+  const isEnvelope = /\*\*\* Begin Patch/.test(text);
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trimEnd();
+    let m = line.match(/^\*\*\*\s*(?:Update|Add|Delete)\s+File:\s*(.+)$/i) || line.match(/^\*\*\*\s*Move\s+to:\s*(.+)$/i);
+    if (!m && !isEnvelope) m = line.match(/^(?:---|\+\+\+)\s+(?:[ab]\/)?(.+)$/);
+    if (!m) continue;
+    const p = m[1].split('\t')[0].trim();
+    if (p && p !== '/dev/null') out.push(p);
+  }
+  return out;
+}
+
+function collectPatchTexts(args, rawArgString) {
+  const texts = [];
+  if (rawArgString) texts.push(rawArgString);
+  for (const k of PATCH_TEXT_KEYS) {
+    const v = args[k];
+    if (typeof v === 'string') texts.push(v);
+    else if (Array.isArray(v)) texts.push(v.filter((x) => typeof x === 'string').join('\n'));
+  }
+  return texts;
+}
+
 export function extractToolContext(payload = {}, stdinEmpty = false, env = process.env) {
   const tc = payload?.toolCall || payload?.preToolHookArgs?.toolCall || payload?.toolHookArgs?.toolCall || null;
   const toolName = String(tc?.name ?? payload?.toolName ?? payload?.tool_name ?? '').trim();
   const lowerName = toolName.toLowerCase();
   let args = tc?.args ?? tc?.arguments ?? payload?.toolArgs ?? payload?.tool_input ?? payload?.input ?? {};
-  if (typeof args === 'string') { try { args = JSON.parse(args); } catch { args = {}; } }
+  let rawArgString = '';
+  if (typeof args === 'string') { try { args = JSON.parse(args); } catch { rawArgString = args; args = {}; } }
   if (!args || typeof args !== 'object') args = {};
 
-  const rawTargets = ['Path', 'TargetFile', 'AbsolutePath', 'file_path', 'path', 'target_file', 'filePath', 'File']
+  const rawTargets = TARGET_PATH_KEYS
     .map((k) => (typeof args[k] === 'string' ? args[k].trim() : ''))
     .filter(Boolean);
   if (Array.isArray(args.edits)) {
@@ -137,8 +175,9 @@ export function extractToolContext(payload = {}, stdinEmpty = false, env = proce
   let commandLine = cmdKey ? args[cmdKey] : '';
   let isWriteEdit = WRITE_EDIT_TOOLS.has(lowerName);
   let isCommand = COMMAND_TOOLS.has(lowerName);
+  const isMcpTool = lowerName === 'call_mcp_tool' || lowerName.startsWith('mcp_');
 
-  if (lowerName === 'call_mcp_tool' || lowerName.startsWith('mcp_')) {
+  if (isMcpTool) {
     const mcpTool = String(args.ToolName ?? args.toolName ?? lowerName).trim();
     let mcpArgs = args.Arguments ?? args.arguments ?? args;
     if (typeof mcpArgs === 'string') { try { mcpArgs = JSON.parse(mcpArgs); } catch { mcpArgs = {}; } }
@@ -157,9 +196,17 @@ export function extractToolContext(payload = {}, stdinEmpty = false, env = proce
     }
   }
 
+  const isSendMessage = SEND_MESSAGE_TOOLS.has(lowerName);
+  if (lowerName && !isWriteEdit && !isCommand && !isSendMessage && !isMcpTool && GENERIC_MUTATING_TOOL_RE.test(lowerName)) {
+    isWriteEdit = true;
+    collectMcpPaths(args, rawTargets);
+  }
+  if (isWriteEdit && !isMcpTool && lowerName.includes('patch')) {
+    for (const txt of collectPatchTexts(args, rawArgString)) rawTargets.push(...extractPatchPaths(txt));
+  }
+
   const recipient = String(args.Recipient ?? args.recipient ?? args.to ?? args.conversationId ?? '').trim();
   const message = String(args.Message ?? args.message ?? args.content ?? '').trim();
-  const isSendMessage = SEND_MESSAGE_TOOLS.has(lowerName);
   let usedEnvFallback = false;
 
   if ((stdinEmpty || !toolName) && typeof env.TOOL_TARGET_PATH === 'string' && env.TOOL_TARGET_PATH.trim()) {

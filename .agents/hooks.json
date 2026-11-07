@@ -10,7 +10,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "run_command|bash|execute_command|shell|Bash|write_file|edit_file|write|edit|multiedit|Write|Edit|MultiEdit|create_file|replace_file_content|multi_replace_file_content|send_message|sendmessage|SendMessage|call_mcp_tool|mcp_.*",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -22,7 +22,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "run_command|bash|execute_command|shell|Bash|write_file|edit_file|write|edit|multiedit|Write|Edit|MultiEdit|create_file|replace_file_content|multi_replace_file_content|send_message|sendmessage|SendMessage|call_mcp_tool|mcp_.*",
+        "matcher": "run_command|bash|execute_command|shell|Bash|write_file|edit_file|write|edit|multiedit|Write|Edit|MultiEdit|NotebookEdit|create_file|replace_file_content|multi_replace_file_content|write_to_file|str_replace_editor|str_replace_based_edit_tool|edit_notebook|apply_patch|send_message|sendmessage|SendMessage|call_mcp_tool|mcp_.*|.*(?:write|edit|replace|create|patch|save|move|copy|rename).*",
         "hooks": [
           {
             "type": "command",
