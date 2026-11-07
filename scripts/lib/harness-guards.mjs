@@ -212,19 +212,21 @@ function touchesProtectedViaShell(clause) {
   }
   // 2. PowerShell / POSIX file writers targeting .env* or .git/
   if (/\b(?:Set-Content|Add-Content|Out-File|sc|ac|tee)\b/i.test(clause)) {
-    const tokens = clause.match(/['"][^'"]+['"]|\S+/g) || [];
+    const tokens = clause.match(/'[^']*'|"[^"]*"|\S+/g) || [];
     if (tokens.some((t) => isUnsafeEnvToken(t) || /(?:^|[\\/])\.git(?:[\\/]|$)/i.test(t))) return true;
   }
   // 3. cp / mv / Copy-Item / Move-Item where destination (last non-flag token) is .env* or .git/
   if (/^(?:cp|mv|copy-item|move-item|cpi|mi|copy|move)\b/i.test(clause)) {
-    const positional = (clause.match(/['"][^'"]+['"]|\S+/g) || []).slice(1).filter((t) => !t.startsWith('-'));
+    const positional = (clause.match(/'[^']*'|"[^"]*"|\S+/g) || []).slice(1).filter((t) => !t.startsWith('-'));
     const dest = positional[positional.length - 1] || '';
     if (isUnsafeEnvToken(dest) || /(?:^|[\\/])\.git(?:[\\/]|$)/i.test(dest)) return true;
   }
-  // 4. Inline node / python file mutation targeting .env* or .git/
-  if (/^(?:node|python3?|py)\b/i.test(clause) && /(?:writeFile|appendFile|copyFile|rename|unlink|rmSync|open\s*\()/i.test(clause)) {
-    for (const m of clause.matchAll(/['"]([^'"]+)['"]/g)) {
-      if (isUnsafeEnvToken(m[1]) || /(?:^|[\\/])\.git(?:[\\/]|$)/i.test(m[1])) return true;
+  // 4. Inline node / python / bun / deno file mutation targeting .env* or .git/
+  if (/^(?:node|python3?|py|bun|deno)\b/i.test(clause) && /(?:writeFile|appendFile|copyFile|rename|unlink|rmSync|open\s*\()/i.test(clause)) {
+    for (const re of [/'([^']+)'/g, /"([^"]+)"/g, /`([^`]+)`/g]) {
+      for (const m of clause.matchAll(re)) {
+        if (isUnsafeEnvToken(m[1]) || /(?:^|[\\/])\.git(?:[\\/]|$)/i.test(m[1])) return true;
+      }
     }
   }
   return false;
