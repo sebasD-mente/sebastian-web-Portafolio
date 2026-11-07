@@ -4,8 +4,9 @@
 > Al iniciar cada ronda y cada evaluación del Checker (`one-shot` con ventana virgen, `0` reutilizaciones por `send_message`) leyendo únicamente este archivo en lugar de acumular el historial conversacional de 15 rondas, el arnés elimina la **Explosión Cuadrática de Tokens ($O(N^2)$)** y el sesgo de co-autoría.
 
 ## Basic Info & Circuit Breaker Monitor
-- **Loop Name:** `sebastian-web-portafolio-maker-checker-loop`
-- **Active Target:** `Idle (WIP = 0; pendiente iniciar feat-001)`
+- **Loop Name / `loop_id`:** `sebastian-web-portafolio-maker-checker-loop`
+- **Iteration:** `iteration: 1`
+- **Active Target:** `Idle (WIP = 0; pendiente planificar e iniciar feat-001)`
 - **Started At:** `Pendiente`
 - **Current Round:** `0 / 15 (Max — Candado 1)`
 - **Current Status:** `Idle` (`Idle` | `In Progress` | `Completed` | `BLOCKED - Circuit Breaker Tripped`)
@@ -18,15 +19,15 @@
 
 ## Round Log
 
-### Round 0 (Baseline Inicializada)
-- **Maker Approach:** Plantilla Maestra del Arnés inicializada en limpio y verificada en las 3 puertas.
-- **Basic Check (`bash ./init.sh`):** `Pass (Exit code 0 — 3 Puertas en verde)`
-- **Independent Checker Verdict:** `Baseline ready`
+### Round 0 (Baseline Universal Chameleon Harness v2.0 Certificada)
+- **Maker Approach:** Sincronización y certificación integral de **Universal Chameleon Harness v2.0** en `sebastian web Portafolio` (`harness.config.json`, `check-python.mjs`, `check-deliverables.mjs`, `detectGlobalPipInstall`, `init.sh` políglota aditivo y `Stop` E2E).
+- **Basic Check (`bash ./init.sh`):** `Pass (Exit code 0 — 3 Puertas aditivas en verde, 0 CRLF)`
+- **Independent Checker Verdict:** `Baseline v2.0 ready (6/6 E2E scenarios PASS + 12/12 adversarial vectors DEFENDED)`
 - **Net Passing Checks Count:** `25 / 25 (Overall: 100/100)`
 - **Issues Found by Checker:** `None`
 - **Human intervention needed:** `No`
-- **Git Action (Ratchet):** `Baseline initialized`
-- **Next Round Adjustment:** `Listo para iniciar Round 1 cuando se active Modo Crítico / Loop (/goal).`
+- **Git Action (Ratchet):** `Baseline upgraded to v2.0-universal-chameleon`
+- **Next Round Adjustment:** `Listo para planificar feat-001 del portafolio web de Sebas o iniciar Round 1 bajo /goal.`
 
 ---
 
@@ -34,7 +35,7 @@
 
 | Metric | Value |
 | :--- | :--- |
-| **Rounds completed** | `0` (`Round 0` baseline lista) |
+| **Rounds completed** | `0` (`iteration: 1` baseline v2.0 lista, `WIP = 0`) |
 | **Passed rounds** | `0` |
 | **Failed rounds** | `0` |
 | **Total issues found** | `0` |
@@ -55,7 +56,9 @@
 
 ```tsv
 timestamp	commit_hash	harness_score	checks_passed	ratchet_status	description
-2026-11-07T08:38	HEAD->commit(feat-000)	100/100	25/25	kept	baseline: instalar Plantilla-Maestra-Arnes en sebastian-web-portafolio en estado limpio Dia 1 (WIP=0)
+2026-11-07T08:38	2fc7fe5	100/100	25/25	kept	baseline: instalar Plantilla-Maestra-Arnes en sebastian-web-portafolio en estado limpio Dia 1 (WIP=0)
+2026-11-07T09:07	77afc0a	100/100	25/25	kept	security: blindar 12 vectores adversariales, stacks web, comillas anidadas y 0 CRLF
+2026-11-07T10:45	HEAD->commit(feat-000)	100/100	25/25	kept	feat(harness): evolucionar a Universal Chameleon Harness v2.0 (6/6 E2E + 12/12 ADV PASS, WIP=0)
 ```
 
 *(Nota operativa: si una ronda futura falla la verificación o recibe `❌ Fail` irreversible del Checker `one-shot`, se restaura el árbol limpio al último commit verde mediante `git restore --worktree --staged .` o `git checkout -- .` —compatible con `PreToolUse`— y se añade aquí una fila con `commit_hash = (reverted)` y `ratchet_status = reverted` documentando qué enfoque falló).*
@@ -71,7 +74,7 @@ timestamp	commit_hash	harness_score	checks_passed	ratchet_status	description
 
 - **Final status:** `Idle` (`Completed` | `Failed` | `Manually stopped` | `In Progress` | `Idle`)
 - **Finished at:** `N/A`
-- **Summary:** `Plantilla base inicializada y lista para ejecutar rondas autónomas bajo /goal.`
+- **Summary:** `Universal Chameleon Harness v2.0 certificado en limpio (WIP = 0) y listo para ejecutar feat-001.`
 
 ---
 

@@ -2,47 +2,45 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-07 09:05
-**Session ID:** sesion-001 (Auditoría Adversarial y Endurecimiento Base — Día 1)
-**Active Feature:** Ninguna (`WIP = 0`; listo para iniciar `feat-001`)
+**Last Updated:** 2026-11-07 10:46
+**Session ID:** sesion-002 (Actualización y Certificación a Universal Chameleon Harness v2.0)
+**Active Feature:** Ninguna (`WIP = 0`; listo para planificar e iniciar `feat-001` del portafolio web de Sebas)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
 ## Status
 
 ### What's Done
-- [x] Instalación completa de los 28 artefactos de `Plantilla-Maestra-Arnes` en `sebastian web Portafolio` (`Overall: 100/100`, `25/25 PASS`).
-- [x] Auditoría adversarial de los 4 pipelines del arnés (`init.sh`, `scripts/check-architecture.sh`, `scripts/validate-harness.mjs`, `.agents/hooks.json` + `scripts/harness-hooks.mjs`), cierre mecánico de 10 vectores de evasión reproducidos (`12/12 DEFENDED` + `27/27 PASS`) y documentación completa de hallazgos y límites residuales en `docs/design-docs/adversarial-audit-day1.md`.
+- [x] Instalación inicial de `Plantilla-Maestra-Arnes` y cierre adversarial Día 1 (`12/12 DEFENDED`, `27/27 PASS`).
+- [x] Evolución, sincronización quirúrgica y certificación de **Universal Chameleon Harness v2.0** (`v2.0-universal-chameleon`) en `sebastian web Portafolio`: `harness.config.json`, `scripts/check-python.mjs`, `scripts/check-deliverables.mjs`, candado `detectGlobalPipInstall` en `scripts/lib/harness-guards.mjs`, `init.sh` políglota aditivo, paridad total de `layerMap`, hook `Stop` E2E sobre árbol limpio y actualización de `docs/design-docs/adversarial-audit-day1.md` (`Overall: 100/100`, `25/25 PASS`, `6/6` escenarios E2E PASS, `12/12` vectores adversariales DEFENDED, `0 CRLF`).
 
 ### What's In Progress
 - Ninguna tarea en curso (`WIP = 0`).
 
 ### What's Next
-1. Abrir `sebastian web Portafolio` como workspace activo, acordar el alcance inicial del portafolio con el usuario, actualizar `feature_list.json` y `sprint-contract.md` y pasar `feat-001` a `in-progress` (`WIP = 1`).
+1. Acordar con Sebas la arquitectura visual y técnica inicial del portafolio web, actualizar `harness.config.json`, `feature_list.json` y `sprint-contract.md`, y pasar `feat-001` a `in-progress` (`WIP = 1`).
 
 ## Blockers / Risks
-- Ninguno activo (límites estructurales residuales documentados y controlados en `docs/design-docs/adversarial-audit-day1.md`).
+- Ninguno activo (límites estructurales residuales y controles mecánicos v2.0 documentados en `docs/design-docs/adversarial-audit-day1.md`).
 
 ## Decisions Made
-- **Endurecimiento del Arnés Base tras Auditoría Adversarial (`12/12` vectores defendidos)**:
-  - Context: Al auditar sin complacencia la plantilla recién instalada, se demostraron 10 brechas reales en entorno aislado (bypass MCP y por redirección shell sobre `.env`, omisión de `.envrc`/rutas del sistema, auto-edición de `evaluator-rubric.md` por sesiones Maker, bypass `TypeName: "research"` en Candado 3, omisión de `check-architecture.sh` en `Stop` con `git status` limpio, puntos ciegos de 6 capas en `.astro/.vue/.svelte` y `src/components/`, conversión a `CRLF` en `git clone` de Windows sin `.gitattributes`, divergencia de esquema con `../` en `required_files` y `harness-hooks.mjs` a `279/280` líneas).
-  - Alternatives considered: Dejar únicamente un reporte escrito sin tocar los validadores; descartado porque el repositorio es el cimiento del proyecto y dejar brechas conocidas sin control mecánico degrada la fiabilidad desde el Día 1. Se modularizó la lógica pura en `scripts/lib/harness-guards.mjs` (`Service`), se añadió `.gitattributes` (`eol=lf`), se amplió `check-architecture.sh` a stacks web modernos y se activó telemetría real `RuntimeLogEntry` en `.agents/.runtime/hook-audit.jsonl`.
+- **Actualización Integral a Universal Chameleon Harness v2.0 (`6/6 E2E` + `12/12 ADV`, `100/100`)**:
+  - Context: Evolucionar el cimiento del repositorio para soportar sin fricción proyectos políglotas aditivos (Web/Node + Python `.venv`/AST + PowerShell AST), repositorios heredados (`brownfield` con `layerMap` unificado y trinquete `maxLegacyLayerViolations`) y entregables documentales (`non-dev` libre de falsos positivos en español), manteniendo intacta la identidad de `sebastian-web-portafolio` (`WIP = 0`) y `0 CRLF`.
+  - Alternatives considered: Conservar el arnés v1 acoplado solo a Node/Web con `init.sh` excluyente (`if/elif`); descartado porque silenciaba scripts auxiliares Python/PowerShell y carecía de perfiles configurables en `harness.config.json` y verificación documental en `Stop`.
 
 ## Files Modified This Session
-- `.gitattributes` - Creado para garantizar `0 CRLF` en cualquier `git clone` / `git worktree` y declarar binarios web
-- `.gitignore` - Añadida exclusión de `.agents/.runtime/` para telemetría local `hook-audit.jsonl`
-- `.agents/hooks.json` - Ampliados matchers `PreToolUse` y `PostToolUse` para cubrir `call_mcp_tool`, `mcp_.*` y variantes de edición
-- `scripts/lib/harness-guards.mjs` - Nuevo módulo `Service` con políticas `Fail-Closed` puras (MCP, shell, `.env*`, rúbrica y Candado 3)
-- `scripts/harness-hooks.mjs` - Orquestador `Runtime` limpio (`< 200L`), telemetría `RuntimeLogEntry` y Puerta 1 obligatoria en `Stop`
-- `scripts/lib/harness-utils.mjs` y `scripts/feature-list.schema.json` - Paridad total de esquema, bloqueo de `../` en `required_files` y `evidence >= 10` chars
-- `scripts/check-architecture.sh` e `init.sh` - Escáner de 6 capas web (`.astro/.vue/.svelte`, `src/components/`, `app/`), validación JSON estricta, control `0 CRLF` e instalación condicional de `node_modules/`
-- `docs/design-docs/adversarial-audit-day1.md`, `AGENTS.md`, `ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/QUALITY_SCORE.md`, `session-handoff.md` - Documentación completa y sincronización del arnés
+- `harness.config.json` - Nuevo perfil Camaleón v2.0 (`mode: "auto"`, `layerMap`, `brownfield`, `python`, `nonDev`)
+- `scripts/check-python.mjs` y `scripts/check-deliverables.mjs` - Nuevos inspectores AST Python (`.venv`/capas/secretos) y Puerta 3 Documental (`non-dev` + validación estricta de `harness.config.json`)
+- `init.sh` y `scripts/check-architecture.sh` - Ejecución políglota aditiva, auto-bootstrap `.venv` previo a Puerta 1, soporte `unittest discover -s tests` en Python 3.14, AST PowerShell y resolución idéntica de `layerMap`
+- `.agents/hooks.json`, `scripts/harness-hooks.mjs` y `scripts/lib/harness-guards.mjs` - Candado anti-`pip` global, cobertura `Stop` completa en árbol limpio y salida `exit 2` CLI / `--agy` protojson
+- `AGENTS.md`, `ARCHITECTURE.md`, `evaluator-rubric.md`, `checker-prompt.md`, `.gitignore`, `.gitattributes`, `docs/SECURITY.md`, `docs/RELIABILITY.md`, `docs/GOTCHAS.md`, `docs/QUALITY_SCORE.md`, `memory/topics/harness-rules.md` - Sincronización completa v2.0
+- `docs/design-docs/adversarial-audit-day1.md`, `loop-state.md`, `progress.md`, `session-handoff.md` - Addendum v2.0, preservación de identidad `sebastian-web-portafolio` (`iteration: 1`, `WIP = 0`) y evidencia certificada
 
 ## Verification Evidence
-- [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas superadas)`
+- [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas y 0 CRLF)`
 - [x] Architecture & Red-Pen check: `bash scripts/check-architecture.sh` -> `OK: Límites arquitectónicos, invariantes de 6 capas, Auto-Memoria, Seguridad e higiene estructural verificados sin violaciones.`
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `command and output verified: Overall: 100/100 (25/25 checks PASS)`
-- [x] Adversarial & functional matrix: `adversarial-audit.mjs` (`12/12 DEFENDED`) + `pipeline-matrix-audit.mjs` (`27/27 PASS`)
+- [x] Universal E2E & Adversarial Matrix: `universal-e2e-audit.mjs` (`6/6 PASS`) + `adversarial-audit.mjs` (`12/12 DEFENDED`)
 
 ## Notes for Next Session
-Ejecuta `bash ./init.sh` (en Windows PowerShell vía Git Bash: `& "C:\Program Files\Git\bin\bash.exe" ./init.sh`) al iniciar la sesión, consulta `docs/design-docs/adversarial-audit-day1.md` para el mapeo de carpetas de frameworks web hacia las 6 capas y comienza `feat-001` bajo `WIP = 1`.
+Ejecuta `bash ./init.sh` (en Windows PowerShell vía Git Bash: `& "C:\Program Files\Git\bin\bash.exe" ./init.sh`) al iniciar la sesión, revisa `harness.config.json` y `docs/design-docs/adversarial-audit-day1.md`, y planifica `feat-001` del portafolio web de Sebas respetando `WIP = 1`.

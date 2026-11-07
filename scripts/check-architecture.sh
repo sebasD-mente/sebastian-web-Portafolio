@@ -14,22 +14,61 @@ red_pen_error() {
   exit 1
 }
 
-echo "--- [Vigilante Arquitectónico] 1. Verificando Mapa de Dominios y Modelo de 6 Capas en ARCHITECTURE.md ---"
+HARNESS_MODE="auto"
+ALLOW_EMPTY_DIRS="false"
+if [ -f "harness.config.json" ]; then
+  if ! cfg_meta="$(node -e '
+    const fs = require("node:fs");
+    const raw = JSON.parse(fs.readFileSync("harness.config.json", "utf8"));
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) process.exit(2);
+    const mode = typeof raw.mode === "string" && raw.mode.trim() ? raw.mode.trim() : "auto";
+    const validModes = new Set(["auto", "greenfield", "brownfield", "non-dev"]);
+    if (!validModes.has(mode)) process.exit(3);
+    if (raw.layerMap !== undefined && (!raw.layerMap || typeof raw.layerMap !== "object" || Array.isArray(raw.layerMap))) process.exit(4);
+    const bf = raw.brownfield;
+    if (bf !== undefined && (!bf || typeof bf !== "object" || Array.isArray(bf))) process.exit(5);
+    if (bf?.maxLegacyLayerViolations !== undefined && (!Number.isInteger(bf.maxLegacyLayerViolations) || bf.maxLegacyLayerViolations < 0)) process.exit(6);
+    if (bf?.allowEmptyDirs !== undefined && typeof bf.allowEmptyDirs !== "boolean") process.exit(7);
+    const py = raw.python;
+    if (py !== undefined && (!py || typeof py !== "object" || Array.isArray(py))) process.exit(8);
+    if (py?.packageRoots !== undefined && (!Array.isArray(py.packageRoots) || !py.packageRoots.every((r) => typeof r === "string" && r.trim().length > 0))) process.exit(9);
+    const allowEmpty = Boolean(bf?.allowEmptyDirs === true || raw.allowEmptyDirs === true);
+    console.log(`${mode}|${allowEmpty ? "true" : "false"}`);
+  ' 2>/dev/null)"; then
+    red_pen_error \
+      "Configuración inválida en 'harness.config.json' (JSON corrupto o tipos fuera de contrato en mode/layerMap/brownfield/python)." \
+      "El vigilante arquitectónico camaleón requiere leer 'harness.config.json' de forma determinista y Fail-Closed." \
+      "Verifica que 'harness.config.json' sea JSON válido con 'mode' en 'auto' | 'greenfield' | 'brownfield' | 'non-dev' y tipos correctos."
+  fi
+  cfg_meta="${cfg_meta%$'\r'}"
+  IFS="|" read -r HARNESS_MODE ALLOW_EMPTY_DIRS <<< "$cfg_meta"
+fi
+
+echo "--- [Vigilante Arquitectónico] 1. Verificando Mapa de Dominios y Modelo de 6 Capas en ARCHITECTURE.md (modo: $HARNESS_MODE) ---"
 if [ ! -f "ARCHITECTURE.md" ]; then
   red_pen_error \
     "No se encontró 'ARCHITECTURE.md' en la raíz del proyecto." \
-    "El arnés requiere un mapa explícito de dominios y el flujo direccional de 6 capas para evitar código espagueti." \
-    "Crea 'ARCHITECTURE.md' en la raíz con las secciones 'Mapa de Dominios', 'Modelo Estricto de Capas' y 'Reglas Duras de Dependencia'."
+    "El arnés requiere un mapa explícito de dominios (y el flujo direccional de 6 capas en proyectos de código) para evitar desorden estructural." \
+    "Crea 'ARCHITECTURE.md' en la raíz con 'Mapa de Dominios' (y las 6 capas si el proyecto es de software)."
 fi
 
-for section in "Mapa de Dominios" "Modelo Estricto de Capas" "Reglas Duras de Dependencia" "Capability Seams" "Interfaces Transversales" "Puntos Calientes Actuales" "Types" "Config" "Repo" "Service" "Runtime" "UI"; do
-  if ! grep -Fq "$section" "ARCHITECTURE.md"; then
+if [ "$HARNESS_MODE" = "non-dev" ]; then
+  if ! grep -Fq "Mapa de Dominios" "ARCHITECTURE.md"; then
     red_pen_error \
-      "Falta la sección o capa obligatoria '$section' dentro de 'ARCHITECTURE.md'." \
-      "El modelo arquitectónico de OpenAI y DeepSeek exige documentar el mapa de dominios, el flujo de 6 capas (Types -> Config -> Repo -> Service -> Runtime -> UI), Capability Seams, Interfaces Transversales y Puntos Calientes Actuales." \
-      "Añade '$section' en 'ARCHITECTURE.md' respetando la estructura canónica del arnés."
+      "Falta la sección obligatoria 'Mapa de Dominios' dentro de 'ARCHITECTURE.md' (modo 'non-dev')." \
+      "Incluso en proyectos de investigación, documentación o análisis ('non-dev'), el arnés exige definir las áreas y entregables del dominio en 'ARCHITECTURE.md'." \
+      "Añade la sección 'Mapa de Dominios' en 'ARCHITECTURE.md' describiendo la estructura de entregables y fuentes del proyecto."
   fi
-done
+else
+  for section in "Mapa de Dominios" "Modelo Estricto de Capas" "Reglas Duras de Dependencia" "Capability Seams" "Interfaces Transversales" "Puntos Calientes Actuales" "Types" "Config" "Repo" "Service" "Runtime" "UI"; do
+    if ! grep -Fq "$section" "ARCHITECTURE.md"; then
+      red_pen_error \
+        "Falta la sección o capa obligatoria '$section' dentro de 'ARCHITECTURE.md'." \
+        "El modelo arquitectónico de OpenAI y DeepSeek exige documentar el mapa de dominios, el flujo de 6 capas (Types -> Config -> Repo -> Service -> Runtime -> UI), Capability Seams, Interfaces Transversales y Puntos Calientes Actuales." \
+        "Añade '$section' en 'ARCHITECTURE.md' respetando la estructura canónica del arnés (o configura '\"mode\": \"non-dev\"' en 'harness.config.json' si no es un proyecto de código)."
+    fi
+  done
+fi
 
 echo "--- [Vigilante Arquitectónico] 2. Verificando Flujo Direccional de Capas (Prohibido ir hacia atrás o saltar capas) ---"
 # Verificación sobre las capas actuales del arnés (scripts/lib = Repo/Service vs scripts/validate-harness.mjs y scripts/harness-hooks.mjs = Runtime)
@@ -43,12 +82,18 @@ for lib_file in scripts/lib/*.mjs; do
   fi
 done
 
-# Verificación mecánica precisa en Node.js para módulos de aplicación en src/ y app/ (ESM, CommonJS, Astro/Vue/Svelte/MDX y Python)
-if [ -d "src" ] || [ -d "app" ]; then
-  src_layer_violation="$(node -e '
+# Verificación mecánica políglota en Node.js (Web ESM/CJS/Astro/Vue/Svelte/MDX + Python multi-root + layerMap + Brownfield Ratchet)
+if [ "$HARNESS_MODE" != "non-dev" ]; then
+  src_layer_result="$(node -e '
     const fs = require("node:fs");
     const path = require("node:path");
 
+    let cfg = {};
+    if (fs.existsSync("harness.config.json")) {
+      cfg = JSON.parse(fs.readFileSync("harness.config.json", "utf8")) || {};
+    }
+
+    const VALID_LAYERS = new Set(["types", "config", "repo", "service", "runtime", "ui"]);
     const FORBIDDEN_BY_LAYER = {
       types: new Set(["config", "repo", "service", "runtime", "ui"]),
       config: new Set(["repo", "service", "runtime", "ui"]),
@@ -57,23 +102,96 @@ if [ -d "src" ] || [ -d "app" ]; then
       runtime: new Set(["ui"]),
       ui: new Set(["config", "repo"])
     };
-    const DIR_TO_LAYER = {
-      types: "types",
-      config: "config",
-      repo: "repo",
-      service: "service",
-      runtime: "runtime",
-      ui: "ui",
-      components: "ui",
-      pages: "ui",
-      views: "ui",
-      app: "ui",
-      routes: "ui"
+
+    const BASE_LAYER_LISTS = {
+      types: ["types", "schemas", "interfaces", "contracts", "domain"],
+      config: ["config", "settings", "constants"],
+      repo: ["repo", "repositories", "db", "data", "adapters", "clients", "models"],
+      service: ["service", "services", "usecases", "core", "logic"],
+      runtime: ["runtime", "server", "cli", "workers", "jobs", "api", "middleware"],
+      ui: ["ui", "components", "pages", "views", "app", "routes", "templates", "screens"]
     };
+
+    const directOverrides = [];
+    const customTopDirs = [];
+    if (cfg.layerMap && typeof cfg.layerMap === "object" && !Array.isArray(cfg.layerMap)) {
+      for (const [rawKey, rawVal] of Object.entries(cfg.layerMap)) {
+        const cleanKey = String(rawKey || "").trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+        if (!cleanKey) continue;
+        const lowerKey = cleanKey.toLowerCase();
+        if (Array.isArray(rawVal) && VALID_LAYERS.has(lowerKey)) {
+          const items = rawVal
+            .map((item) => String(item || "").trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, ""))
+            .filter(Boolean);
+          const claimedLower = new Set(items.map((x) => x.toLowerCase()));
+          for (const other of VALID_LAYERS) {
+            if (other !== lowerKey) {
+              BASE_LAYER_LISTS[other] = BASE_LAYER_LISTS[other].filter((a) => !claimedLower.has(a.toLowerCase()));
+            }
+          }
+          BASE_LAYER_LISTS[lowerKey] = items;
+          for (const it of items) customTopDirs.push(it.split("/")[0]);
+          continue;
+        }
+        const layer = String(rawVal || "").trim().toLowerCase();
+        if (!VALID_LAYERS.has(layer)) continue;
+        for (const other of VALID_LAYERS) {
+          BASE_LAYER_LISTS[other] = BASE_LAYER_LISTS[other].filter((a) => a.toLowerCase() !== lowerKey);
+        }
+        directOverrides.push([cleanKey, layer]);
+        customTopDirs.push(cleanKey.split("/")[0]);
+      }
+    }
+
+    const DIR_TO_LAYER = {};
+    const PATH_PREFIX_TO_LAYER = [];
+    for (const canon of VALID_LAYERS) {
+      DIR_TO_LAYER[canon] = canon;
+      for (const item of BASE_LAYER_LISTS[canon]) {
+        if (item.includes("/")) PATH_PREFIX_TO_LAYER.push([item, canon]);
+        else { DIR_TO_LAYER[item] = canon; DIR_TO_LAYER[item.toLowerCase()] = canon; }
+      }
+    }
+    for (const [cleanKey, layer] of directOverrides) {
+      if (cleanKey.includes("/")) PATH_PREFIX_TO_LAYER.push([cleanKey, layer]);
+      else { DIR_TO_LAYER[cleanKey] = layer; DIR_TO_LAYER[cleanKey.toLowerCase()] = layer; }
+    }
+    PATH_PREFIX_TO_LAYER.sort((a, b) => b[0].length - a[0].length);
+
+    const maxLegacyLayerViolations = Number.isInteger(cfg?.brownfield?.maxLegacyLayerViolations) && cfg.brownfield.maxLegacyLayerViolations >= 0
+      ? cfg.brownfield.maxLegacyLayerViolations
+      : (Number.isInteger(cfg?.maxLegacyLayerViolations) && cfg.maxLegacyLayerViolations >= 0 ? cfg.maxLegacyLayerViolations : 0);
+
+    const pyRootsCfg = Array.isArray(cfg?.python?.packageRoots)
+      ? cfg.python.packageRoots
+      : ["src", "app", "backend"];
+    const sanitizedPyRoots = pyRootsCfg
+      .map((r) => String(r || "").trim().replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/^\/+|\/+$/g, ""))
+      .filter((r) => r && r !== "." && !r.startsWith("..") && !r.includes("/"));
+
+    const packageRootsList = Array.from(new Set(["src", "app", "backend", ...sanitizedPyRoots]));
+    const RESERVED_HARNESS_DIRS = new Set([
+      "scripts", "docs", "memory", ".agents", "node_modules", ".git",
+      ".venv", "venv", "env", "dist", "build", "tests", "test", "deliverables"
+    ]);
+    const extraMappedRoots = customTopDirs.filter((d) => d && !d.startsWith(".") && !RESERVED_HARNESS_DIRS.has(d.toLowerCase()));
+    const candidateRoots = Array.from(new Set([...packageRootsList, ...extraMappedRoots]));
+    const KNOWN_ROOTS = new Set(packageRootsList);
     const ALL_SEGMENTS = new Set(Object.keys(DIR_TO_LAYER));
-    const LAYER_SEG_RE = /(^|\/)(types|config|repo|service|runtime|ui|components|pages|views|app|routes)(\/|$)/;
+    const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const segAlt = Array.from(ALL_SEGMENTS).map(escapeRe).join("|");
+    const rootAlt = Array.from(KNOWN_ROOTS).map(escapeRe).join("|");
+    const LAYER_SEG_RE = segAlt ? new RegExp("(^|/)(" + segAlt + ")(/|$)") : /(?!)/;
+    const ALIAS_RE = segAlt ? new RegExp("^[@#](" + segAlt + ")(\\/.*|$)") : /(?!)/;
+    const INTERNAL_PREFIX_RE = new RegExp("^(?:\\.\\/|\\.\\.\\/|@\\/|~\\/|#\\/|" + (rootAlt ? "(?:" + rootAlt + ")\\/|" : "") + "\\.\\.?$)");
+    const STRIP_ROOT_RE = rootAlt ? new RegExp("^(" + rootAlt + ")\\/(.+)$") : null;
+
     const CODE_EXT_RE = /\.(?:[cm]?js|tsx?|jsx|astro|vue|svelte|mdx|py)$/i;
-    const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", ".astro", "__pycache__"]);
+    const SFC_HTML_EXT = new Set([".astro", ".vue", ".svelte", ".mdx"]);
+    const SKIP_DIRS = new Set([
+      "node_modules", ".git", "dist", "build", ".next", ".astro", ".svelte-kit",
+      ".venv", "venv", "env", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"
+    ]);
 
     function stripJsComments(code) {
       let out = "", i = 0, quote = "";
@@ -124,43 +242,70 @@ if [ -d "src" ] || [ -d "app" ]; then
         .join("\n");
     }
 
+    function isInternalPyRootSeg(firstSeg) {
+      return KNOWN_ROOTS.has(firstSeg) || ALL_SEGMENTS.has(firstSeg);
+    }
+
     function extractSpecifiers(code, ext) {
       const specs = [];
       if (ext === ".py") {
         const clean = stripPyComments(code);
-        for (const m of clean.matchAll(/^\s*from\s+(\.+[A-Za-z0-9_.]*|src(?:\.[A-Za-z0-9_]+)*)\s+import\s+([^\n;]+)/gm)) {
+        const fromRe = /^\s*from\s+(\.+[A-Za-z0-9_.]*|[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s+import\s+(?:\(([\s\S]*?)\)|([^\n;]+))/gm;
+        for (const m of clean.matchAll(fromRe)) {
           const mod = m[1];
-          const names = m[2].replace(/[()]/g, "").split(",").map((s) => s.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean);
-          if (mod === "src") {
-            for (const n of names) specs.push("src/" + n.replace(/\./g, "/"));
-          } else if (mod.startsWith("src.")) {
-            specs.push(mod.replace(/\./g, "/"));
-          } else if (mod.startsWith(".")) {
+          const rawNames = (m[2] !== undefined ? m[2] : m[3] || "");
+          const names = rawNames
+            .replace(/[()\\]/g, " ")
+            .split(",")
+            .map((s) => s.trim().split(/\s+as\s+/)[0].trim())
+            .filter((s) => s && s !== "*");
+          if (mod.startsWith(".")) {
             const dots = (mod.match(/^\.+/) || [""])[0].length;
             const rest = mod.slice(dots).replace(/\./g, "/");
             const prefix = dots === 1 ? "./" : "../".repeat(dots - 1);
-            if (rest) specs.push(prefix + rest);
-            else for (const n of names) specs.push(prefix + n);
+            if (rest) specs.push({ raw: mod, spec: prefix + rest, isPyInternal: true });
+            else for (const n of names) specs.push({ raw: `${mod} import ${n}`, spec: prefix + n.replace(/\./g, "/"), isPyInternal: true });
+          } else {
+            const parts = mod.split(".");
+            const firstSeg = parts[0];
+            if (!isInternalPyRootSeg(firstSeg)) continue;
+            if (parts.length === 1 && KNOWN_ROOTS.has(firstSeg)) {
+              for (const n of names) specs.push({ raw: `${mod}.${n}`, spec: `${firstSeg}/${n.replace(/\./g, "/")}`, isPyInternal: true });
+            } else {
+              specs.push({ raw: mod, spec: mod.replace(/\./g, "/"), isPyInternal: true });
+            }
           }
         }
         for (const m of clean.matchAll(/^\s*import\s+([^\n;]+)/gm)) {
           for (const item of m[1].split(",")) {
             const mod = item.trim().split(/\s+as\s+/)[0].trim();
-            if (mod.startsWith("src.")) specs.push(mod.replace(/\./g, "/"));
+            if (!mod) continue;
+            const firstSeg = mod.split(".")[0];
+            if (isInternalPyRootSeg(firstSeg)) {
+              specs.push({ raw: mod, spec: mod.replace(/\./g, "/"), isPyInternal: true });
+            }
           }
         }
       } else {
-        const clean = stripJsComments(code);
-        for (const m of clean.matchAll(/\b(?:import|export)\s+(?:type\s+)?(?:[^;\x27"`]*?\s+from\s+)[\x27"]([^\x27"]+)[\x27"]/g)) specs.push(m[1]);
-        for (const m of clean.matchAll(/\bimport\s+[\x27"]([^\x27"]+)[\x27"]/g)) specs.push(m[1]);
-        for (const m of clean.matchAll(/\b(?:import|require)\s*\(\s*[\x27"`]([^\x27"`$]+)[\x27"`]\s*\)/g)) specs.push(m[1]);
+        const preClean = SFC_HTML_EXT.has(ext) ? code.replace(/<!--[\s\S]*?-->/g, "") : code;
+        const clean = stripJsComments(preClean);
+        for (const m of clean.matchAll(/\b(?:import|export)\s+(?:type\s+)?(?:[^;\x27"`]*?\s+from\s+)[\x27"]([^\x27"]+)[\x27"]/g)) {
+          specs.push({ raw: m[1], spec: m[1], isPyInternal: false });
+        }
+        for (const m of clean.matchAll(/\bimport\s+[\x27"]([^\x27"]+)[\x27"]/g)) {
+          specs.push({ raw: m[1], spec: m[1], isPyInternal: false });
+        }
+        for (const m of clean.matchAll(/\b(?:import|require)\s*\(\s*[\x27"`]([^\x27"`$]+)[\x27"`]\s*\)/g)) {
+          specs.push({ raw: m[1], spec: m[1], isPyInternal: false });
+        }
       }
       return specs;
     }
 
     function walkFiles(dir, out = []) {
       if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return out;
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const entries = fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+      for (const entry of entries) {
         if (SKIP_DIRS.has(entry.name)) continue;
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) walkFiles(full, out);
@@ -169,60 +314,127 @@ if [ -d "src" ] || [ -d "app" ]; then
       return out;
     }
 
-    function inferLayerFromSegments(segs) {
-      for (const s of segs) {
-        if (ALL_SEGMENTS.has(s)) return DIR_TO_LAYER[s];
+    function inferLayerByPrefix(relPosixPath) {
+      for (const [prefix, layer] of PATH_PREFIX_TO_LAYER) {
+        if (relPosixPath === prefix || relPosixPath.startsWith(prefix + "/")) return layer;
       }
       return "";
     }
 
-    const roots = ["src", "app"].filter((r) => fs.existsSync(r) && fs.statSync(r).isDirectory());
+    function inferLayerFromSegments(segs) {
+      for (const s of segs) {
+        if (ALL_SEGMENTS.has(s)) return DIR_TO_LAYER[s];
+        const low = s.toLowerCase();
+        if (ALL_SEGMENTS.has(low)) return DIR_TO_LAYER[low];
+      }
+      return "";
+    }
+
+    const roots = candidateRoots.filter((r) => fs.existsSync(r) && fs.statSync(r).isDirectory());
+    const seenViolations = new Set();
+    const violations = [];
+
     for (const scanRoot of roots) {
       for (const filePath of walkFiles(scanRoot)) {
-        const relFromRoot = scanRoot === "app"
-          ? path.posix.join("app", path.relative("app", path.dirname(filePath)).replace(/\\/g, "/"))
-          : path.relative("src", path.dirname(filePath)).replace(/\\/g, "/");
-        const sourceLayer = inferLayerFromSegments(relFromRoot.split("/").filter(Boolean));
+        const ext = path.extname(filePath).toLowerCase();
+        const relFilePosix = filePath.replace(/\\/g, "/");
+        const fileRelDirFromRepo = path.dirname(relFilePosix);
+        const relDirInRoot = path.relative(scanRoot, path.dirname(filePath)).replace(/\\/g, "/");
+
+        let sourceLayer = inferLayerByPrefix(fileRelDirFromRepo)
+          || inferLayerByPrefix(relDirInRoot)
+          || inferLayerFromSegments(relDirInRoot.split("/").filter(Boolean));
+        if (!sourceLayer && !KNOWN_ROOTS.has(scanRoot) && ALL_SEGMENTS.has(scanRoot)) {
+          sourceLayer = DIR_TO_LAYER[scanRoot];
+        }
+        if (!sourceLayer && scanRoot === "app" && ext !== ".py" && ALL_SEGMENTS.has("app")) {
+          sourceLayer = DIR_TO_LAYER.app;
+        }
         if (!sourceLayer) continue;
+
         const forbiddenSet = FORBIDDEN_BY_LAYER[sourceLayer];
-        const specs = extractSpecifiers(fs.readFileSync(filePath, "utf8"), path.extname(filePath).toLowerCase());
-        for (const rawSpec of specs) {
-          const spec = rawSpec.trim().replace(/\\/g, "/").split(/[?#]/)[0];
-          const aliasMatch = spec.match(/^[@#](types|config|repo|service|runtime|ui|components|pages|views|app|routes)(\/.*|$)/);
-          const isInternal = Boolean(aliasMatch) || /^(?:\.\/|\.\.\/|@\/|~\/|#\/|src\/|app\/|\.\.?$)/.test(spec);
+        const extracted = extractSpecifiers(fs.readFileSync(filePath, "utf8"), ext);
+
+        for (const item of extracted) {
+          const rawSpec = item.raw;
+          const spec = item.spec.trim().replace(/\\/g, "/").split(/[?#]/)[0];
+          const aliasMatch = spec.match(ALIAS_RE);
+          const isInternal = item.isPyInternal || Boolean(aliasMatch) || INTERNAL_PREFIX_RE.test(spec);
           if (!isInternal) continue;
 
           let normalized = "";
+          let strippedRoot = "";
+          let fullTargetRel = "";
+
           if (aliasMatch) {
             normalized = aliasMatch[1] + (aliasMatch[2] || "");
           } else if (spec.startsWith(".")) {
-            normalized = path.posix.normalize(path.posix.join(relFromRoot, spec)).replace(/^(?:\.\.\/)+(?:src\/)?/, "");
+            const joined = path.posix.normalize(path.posix.join(fileRelDirFromRepo, spec)).replace(/^(?:\.\.\/)+/, "");
+            fullTargetRel = joined;
+            const rm = STRIP_ROOT_RE ? joined.match(STRIP_ROOT_RE) : null;
+            if (rm) {
+              strippedRoot = rm[1];
+              normalized = rm[2];
+            } else {
+              normalized = joined;
+            }
           } else {
-            normalized = path.posix.normalize(spec.replace(/^(?:@\/|~\/|#\/|src\/)/, ""));
+            const dealiased = path.posix.normalize(spec.replace(/^(?:@\/|~\/|#\/)/, ""));
+            fullTargetRel = dealiased;
+            const rm = STRIP_ROOT_RE ? dealiased.match(STRIP_ROOT_RE) : null;
+            if (rm) {
+              strippedRoot = rm[1];
+              normalized = rm[2];
+            } else {
+              normalized = dealiased;
+            }
           }
 
-          if (!LAYER_SEG_RE.test(normalized) && !LAYER_SEG_RE.test(spec)) continue;
-          const targetLayer = inferLayerFromSegments(normalized.split("/").filter(Boolean));
+          let targetLayer = (fullTargetRel && inferLayerByPrefix(fullTargetRel))
+            || inferLayerByPrefix(normalized)
+            || ((LAYER_SEG_RE.test(normalized) || LAYER_SEG_RE.test(spec))
+              ? inferLayerFromSegments(normalized.split("/").filter(Boolean))
+              : "");
+
+          if (!targetLayer && strippedRoot === "app" && ext !== ".py" && ALL_SEGMENTS.has("app")) {
+            targetLayer = DIR_TO_LAYER.app;
+          }
+
           if (targetLayer && targetLayer !== sourceLayer && forbiddenSet.has(targetLayer)) {
-            console.log(`${filePath.replace(/\\/g, "/")}|${sourceLayer}|${targetLayer}|${rawSpec}`);
-            process.exit(0);
+            const key = `${relFilePosix}|${sourceLayer}|${targetLayer}|${rawSpec}`;
+            if (!seenViolations.has(key)) {
+              seenViolations.add(key);
+              violations.push({ file: relFilePosix, src: sourceLayer, dst: targetLayer, spec: rawSpec });
+            }
           }
         }
       }
     }
+
+    if (violations.length > maxLegacyLayerViolations) {
+      const first = violations[0];
+      console.log(`FAIL|${violations.length}|${maxLegacyLayerViolations}|${first.file}|${first.src}|${first.dst}|${first.spec}`);
+    } else if (maxLegacyLayerViolations > 0) {
+      console.log(`WARN|${violations.length}|${maxLegacyLayerViolations}`);
+    }
   ')"
-  if [ -n "$src_layer_violation" ]; then
-    IFS="|" read -r v_file v_src v_dst v_spec <<< "$src_layer_violation"
-    if [ "$v_src" = "ui" ]; then
-      red_pen_error \
-        "Salto ilegal de capas en '$v_file': la capa UI ('src/ui/') importa '$v_spec' hacia '$v_dst'." \
-        "La Regla Dura #2 de ARCHITECTURE.md permite a UI consumir contratos puros de Types ('src/types/'), pero prohíbe saltar Service/Runtime para acceder directamente a Config o Repo." \
-        "Enruta el acceso a datos o configuración desde 'src/ui/' a través de un servicio o adaptador expuesto en 'src/service/' o 'src/runtime/'."
-    else
-      red_pen_error \
-        "Violación direccional en '$v_file': la capa '$v_src' ('src/$v_src/') importa '$v_spec' desde una capa superior ('$v_dst')." \
-        "La Regla Dura #1 de ARCHITECTURE.md exige respetar estrictamente el flujo 'Types -> Config -> Repo -> Service -> Runtime -> UI' sin dependencias hacia atrás." \
-        "Elimina la importación '$v_spec' en '$v_file' o invierte la dependencia mediante contratos puros en 'src/types/'."
+  src_layer_result="${src_layer_result%$'\r'}"
+  if [ -n "$src_layer_result" ]; then
+    IFS="|" read -r v_status v_count v_max v_file v_src v_dst v_spec <<< "$src_layer_result"
+    if [ "$v_status" = "FAIL" ]; then
+      if [ "$v_src" = "ui" ]; then
+        red_pen_error \
+          "Salto ilegal de capas en '$v_file': la capa UI importa '$v_spec' hacia '$v_dst' (Detectadas $v_count violaciones; tope permitido: $v_max)." \
+          "La Regla Dura #2 de ARCHITECTURE.md permite a UI consumir contratos puros de Types, pero prohíbe saltar Service/Runtime para acceder directamente a Config o Repo." \
+          "Enruta el acceso a datos o configuración desde '$v_file' a través de un servicio o adaptador expuesto en 'service/' o 'runtime/'."
+      else
+        red_pen_error \
+          "Violación direccional en '$v_file': la capa '$v_src' importa '$v_spec' desde una capa superior ('$v_dst') (Detectadas $v_count violaciones; tope permitido: $v_max)." \
+          "La Regla Dura #1 de ARCHITECTURE.md exige respetar estrictamente el flujo 'Types -> Config -> Repo -> Service -> Runtime -> UI' sin dependencias hacia atrás." \
+          "Elimina la importación '$v_spec' en '$v_file' o invierte la dependencia mediante contratos puros en 'types/'."
+      fi
+    elif [ "$v_status" = "WARN" ]; then
+      echo "AVISO [Brownfield Ratchet]: Detectadas $v_count violaciones legadas dentro del tope permitido ($v_count <= $v_max). Prohibido subir este techo; redúcelo en 'harness.config.json' conforme refactorices."
     fi
   fi
 fi
@@ -522,8 +734,11 @@ fi
 
 if ! node -e '
   const fs = require("node:fs");
+  const path = require("node:path");
   const schema = JSON.parse(fs.readFileSync("scripts/feature-list.schema.json", "utf8"));
+  if (schema?.additionalProperties !== false) process.exit(1);
   const itemsSchema = schema?.properties?.features?.items;
+  if (itemsSchema?.additionalProperties !== false) process.exit(1);
   const itemProps = itemsSchema?.properties;
   const itemsRequired = itemsSchema?.required;
   const baseRequired = ["id", "name", "description", "status", "dependencies", "required_files", "verification"];
@@ -538,7 +753,12 @@ if ! node -e '
   if (!itemProps?.area || !itemProps?.user_visible_behavior) {
     process.exit(1);
   }
+  const doneMinLen = itemsSchema?.allOf?.[0]?.then?.properties?.evidence?.minLength;
+  if (typeof doneMinLen !== "number" || doneMinLen < 10) {
+    process.exit(1);
+  }
   if (fs.existsSync("feature_list.json")) {
+    const resolvedRoot = path.resolve(".");
     const data = JSON.parse(fs.readFileSync("feature_list.json", "utf8"));
     const allowedRoot = new Set(Object.keys(schema.properties || {}));
     const allowedItem = new Set(Object.keys(itemProps));
@@ -552,15 +772,30 @@ if ! node -e '
       if (!Object.keys(f).every((k) => allowedItem.has(k))) process.exit(1);
       if (!baseRequired.every((req) => f[req] !== undefined)) process.exit(1);
       if (typeof f.id !== "string" || !idRe.test(f.id)) process.exit(1);
+      if (typeof f.name !== "string" || f.name.trim().length === 0) process.exit(1);
       if (!statusEnum.includes(f.status)) process.exit(1);
+      if (!Array.isArray(f.required_files) || f.required_files.length === 0) process.exit(1);
+      for (const relPath of f.required_files) {
+        if (typeof relPath !== "string" || !relPath.trim() || path.isAbsolute(relPath) || path.posix.isAbsolute(relPath) || path.win32.isAbsolute(relPath) || /^[a-zA-Z]:/.test(relPath)) {
+          process.exit(1);
+        }
+        const full = path.resolve(resolvedRoot, relPath);
+        const rel = path.relative(resolvedRoot, full);
+        if (!rel || rel === "." || rel === ".." || rel.startsWith("../") || rel.startsWith("..\\") || path.isAbsolute(rel)) {
+          process.exit(1);
+        }
+        if (f.status === "done" && (!fs.existsSync(full) || !fs.statSync(full).isFile() || fs.statSync(full).size <= 0)) {
+          process.exit(1);
+        }
+      }
       if (f.status === "done" && (typeof f.evidence !== "string" || f.evidence.trim().length < 10)) process.exit(1);
     }
   }
 ' >/dev/null 2>&1; then
   red_pen_error \
     "Violación de esquema entre 'scripts/feature-list.schema.json' y 'feature_list.json'." \
-    "El rastreador de tareas debe exigir los 7 campos obligatorios en items.required, los 4 estados canónicos (not-started, in-progress, blocked, done), area/user_visible_behavior y evidencia ejecutable (>= 10 caracteres) en 'done'." \
-    "Verifica que 'scripts/feature-list.schema.json' conserve items.required completo + los 4 estados y que 'feature_list.json' cumpla estrictamente ese esquema."
+    "El rastreador de tareas debe exigir los 7 campos obligatorios en items.required, additionalProperties: false, los 4 estados canónicos, rutas internas seguras en required_files y evidencia ejecutable (>= 10 caracteres) + archivos físicos no vacíos en 'done'." \
+    "Verifica que 'scripts/feature-list.schema.json' conserve items.required completo + minLength: 10 en done y que 'feature_list.json' cumpla estrictamente ese esquema."
 fi
 
 echo "--- [Vigilante Arquitectónico] 5. Escáner de Higiene y Estado Limpio (cleanup-scanner: .gitignore, .gitattributes, 0 CRLF, JSON, secretos, artefactos y árbol fuente) ---"
@@ -574,7 +809,7 @@ fi
 crlf_script="$(node -e '
   const fs = require("node:fs");
   const path = require("node:path");
-  const targets = ["init.sh", ".agents/hooks.json"];
+  const targets = ["init.sh", ".agents/hooks.json", "harness.config.json"];
   for (const dir of ["scripts", "scripts/lib"]) {
     if (!fs.existsSync(dir)) continue;
     for (const f of fs.readdirSync(dir)) {
@@ -583,23 +818,27 @@ crlf_script="$(node -e '
     }
   }
   for (const t of targets) {
-    if (fs.existsSync(t) && fs.readFileSync(t).includes(13)) {
+    if (fs.existsSync(t) && fs.statSync(t).isFile() && fs.readFileSync(t).includes(13)) {
       console.log(t.replace(/\\/g, "/"));
       process.exit(0);
     }
   }
 ')"
+crlf_script="${crlf_script%$'\r'}"
 if [ -n "$crlf_script" ]; then
   red_pen_error \
-    "Saltos de línea CRLF detectados en el artefacto ejecutable '$crlf_script'." \
-    "Los scripts POSIX y runners del arnés deben mantenerse en LF puro (0 CRLF) para funcionar de forma idéntica en Windows, Linux, WSL y contenedores CI." \
+    "Saltos de línea CRLF detectados en el artefacto ejecutable o de configuración '$crlf_script'." \
+    "Los scripts POSIX, runners y manifiestos del arnés deben mantenerse en LF puro (0 CRLF) para funcionar de forma idéntica en Windows, Linux, WSL y contenedores CI." \
     "Normaliza '$crlf_script' a LF puro eliminando los bytes '\\r' (0x0D)."
 fi
 
 invalid_json_file="$(node -e '
   const fs = require("node:fs");
   const path = require("node:path");
-  const skipDirs = new Set([".git", "node_modules", "dist", "build", ".next", ".astro", "coverage"]);
+  const skipDirs = new Set([
+    ".git", "node_modules", "dist", "build", ".next", ".astro", ".svelte-kit",
+    "coverage", ".venv", "venv", "env", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"
+  ]);
   const jsoncRe = /(?:^|\/)(?:[jt]sconfig(?:\.[^/]+)?\.json|\.vscode\/.*\.json)$/i;
   function walk(dir, depth) {
     if (depth > 4 || !fs.existsSync(dir)) return null;
@@ -619,6 +858,7 @@ invalid_json_file="$(node -e '
   const bad = walk(".", 0);
   if (bad) console.log(bad);
 ')"
+invalid_json_file="${invalid_json_file%$'\r'}"
 if [ -n "$invalid_json_file" ]; then
   IFS="|" read -r bad_json_path bad_json_err <<< "$invalid_json_file"
   red_pen_error \
@@ -626,6 +866,7 @@ if [ -n "$invalid_json_file" ]; then
     "En Antigravity, stderr de PostToolUse no detiene el turno; Puerta 1 actúa como red de seguridad dura para impedir JSON inválido en manifiestos o configuraciones." \
     "Corrige el error de sintaxis JSON en '$bad_json_path' antes de continuar."
 fi
+
 if [ ! -f ".gitignore" ]; then
   red_pen_error \
     "Violación estructural: no se encontró '.gitignore' en la raíz del proyecto." \
@@ -661,9 +902,9 @@ while IFS= read -r env_file; do
       "docs/SECURITY.md prohíbe exponer archivos '.env*' reales fuera de las plantillas seguras (.env.example, .env.sample, .env.template)." \
       "Elimina la excepción '!$env_base' de '.gitignore' o renombra la plantilla sin secretos a '.env.example'."
   fi
-done < <(find . -maxdepth 4 -type f -name ".env*" -not -path "./.git/*" -not -path "./node_modules/*" 2>/dev/null || true)
+done < <(find . -maxdepth 4 -type f -name ".env*" -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" 2>/dev/null || true)
 
-temp_files="$(find . -maxdepth 4 -type f \( -name "*.tmp" -o -name "*.bak" -o -name "*.swp" -o -name "*~" \) -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./dist/*" -not -path "./build/*" 2>/dev/null || true)"
+temp_files="$(find . -maxdepth 4 -type f \( -name "*.tmp" -o -name "*.bak" -o -name "*.swp" -o -name "*~" \) -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./dist/*" -not -path "./build/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" 2>/dev/null || true)"
 if [ -n "$temp_files" ]; then
   red_pen_error \
     "Se detectaron archivos temporales, de respaldo o swap en el repositorio: $temp_files" \
@@ -671,13 +912,25 @@ if [ -n "$temp_files" ]; then
     "Elimina los archivos temporales listados ('rm <archivo>') antes de ejecutar la verificación."
 fi
 
-for src_tree in "src" "lib" "app"; do
+for nb_tree in "src" "app" "backend" "deliverables" "notebooks"; do
+  if [ -d "$nb_tree" ]; then
+    nb_ckpts="$(find "$nb_tree" -maxdepth 5 -type d -name ".ipynb_checkpoints" -not -path "*/node_modules/*" -not -path "*/.venv/*" -not -path "*/venv/*" -not -path "*/env/*" 2>/dev/null || true)"
+    if [ -n "$nb_ckpts" ]; then
+      red_pen_error \
+        "Se detectaron directorios '.ipynb_checkpoints' huérfanos en '$nb_tree/': $nb_ckpts" \
+        "Los checkpoints automáticos de Jupyter fuera de entornos ignorados contaminan el árbol fuente o los entregables con borradores no auditados." \
+        "Elimina los directorios '.ipynb_checkpoints' de '$nb_tree/' y asegúrate de ignorar '.ipynb_checkpoints/' en '.gitignore'."
+    fi
+  fi
+done
+
+for src_tree in "src" "lib" "app" "backend"; do
   if [ -d "$src_tree" ]; then
-    src_logs="$(find "$src_tree" -maxdepth 4 -type f -name "*.log" -not -path "*/node_modules/*" 2>/dev/null || true)"
+    src_logs="$(find "$src_tree" -maxdepth 4 -type f -name "*.log" -not -path "*/node_modules/*" -not -path "*/.venv/*" -not -path "*/venv/*" -not -path "*/env/*" 2>/dev/null || true)"
     if [ -n "$src_logs" ]; then
       red_pen_error \
         "Se detectaron archivos de log de depuración dentro del árbol de código fuente ('$src_tree/'): $src_logs" \
-        "El escáner de limpieza prohíbe mezclar trazas '*.log' con módulos de código fuente en 'src/', 'lib/' o 'app/'." \
+        "El escáner de limpieza prohíbe mezclar trazas '*.log' con módulos de código fuente en 'src/', 'lib/', 'app/' o 'backend/'." \
         "Elimina los archivos '*.log' de '$src_tree/' y dirige los logs de runtime a stdout o a un directorio externo ignorado."
     fi
   fi
@@ -691,16 +944,16 @@ if [ -n "$session_artifacts" ]; then
     "Transfiere cualquier nota relevante a 'progress.md' o 'session-handoff.md' y elimina los artefactos temporales de la raíz."
 fi
 
-for build_in_src in "src/dist" "src/build" "lib/dist" "lib/build" "app/dist" "app/build"; do
+for build_in_src in "src/dist" "src/build" "lib/dist" "lib/build" "app/dist" "app/build" "backend/dist" "backend/build"; do
   if [ -d "$build_in_src" ]; then
     red_pen_error \
       "Violación estructural crítica: directorio de salida compilada '$build_in_src/' mezclado dentro del árbol fuente." \
-      "Mezclar artefactos compilados ('dist/' o 'build/') dentro de 'src/', 'lib/' o 'app/' contamina las búsquedas del agente y rompe los límites de capas." \
+      "Mezclar artefactos compilados ('dist/' o 'build/') dentro de 'src/', 'lib/', 'app/' o 'backend/' contamina las búsquedas del agente y rompe los límites de capas." \
       "Elimina '$build_in_src/' y configura la herramienta de compilación para emitir salidas en 'dist/' o 'build/' en la raíz del proyecto."
   fi
 done
 
-nested_nm="$(find . -mindepth 2 -maxdepth 4 -type d -name "node_modules" -not -path "./node_modules/*" -not -path "./.git/*" 2>/dev/null || true)"
+nested_nm="$(find . -mindepth 2 -maxdepth 4 -type d -name "node_modules" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" 2>/dev/null || true)"
 if [ -n "$nested_nm" ]; then
   red_pen_error \
     "Violación estructural crítica: directorio 'node_modules' anidado detectado fuera de la raíz: $nested_nm" \
@@ -708,13 +961,15 @@ if [ -n "$nested_nm" ]; then
     "Elimina los directorios 'node_modules' anidados y gestiona las dependencias desde la raíz del proyecto."
 fi
 
-for common_dir in "src" "lib" "app" "test" "tests" "docs"; do
-  if [ -d "$common_dir" ] && [ -z "$(ls -A "$common_dir" 2>/dev/null)" ]; then
-    red_pen_error \
-      "Directorio vacío residual detectado: '$common_dir/'." \
-      "El escáner de higiene de sesión marca directorios vacíos como trabajo incompleto o estructura fantasma que desorienta a la siguiente sesión." \
-      "Elimina el directorio vacío '$common_dir/' o incorpora los archivos reales correspondientes al alcance activo."
-  fi
-done
+if [ "$ALLOW_EMPTY_DIRS" != "true" ]; then
+  for common_dir in "src" "lib" "app" "backend" "deliverables" "test" "tests" "docs"; do
+    if [ -d "$common_dir" ] && [ -z "$(ls -A "$common_dir" 2>/dev/null)" ]; then
+      red_pen_error \
+        "Directorio vacío residual detectado: '$common_dir/'." \
+        "El escáner de higiene de sesión marca directorios vacíos como trabajo incompleto o estructura fantasma que desorienta a la siguiente sesión." \
+        "Elimina el directorio vacío '$common_dir/' o incorpora los archivos reales correspondientes al alcance activo (o habilita 'brownfield.allowEmptyDirs: true' en 'harness.config.json' en repositorios legados)."
+    fi
+  done
+fi
 
 echo "OK: Límites arquitectónicos, invariantes de 6 capas, Auto-Memoria, Seguridad e higiene estructural verificados sin violaciones."

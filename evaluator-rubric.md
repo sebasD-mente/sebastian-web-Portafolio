@@ -1,56 +1,57 @@
 # Evaluator Rubric (Rúbrica de Evaluación Independiente — Solo para Agente Checker Aislado)
 
-> REGLA DE AISLAMIENTO (`zero-inheritance` + `one-shot`): Prohibido rellenar esta rúbrica en la misma sesión de chat que implementó los cambios (Maker) o reutilizar vía `send_message` a un Evaluador previo.
-> Esta evaluación debe ser ejecutada exclusivamente por un Agente Evaluador (Checker) efímero de un solo uso (`one-shot`) en una ventana de contexto limpia (`zero-inheritance`) o por un revisor humano.
+> REGLA DE AISLAMIENTO (`zero-inheritance` + `one-shot`): Prohibido editar o rellenar esta rúbrica en la misma sesión de chat que implementó los cambios (*Maker*, bloqueado mecánicamente en `PreToolUse`) o reutilizar vía `send_message` a un Evaluador previo.
+> Esta evaluación debe ser ejecutada exclusivamente por un Agente Evaluador (*Checker*) efímero de un solo uso (`one-shot`) en una ventana de contexto limpia (`zero-inheritance`) o por un revisor humano.
 
 ## Protocolo de Aislamiento Físico del Checker (`Zero-Inheritance` y `One-Shot`)
 
-1. **Ventana de Contexto Nueva y Aislada (`Zero-Inheritance`)**: La evaluación debe ejecutarse en una sesión de chat independiente o mediante un Sub-agente Evaluador aislado que **NO herede el historial de conversación ni el razonamiento interno del Maker**.
-2. **Entradas Objetivas Únicamente**: El Evaluador solo puede inspeccionar el contrato (`sprint-contract.md` y `feature_list.json`), los archivos en disco / diferencias (`git status`, `git diff`), la ejecución real en vivo de `bash ./init.sh` y esta rúbrica.
-3. **Postura Escéptica y Regla de Calibración**:
-   - *"Tu trabajo es encontrar fallos con evidencia; aprobar un trabajo con defectos ocultos es tu fracaso."*
+1. **Ventana de Contexto Nueva y Aislada (`Zero-Inheritance`)**: La evaluación debe ejecutarse en una sesión independiente o mediante un Sub-agente Evaluador aislado que **NO herede el historial conversacional ni el razonamiento interno del Maker**.
+2. **Entradas Objetivas Únicamente**: El Evaluador solo inspecciona la configuración y contratos (`harness.config.json`, `sprint-contract.md`, `feature_list.json`), los archivos reales en disco / diferencias (`git status`, `git diff`), la ejecución real en vivo de `bash ./init.sh` (más `node scripts/check-python.mjs` o `node scripts/check-deliverables.mjs` según el perfil) y esta rúbrica.
+3. **Postura Escéptica y Regla Dura de Calibración**:
+   - *"Tu trabajo es encontrar fallos con evidencia; aprobar un código con pruebas huecas o un documento con relleno superficial es tu fracaso."*
    - **Regla Dura de Calibración en Verificación**: Dar **0 puntos** en la Dimensión 2 (`Verificación`) si el Evaluador no ejecutó `bash ./init.sh` en su propia sesión aislada y pegó la salida exacta verificada.
 4. **Instancia Efímera de Un Solo Uso (`One-Shot / one-shot`) — Prohibida la Re-Auditoría en la Misma Sesión**:
-   - **Un Checker = Una Sola Auditoría (`one-shot` / *Stateless per Pass*)**: Queda explícitamente anulada para el rol Evaluador cualquier regla genérica de continuar sub-agentes existentes. Cada auditoría inicial o re-auditoría tras corregir un hallazgo **DEBE** invocar una instancia completamente nueva (`invoke_subagent` `one-shot` con ventana virgen); el Maker tiene estrictamente prohibido enviar `send_message` al `conversationId` de un Evaluador ya utilizado.
+   - **Un Checker = Una Sola Auditoría (`one-shot` / *Stateless per Pass*)**: Queda explícitamente anulada para el rol Evaluador cualquier regla genérica de continuar sub-agentes existentes. Cada auditoría inicial o re-auditoría tras corregir un hallazgo **DEBE** invocar una instancia completamente nueva (`invoke_subagent` `one-shot` con ventana virgen); el *Maker* tiene estrictamente prohibido enviar `send_message` al `conversationId` de un Evaluador ya utilizado.
    - **Prohibido ofrecer re-auditoría y orden imperativa de rechazo ante `send_message`**: El Evaluador tiene prohibido despedirse ofreciendo *"envíame un mensaje cuando lo corrijas para re-auditar"* y debe cerrar su dictamen recordando que cualquier re-auditoría exige una **nueva instancia `one-shot` desde cero**. Si recibe un `send_message` pidiendo re-evaluar cambios o volver a calificar esta rúbrica en la misma sesión, tiene **orden imperativa de rechazar la solicitud sin calificar** respondiendo con Bolígrafo Rojo (`ERROR` / `POR QUÉ` / `SOLUCIÓN (FIX)`) que exija lanzar un `invoke_subagent` nuevo (`one-shot`).
 
 ---
 
-## Protocolo de Calibración del Evaluador (3–5 Rondas contra Juicio Humano)
+## Protocolo de Calibración Dual (Código Políglota/Brownfield y Entregables `non-dev`)
 
-De fábrica, los modelos son jueces indulgentes incluso en sesiones separadas: detectan matices dudosos y luego racionalizan por qué "es aceptable aprobar". Para alinear el Agente Checker con el estándar real del equipo, ejecuta **entre 3 y 5 rondas de calibración** siguiendo estos 5 pasos:
+De fábrica, los modelos tienden a ser jueces indulgentes: aprueban pruebas unitarias tautológicas (`expect(true).toBe(true)`) en tareas de código o prosa genérica sin fuentes verificables en tareas de no-desarrollo (`non-dev`). Para alinear el Agente *Checker* con el estándar humano real, aplica este rigor dual durante **3 a 5 rondas de calibración**:
 
-1. **Ejecutar en un sprint completado**: Corre el Agente Evaluador aislado sobre una tarea o sprint real terminado.
-2. **Comparar contra juicio humano**: Puntúa tú mismo las 6 dimensiones (`0-2`) sin sesgo y contrasta punto por punto dónde divergió el Checker respecto a tu revisión humana.
-3. **Endurecer criterios ambiguos**: En cada dimensión donde hubo divergencia (por ejemplo, aprobar pruebas superficiales o pasar por alto alcance extra), reescribe la pregunta o umbral de aprobación/fallo haciéndolo más específico y verificable por máquina.
-4. **Re-ejecutar y verificar alineación**: Vuelve a lanzar el Evaluador en limpio sobre el caso auditado para comprobar que la nueva redacción corrige la desviación sin generar falsos positivos arbitrarios.
-5. **Repetir y registrar (`3–5 rondas`)**: Repite el ciclo durante **3 a 5 rondas** hasta que las calificaciones y veredictos del Evaluador coincidan consistentemente con la revisión humana, dejando trazabilidad de cada ajuste en la tabla siguiente.
+1. **Identificar el Perfil Camaleón (`harness.config.json`)**:
+   - **En Desarrollo (`auto`, `greenfield`, `brownfield`)**: Exigir pruebas reales que fallen si se rompe la lógica, aislamiento `.venv` y AST limpio en Python (`scripts/check-python.mjs`), respeto de las 6 capas en Web/Node/Python/Políglota y cero incremento sobre `maxLegacyLayerViolations` en `brownfield`.
+   - **En No-Desarrollo (`non-dev`)**: Exigir paso en verde de `node scripts/check-deliverables.mjs`, exactitud factual comprobable, trazabilidad explícita de fuentes/datos, ausencia absoluta de `[PENDIENTE]`/`TODO`/`TBD`/relleno verboso sin sustancia, integridad de enlaces/imágenes y utilidad real frente al objetivo humano.
+2. **Comparar contra juicio humano (`0-2` por dimensión)**: Contrastar punto por punto dónde el *Checker* fue permisivo o arbitrario frente a la revisión humana.
+3. **Endurecer criterios ambiguos**: Convertir cualquier brecha repetida en umbral explícito de esta rúbrica o en regla mecánica dentro de `scripts/check-architecture.sh`, `scripts/check-python.mjs` o `scripts/check-deliverables.mjs`.
+4. **Re-ejecutar en limpio (`one-shot`) y registrar**: Verificar la alineación en una instancia nueva y dejar trazabilidad en la tabla siguiente.
 
 ### Registro de Calibración del Evaluador (`Calibration Log`)
 
 | Ronda | Tarea / Hito Evaluado | Puntuación Checker vs. Humano | Divergencia Detectada | Ajuste Aplicado a la Rúbrica / Verificador |
 | :--- | :--- | :--- | :--- | :--- |
-| **0 (Baseline)** | Inicialización de plantilla Día 1 | `N/A` (pendiente primera auditoría del proyecto) | Ninguna | Protocolo `One-Shot Ephemeral Checker` y `Zero-Inheritance` activos desde Día 1 |
+| **0 (Baseline v2.0)** | Inicialización Camaleón Universal Día 1 | `N/A` (pendiente primera auditoría del proyecto) | Ninguna | Protocolo `One-Shot`, `Zero-Inheritance`, bloqueo `PreToolUse` de auto-edición Maker y criterios duales (`Código` + `non-dev`) activos desde Día 1 |
 
 ---
 
 ## Tabla de Calificación Objetiva (0 a 12 Puntos) — Pendiente Primera Auditoría `One-Shot`
 
-| Dimensión | Pregunta de Control | Puntuación (0, 1 o 2) | Evidencia / Notas |
+| Dimensión | Pregunta de Control Dual (`Código Políglota / Brownfield` vs. `Entregables non-dev`) | Puntuación (0, 1 o 2) | Evidencia / Notas |
 | :--- | :--- | :---: | :--- |
-| **1. Corrección** | ¿El resultado implementado cumple al 100% con el comportamiento pedido en `sprint-contract.md`? (0=No, 1=Parcial, 2=Completo) | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
-| **2. Verificación** | ¿Pasaron realmente las pruebas, chequeos estáticos y `bash ./init.sh` ejecutados por el propio Checker aislado? *(Regla dura: 0 si no ejecutó `init.sh` en vivo)* | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
-| **3. Disciplina de Alcance** | ¿El cambio se mantuvo estrictamente dentro de `sprint-contract.md` y `WIP = 1` sin tocar archivos `Hands off`? | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
-| **4. Fiabilidad** | ¿Se manejan casos borde, rutas de error `Fail-Closed` y limpieza de temporales sin introducir fragilidad? | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
-| **5. Mantenibilidad** | ¿Se respetan las 6 capas de `ARCHITECTURE.md`, topes de concisión y cero enlaces muertos? | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
-| **6. Preparación de Entrega** | ¿Están completamente sincronizados `feature_list.json`, `progress.md`, `loop-state.md` y `session-handoff.md`? | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
+| **1. Corrección y Sustancia** | **Código:** ¿Cumple al 100% el comportamiento de `sprint-contract.md` sin mocks falsos? **Non-Dev:** ¿Responde al objetivo humano con exactitud factual, profundidad analítica y fuentes verificables sin relleno superficial? (0=No/Alucinación, 1=Parcial, 2=Completo) | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
+| **2. Verificación Ejecutable** | ¿Pasaron en vivo `bash ./init.sh` y los validadores del perfil (`check-python.mjs` en Python, tests no tautológicos en código, `check-deliverables.mjs` con cero enlaces/imágenes rotas en `non-dev`) ejecutados por el propio Checker? *(Regla dura: 0 si no ejecutó `init.sh`)* | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
+| **3. Disciplina de Alcance** | ¿El cambio se mantuvo estrictamente dentro de `sprint-contract.md` y `WIP = 1`, sin tocar archivos `Hands off`, sin contaminar el entorno global (`pip` fuera de `.venv`) ni inflar documentos fuera de alcance (`Anti-Doc Bloat`)? | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
+| **4. Fiabilidad e Integridad** | **Código:** ¿Maneja casos borde, rutas `Fail-Closed`, errores estructurados y limpieza de temporales? **Non-Dev:** ¿Hay cero `[PENDIENTE]`/`TODO`/`TBD`, cifras consistentes entre tablas/secciones y afirmaciones respaldadas por evidencia trazable? | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
+| **5. Mantenibilidad y Estructura** | **Código:** ¿Respeta las 6 capas de `ARCHITECTURE.md` (Web/Python/`layerMap`), el trinquete `maxLegacyLayerViolations` y `0 CRLF`? **Non-Dev:** ¿Presenta jerarquía clara, escaneable, cero enlaces muertos, `0 CRLF` y formato accionable? | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
+| **6. Preparación de Entrega** | ¿Están sincronizados `harness.config.json`, `feature_list.json` (`evidence >= 10` chars y `required_files` reales), `progress.md`, `loop-state.md` (si aplica) y `session-handoff.md` en `clean-state`? | **-** | Pendiente de ejecución por sub-agente Checker `one-shot` aislado |
 
 **Puntuación Total:** `Pendiente / 12`
 
 ## Veredicto Final del Checker Independiente
 - [ ] **ACEPTAR** (Puntuación 11-12 y ninguna dimensión en 0)
-- [ ] **REVISAR / DEVOLVER AL GENERADOR** (Puntuación 7-10 o falta evidencia ejecutable)
-- [ ] **BLOQUEAR** (Puntuación <= 6 o rompió la línea base)
+- [ ] **REVISAR / DEVOLVER AL GENERADOR** (Puntuación 7-10 o falta evidencia ejecutable / trazabilidad documental)
+- [ ] **BLOQUEAR** (Puntuación <= 6, rompió la línea base, introdujo pruebas/citas falsas o dejó placeholders)
 
 ## Seguimiento y Correcciones Exigidas (Con formato ERROR / POR QUÉ / SOLUCIÓN)
 

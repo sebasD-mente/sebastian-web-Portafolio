@@ -10,18 +10,30 @@
 *.local.md
 .agents/.runtime/
 
-# Dependencias y artefactos de compilación
+# Dependencias y artefactos de compilación Web / Node / Multi-stack
 node_modules/
 dist/
 build/
 coverage/
 .next/
+.astro/
+.svelte-kit/
 out/
+
+# Entornos virtuales, cachés y artefactos Python / Data / ML
+.venv/
+venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.venv/
-venv/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.ipynb_checkpoints/
+*.egg-info/
+.eggs/
+.coverage
+htmlcov/
 
 # Archivos temporales, respaldos, editores y logs (clean-state-checklist.md)
 *.tmp

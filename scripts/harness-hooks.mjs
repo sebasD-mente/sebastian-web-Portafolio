@@ -5,26 +5,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  detectDestructiveCommand,
-  extractToolContext,
-  isCheckerSession,
-  isProtectedTargetPath,
-  isRubricTarget,
-  isSendMessageToChecker,
-  redactSecrets,
-  redPenReason
+  detectDestructiveCommand, detectGlobalPipInstall, extractToolContext, isCheckerSession,
+  isPipVenvRequired, isProtectedTargetPath, isRubricTarget, isSendMessageToChecker, redactSecrets, redPenReason
 } from './lib/harness-guards.mjs';
 import { formatScoreReport, scoreHarness } from './lib/harness-utils.mjs';
 
 const SCRIPT_FILE = fileURLToPath(import.meta.url);
 export const REPO_ROOT = path.resolve(path.dirname(SCRIPT_FILE), '..');
 export {
-  detectDestructiveCommand,
-  extractToolContext,
-  isCheckerSession,
-  isProtectedTargetPath,
-  isSendMessageToChecker,
-  redPenReason
+  detectDestructiveCommand, detectGlobalPipInstall, extractToolContext, isCheckerSession,
+  isPipVenvRequired, isProtectedTargetPath, isSendMessageToChecker, redPenReason
 };
 
 export function resolveTargetRoot(payload = {}, env = process.env) {
@@ -126,6 +116,12 @@ export function evaluatePreToolUse(stdinState, env = process.env) {
       appendAuditLog(targetRoot, 'pre-tool-use', t0, { tool: ctx.toolName, cmd: ctx.commandLine }, null, reason, stdinState.payload);
       return { decision: 'deny', reason };
     }
+    const pipCheck = detectGlobalPipInstall(ctx.commandLine, { targetRoot, env });
+    if (pipCheck.blocked) {
+      const reason = redPenReason(`Instalación global con pip bloqueada (${pipCheck.rule}).`, 'Instalar paquetes en el Python global contamina el sistema operativo del usuario y rompe el aislamiento reproducible entre proyectos.', 'Crea y usa el entorno virtual local .venv: ejecuta `python -m venv .venv` y luego `.venv/Scripts/python -m pip install <paquete>` (Windows) o `.venv/bin/python -m pip install <paquete>` (Linux/macOS), o bien `uv venv && uv pip install <paquete>`.');
+      appendAuditLog(targetRoot, 'pre-tool-use', t0, { tool: ctx.toolName, cmd: ctx.commandLine }, null, reason, stdinState.payload);
+      return { decision: 'deny', reason };
+    }
   }
   if (ctx.isSendMessage) {
     const c = isSendMessageToChecker(stdinState.payload, ctx.recipient, ctx.message);
@@ -195,7 +191,6 @@ export function evaluateStopGate(stdinState, env = process.env) {
     isGitClean = gitRes.status === 0 && gitRes.stdout.trim() === '';
   }
 
-  // Incluso con git status limpio, ejecutamos SIEMPRE Puerta 1 (check-architecture.sh) para atrapar violaciones de capas ya confirmadas o temporales .tmp/.env* ignorados
   const scriptToRun = isGitClean ? 'scripts/check-architecture.sh' : './init.sh';
   const gateRes = spawnSync(bashBin, [scriptToRun], { cwd: targetRoot, env: childEnv, encoding: 'utf8', timeout: 55000 });
   if (gateRes.status !== 0) {
@@ -204,17 +199,41 @@ export function evaluateStopGate(stdinState, env = process.env) {
     return { decision: 'continue', reason };
   }
 
+  if (isGitClean) {
+    for (const extraScript of ['scripts/check-deliverables.mjs', 'scripts/check-python.mjs']) {
+      if (!fs.existsSync(path.join(targetRoot, extraScript))) continue;
+      const subRes = spawnSync(process.execPath, [extraScript, '--root', targetRoot], { cwd: targetRoot, env: childEnv, encoding: 'utf8', timeout: 30000 });
+      if (subRes.status !== 0) {
+        const reason = redPenReason(`Fallo al ejecutar '${extraScript}' en Stop (exit ${subRes.status ?? 1}).`, 'AGENTS.md prohíbe cerrar turno con entregables incompletos ([PENDIENTE]/enlaces rotos) o errores AST/secretos Python.', `Repara el hallazgo y verifica 'bash ./init.sh':\n${[subRes.stdout, subRes.stderr].filter(Boolean).join('\n').trim().slice(-900)}`);
+        appendAuditLog(targetRoot, 'stop', t0, { scriptToRun: extraScript }, null, reason, payload);
+        return { decision: 'continue', reason };
+      }
+    }
+  }
+
   appendAuditLog(targetRoot, 'stop', t0, { scriptToRun, isGitClean }, { decision: 'stop' }, null, payload);
   return { decision: 'stop' };
 }
 
 export function runCli(argv = process.argv.slice(2), env = process.env) {
-  const cmd = String(argv[0] || '').trim().toLowerCase();
+  const agyMode = argv.includes('--agy');
+  const posArgs = argv.filter((a) => a !== '--agy');
+  const cmd = String(posArgs[0] || '').trim().toLowerCase();
   const stdinState = readStdinPayload();
-  if (cmd === 'pre-tool-use' || cmd === 'pretooluse') { process.stdout.write(`${JSON.stringify(evaluatePreToolUse(stdinState, env))}\n`); return 0; }
+  if (cmd === 'pre-tool-use' || cmd === 'pretooluse') {
+    const res = evaluatePreToolUse(stdinState, env);
+    process.stdout.write(`${JSON.stringify(res)}\n`);
+    if (!agyMode && res.decision === 'deny') { process.stderr.write(`${res.reason}\n`); return 2; }
+    return 0;
+  }
   if (cmd === 'post-tool-use' || cmd === 'posttooluse') { process.stdout.write(`${JSON.stringify(executePostToolUse(stdinState, env))}\n`); return 0; }
-  if (cmd === 'stop') { process.stdout.write(`${JSON.stringify(evaluateStopGate(stdinState, env))}\n`); return 0; }
-  process.stdout.write(`${JSON.stringify({ decision: 'deny', reason: redPenReason(`Subcomando desconocido '${argv[0] || ''}'.`, 'Solo se admiten pre-tool-use, post-tool-use y stop.', 'Usa node ../scripts/harness-hooks.mjs <evento>.') })}\n`);
+  if (cmd === 'stop') {
+    const res = evaluateStopGate(stdinState, env);
+    process.stdout.write(`${JSON.stringify(res)}\n`);
+    if (!agyMode && res.decision === 'continue') { process.stderr.write(`${res.reason}\n`); return 2; }
+    return 0;
+  }
+  process.stdout.write(`${JSON.stringify({ decision: 'deny', reason: redPenReason(`Subcomando desconocido '${posArgs[0] || ''}'.`, 'Solo se admiten pre-tool-use, post-tool-use y stop.', 'Usa node ../scripts/harness-hooks.mjs <evento>.') })}\n`);
   return 1;
 }
 

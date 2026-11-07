@@ -1,0 +1,29 @@
+{
+  "mode": "auto",
+  "activeStacks": [],
+  "layerMap": {
+    "types": ["types", "schemas", "interfaces", "contracts", "domain"],
+    "config": ["config", "settings", "constants"],
+    "repo": ["repo", "repositories", "db", "data", "adapters", "clients", "models"],
+    "service": ["service", "services", "usecases", "core", "logic"],
+    "runtime": ["runtime", "server", "cli", "workers", "jobs", "api", "middleware"],
+    "ui": ["ui", "components", "pages", "views", "app", "routes", "templates", "screens"]
+  },
+  "brownfield": {
+    "enabled": false,
+    "allowUnmappedDirs": true,
+    "allowEmptyDirs": false,
+    "maxLegacyLayerViolations": 0
+  },
+  "python": {
+    "requireVenvForPip": true,
+    "packageRoots": ["src", "app", "backend"],
+    "enforceAstChecks": true
+  },
+  "nonDev": {
+    "deliverableDirs": ["deliverables", "content", "research", "reports"],
+    "forbidPlaceholders": true,
+    "checkMarkdownLinks": true,
+    "minDeliverableWords": 15
+  }
+}

@@ -8,6 +8,8 @@
 *.jsx text eol=lf
 *.ts text eol=lf
 *.tsx text eol=lf
+*.py text eol=lf
+*.ps1 text eol=lf
 *.astro text eol=lf
 *.vue text eol=lf
 *.svelte text eol=lf
@@ -19,7 +21,7 @@
 *.yaml text eol=lf
 *.toml text eol=lf
 
-# Activos binarios comunes en proyectos web (portafolio)
+# Activos binarios comunes en proyectos web, datos y documentos
 *.png binary
 *.jpg binary
 *.jpeg binary

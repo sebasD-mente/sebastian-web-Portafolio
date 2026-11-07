@@ -1,6 +1,6 @@
-# RELIABILITY.md (Observabilidad de Runtime, Fiabilidad en 3 Puertas y Validación UI)
+# RELIABILITY.md (Observabilidad de Runtime, Fiabilidad Aditiva en 3 Puertas y Validación UI / Non-Dev)
 
-Este documento define cómo el sistema demuestra de forma determinista que está saludable, es observable desde señales locales y permanece reiniciable (`restartable`), eliminando las suposiciones y los reintentos a ciegas (*blind retries*) tanto en backend/CLI como en interfaces de usuario.
+Este documento define cómo el **Arnés Camaleón Universal v2.0** demuestra de forma determinista que el repositorio está saludable, registra señales observables reales en disco y permanece reiniciable (`restartable`), eliminando suposiciones y reintentos a ciegas (*blind retries*) en aplicaciones Web/Node, backends Python, proyectos políglotas, repositorios `brownfield` y entregables `non-dev`.
 
 ---
 
@@ -10,56 +10,55 @@ Todo proyecto gobernado por este arnés expone cuatro rutas operativas canónica
 
 | Ruta Estándar | Comando / Procedimiento Canónico | Propósito Operativo |
 | :--- | :--- | :--- |
-| **1. Arranque (`Startup`)** | `bash ./init.sh` | Confirma directorio, integridad de artefactos críticos, sincronización multi-stack y salud de línea base antes de tocar código. |
-| **2. Verificación (`Verification`)** | `bash ./init.sh` (`bash scripts/check-architecture.sh` + `node scripts/validate-harness.mjs --min-score 100`) | Ejecuta secuencialmente las 3 Puertas (Estática, Comportamiento `100/100` y Sistema Completo: build, lint, type-check y tests). |
-| **3. Iniciar aplicación o servicio (`Start app / service`)** | `RUN_START_COMMAND=1 bash ./init.sh` (o `START_CMD` configurado en el entorno/proyecto) | Levanta la aplicación o servicio objetivo únicamente después de haber superado las 3 puertas de verificación previas. |
-| **4. Depurar o inspeccionar runtime (`Debug / inspect runtime`)** | Filtrado local de trazas JSON por `correlationId` / `level: "error"` + ejecución aislada de la puerta o recorrido afectado | Permite diagnosticar la causa raíz y la capa propietaria del fallo desde señales locales antes de modificar código. |
+| **1. Arranque (`Startup`)** | `bash ./init.sh` | Confirma directorio, perfil `harness.config.json`, integridad de artefactos críticos (`0 CRLF`), sincronización inteligente y salud de línea base antes de editar. |
+| **2. Verificación (`Verification`)** | `bash ./init.sh` (`check-architecture.sh` + `validate-harness.mjs` + `check-python.mjs` / `check-deliverables.mjs` / build & tests) | Ejecuta secuencialmente las 3 Puertas aditivas (Estática, Comportamiento `100/100` y Sistema Completo Políglota o Documental). |
+| **3. Iniciar aplicación o servicio (`Start app / service`)** | `RUN_START_COMMAND=1 bash ./init.sh` (o `START_CMD` configurado en `harness.config.json` / entorno) | Levanta la aplicación o servicio objetivo únicamente después de haber superado en verde las 3 puertas de verificación previas. |
+| **4. Depurar o inspeccionar runtime (`Debug / inspect runtime`)** | Inspección de `.agents/.runtime/hook-audit.jsonl` y logs de aplicación filtrando por `correlationId` / `level: "error"` + corrida aislada de la puerta afectada | Permite diagnosticar la causa raíz y la capa propietaria del fallo desde señales locales reales antes de modificar archivos. |
 
 ### Señales Requeridas en Tiempo de Ejecución (`Required Runtime Signals`)
-Está estrictamente prohibido emitir mensajes vagos como `"Algo salió mal"`, `"Error procesando archivo"` o `"Fallo inesperado"`. El runtime debe proporcionar cuatro señales observables:
-1. **Logs estructurados** para el arranque y todos los flujos críticos (siguiendo `RuntimeLogEntry`).
-2. **Verificaciones de salud (`health checks`)** para servicios clave, dependencias locales y estado de inicialización.
-3. **Datos de traza o tiempo (`durationMs`, latencia por etapa, conteos de fallos o profundidad de cola)** para rutas lentas o flujos de múltiples pasos.
-4. **Estados de error visibles y accionables para el usuario** ante fallos recuperables (con secretos, tokens y PII redactados según `docs/SECURITY.md`).
+Está estrictamente prohibido emitir mensajes vagos como `"Algo salió mal"` o `"Fallo inesperado"`. El runtime del arnés y de la aplicación proporcionan cuatro señales observables:
+1. **Logs JSONL estructurados reales (`RuntimeLogEntry`)**: El runner `scripts/harness-hooks.mjs` persiste cada evaluación de `PreToolUse`, `PostToolUse` y `Stop` en `.agents/.runtime/hook-audit.jsonl`, y los módulos de `Runtime` de la aplicación siguen el mismo contrato.
+2. **Verificaciones de salud (`health checks`)**: Validación determinista de `.venv` en Python (`scripts/check-python.mjs`), sintaxis JSON estricta, integridad de enlaces/sustancia (`scripts/check-deliverables.mjs`) y disponibilidad de dependencias.
+3. **Datos de traza y latencia (`durationMs`)**: Medición explícita por evento/etapa (por ejemplo, `PostToolUse < 15 ms` y omisión de reinstalaciones redundantes en `Stop` con `HARNESS_SKIP_INSTALL=1` para evitar bloqueos por *timeout*).
+4. **Estados de error accionables con Bolígrafo Rojo (`ERROR + POR QUÉ + SOLUCIÓN`)**: Con secretos, tokens y `PII` redactados automáticamente según `docs/SECURITY.md`.
 
 ---
 
-## 2. Esquema Obligatorio de Logs JSON Estructurados (`RuntimeLogEntry`)
+## 2. Esquema Obligatorio de Logs JSON Estructurados (`RuntimeLogEntry` y `hook-audit.jsonl`)
 
-Cada paso crítico de ejecución en módulos de runtime o automatización debe registrar un **objeto JSON estructurado** con los siguientes 8 campos obligatorios:
+Cada paso crítico de ejecución en hooks del arnés (`.agents/.runtime/hook-audit.jsonl`) o en módulos `Runtime` del proyecto registra un **objeto JSON estructurado** con los siguientes 8 campos obligatorios:
 
 | Campo | Tipo | Obligatorio | Descripción y Propósito |
 | :--- | :--- | :--- | :--- |
-| `timestamp` | `string` (ISO 8601) | Sí | Fecha y hora exacta en UTC (ej. `"2026-10-28T19:10:00.000Z"`). |
-| `level` | `"info" \| "warn" \| "error"` | Sí | Nivel de severidad del evento. |
-| `component` | `string` | Sí | Pieza o módulo del sistema que emite el evento (ej. `"ArchitectureChecker"`, `"HarnessValidator"`, `"IngestaDocumentos"`). |
-| `action` | `string` | Sí | Operación específica en curso (ej. `"verificar_6_capas"`, `"evaluar_subsistemas"`, `"extraer_texto"`). |
-| `durationMs` | `number` | Sí | Tiempo de ejecución en milisegundos para detectar cuellos de botella y regresiones de latencia. |
-| `input` | `object \| string` | Sí | Resumen sanitizado de los parámetros de entrada (sin secretos, credenciales ni payloads masivos). |
-| `output` / `error` | `object \| null` | Sí | Resultado estructurado en caso de éxito (`output`) o detalle exacto del fallo (`error` con `message`, `why` y `fix`). |
-| `correlationId` | `string` | Sí | Identificador único por solicitud o corrida (ej. `"req-8f2a1c"`) que permite rastrear de principio a fin todos los pasos de una misma operación a través de las 6 capas. |
+| `timestamp` | `string` (ISO 8601) | Sí | Fecha y hora exacta en UTC (ej. `"2026-11-07T16:10:00.000Z"`). |
+| `level` | `"info" \| "warn" \| "error"` | Sí | Nivel de severidad del evento (`"warn"`/`"error"` en bloqueos `deny` o `continue`). |
+| `component` | `string` | Sí | Módulo emisor (ej. `"HarnessHooks"`, `"PythonChecker"`, `"DeliverablesChecker"`, `"ArchitectureChecker"`). |
+| `action` | `string` | Sí | Operación específica evaluada (ej. `"pre-tool-use"`, `"stop"`, `"verificar_python_venv"`, `"auditar_entregables"`). |
+| `durationMs` | `number` | Sí | Tiempo de ejecución en milisegundos para vigilar latencia de hooks y puertas. |
+| `input` | `object \| string` | Sí | Resumen sanitizado y redactado de los parámetros de entrada (sin secretos ni payloads masivos). |
+| `output` / `error` | `object \| null` | Sí | Decisión estructurada en éxito (`output`) o detalle exacto del fallo (`error` con `message`, `why` y `fix`). |
+| `correlationId` | `string` | Sí | Identificador único por invocación, turno o solicitud (ej. `"hook-9c41f2"` o `"req-8f2a1c"`) para correlacionar eventos de extremo a extremo. |
 
-### Ejemplo Canónico: Evento Exitoso (`level: "info"`)
+### Ejemplo Canónico: Decisión Registrada en `.agents/.runtime/hook-audit.jsonl` (`level: "info"`)
 
 ```json
 {
-  "timestamp": "2026-10-28T19:10:04.120Z",
+  "timestamp": "2026-11-07T16:10:04.120Z",
   "level": "info",
-  "component": "HarnessValidator",
-  "action": "evaluar_5_subsistemas",
-  "durationMs": 42,
+  "component": "HarnessHooks",
+  "action": "stop",
+  "durationMs": 185,
   "input": {
-    "rootDir": ".",
-    "minScore": 100
+    "terminationReason": "NO_TOOL_CALL",
+    "cleanGitTree": true
   },
   "output": {
-    "overallScore": 100,
-    "passedChecks": 25,
-    "totalChecks": 25,
-    "cleanState": true
+    "decision": "stop",
+    "gate1": "PASS",
+    "overallScore": 100
   },
   "error": null,
-  "correlationId": "req-8f2a1c"
+  "correlationId": "hook-9c41f2"
 }
 ```
 
@@ -67,56 +66,63 @@ Cada paso crítico de ejecución en módulos de runtime o automatización debe r
 
 ```json
 {
-  "timestamp": "2026-10-28T19:10:05.305Z",
+  "timestamp": "2026-11-07T16:10:05.305Z",
   "level": "error",
-  "component": "ArchitectureChecker",
-  "action": "verificar_flujo_direccional_capas",
-  "durationMs": 18,
+  "component": "HarnessHooks",
+  "action": "pre-tool-use",
+  "durationMs": 4,
   "input": {
-    "targetFile": "scripts/lib/harness-utils.mjs"
+    "toolName": "run_command",
+    "commandLine": "pip install requests"
   },
-  "output": null,
+  "output": {
+    "decision": "deny"
+  },
   "error": {
-    "message": "Violación de capa en 'scripts/lib/harness-utils.mjs': invocación prohibida a 'process.exit('.",
-    "why": "La Regla Dura #1 de ARCHITECTURE.md prohíbe que Repo/Service dependa o controle el ciclo de vida de Runtime.",
-    "fix": "Elimina 'process.exit(' de 'scripts/lib/harness-utils.mjs' y devuelve un objeto de resultado para que la capa Runtime decida el código de salida."
+    "message": "Instalación global de paquetes Python bloqueada ('pip install requests').",
+    "why": "docs/SECURITY.md prohíbe contaminar el Python global del sistema fuera de un entorno virtual aislado (.venv).",
+    "fix": "Crea o usa el entorno virtual del proyecto ('.venv/Scripts/python.exe -m pip install ...' o '.venv/bin/python -m pip install ...')."
   },
-  "correlationId": "req-8f2a1c"
+  "correlationId": "hook-9c41f3"
 }
 ```
 
 ---
 
-## 3. Contrato de Fiabilidad en 3 Puertas (`init.sh`) y Recorridos Dorados (`Golden Journeys`)
+## 3. Contrato de Fiabilidad Aditiva en 3 Puertas (`init.sh`) y Recorridos Dorados (`Golden Journeys`)
 
-Ningún cambio en el repositorio se considera fiable hasta superar secuencialmente las **3 Puertas de Verificación** ejecutadas por `bash ./init.sh` bajo modo estricto POSIX (`set -euo pipefail`):
+Ningún cambio en el repositorio se considera fiable hasta superar secuencialmente las **3 Puertas de Verificación** ejecutadas por `bash ./init.sh` (`set -euo pipefail`) y parametrizadas por `harness.config.json`:
 
-1. **Puerta 1 — Estática y Límites Arquitectónicos (`Static & Architecture Gate`)**:
-   - Comprueba la existencia física de los archivos vitales del arnés y ejecuta `bash scripts/check-architecture.sh` para validar `ARCHITECTURE.md`, las 6 capas (`Types -> Config -> Repo -> Service -> Runtime -> UI`), los límites de Auto-Memoria (`memory/INDEX.md <= 200` líneas / `25 KB` e Invariante de Dos Pasos), la integridad de Observabilidad Dual, cero enlaces muertos en `Required Artifacts` y el escáner `cleanup-scanner`.
+1. **Puerta 1 — Estática, `0 CRLF`, JSON Estricto y Límites Arquitectónicos (`Static & Architecture Gate`)**:
+   - Verifica la existencia física de los archivos vitales, `0 CRLF` (`\r`), sintaxis válida en todos los `.json` estrictos del árbol y ejecuta `bash scripts/check-architecture.sh` validando `ARCHITECTURE.md`, `harness.config.json`, las 6 capas (incluyendo superficies web `.astro/.vue/.svelte`, `components/`, `pages/`, `app/` y el trinquete `maxLegacyLayerViolations` en `brownfield`), Auto-Memoria (`<= 200L / 25KB`), cero enlaces muertos en `Required Artifacts` y `cleanup-scanner`.
 2. **Puerta 2 — Comportamiento y Reglas de Subsistemas (`Behavioral Gate`)**:
-   - Ejecuta `node scripts/validate-harness.mjs --min-score 100` exigiendo `100/100` en los 5 subsistemas (`instructions`, `state`, `verification`, `scope`, `lifecycle`), validando `WIP <= 1`, orden secuencial DAG (incluyendo bloqueo aguas abajo ante estado `blocked`) sobre las tareas del proyecto (`N >= 1` en `feature_list.json`) y `Pass-State Gating`.
-3. **Puerta 3 — Sistema Completo (`End-to-End System Gate`)**:
-   - Sincroniza dependencias y ejecuta build, lint, type-check y tests mediante autodetección multi-stack (`pnpm`/`yarn`/`bun`/`npm`, Python, Go, Rust, Maven, Gradle, .NET) o `INSTALL_CMD` / `VERIFY_CMD`, confirmando `CLEAN STATE`.
+   - Ejecuta `node scripts/validate-harness.mjs --min-score 100` exigiendo `100/100` (`25/25 PASS`) en `instructions`, `state`, `verification`, `scope` y `lifecycle`, validando `WIP <= 1`, orden secuencial DAG sin ciclos y `Pass-State Gating` en paridad estricta con `scripts/feature-list.schema.json` (`evidence >= 10` caracteres, cero `../` fuera de raíz y `required_files` físicos con tamaño `> 0`).
+3. **Puerta 3 — Sistema Completo Políglota Aditivo y Puerta Documental (`End-to-End Polyglot & Non-Dev Gate`)**:
+   - A diferencia de una cascada excluyente donde `package.json` silenciaba otros lenguajes, la Puerta 3 ejecuta **de forma aditiva** cada validador aplicable al repositorio:
+     - **Node / Web (`package.json`)**: Instala dependencias solo en arranque en frío (cuando falta `node_modules/` o `HARNESS_FORCE_INSTALL=1`, omitiendo en `Stop` mediante `HARNESS_SKIP_INSTALL=1`) y corre `check`/`typecheck`, `lint`, `test` y `build`.
+     - **Python (`scripts/check-python.mjs`)**: Cuando existen manifiestos o módulos Python (`pyproject.toml`, `requirements.txt`, `src/`, `app/`, `backend/`), verifica el aislamiento en `.venv`, parsea sintaxis/AST e imports de capas y ejecuta `pytest` / linters configurados.
+     - **Otros Stacks Políglotas**: Ejecuta aditivamente Go (`go test`), Rust (`cargo test`), JVM (Maven/Gradle), .NET (`dotnet test`), Dart/Flutter, PowerShell o los comandos declarados en `harness.config.json` / `VERIFY_CMD`.
+     - **No-Desarrollo (`scripts/check-deliverables.mjs`)**: Cuando `mode: "non-dev"` (o existen entregables documentales registrados en `harness.config.json`), verifica tamaño y estructura real, cero placeholders (`[PENDIENTE]`, `TODO`, `TBD`, `Lorem ipsum`), cero enlaces o imágenes locales rotas y presencia de referencias/fuentes verificables.
 
 ### Recorridos Dorados (`Golden Journeys`)
-Cada recorrido dorado define un flujo crítico de extremo a extremo con una ruta de verificación repetible y señales inequívocas de éxito y de fallo:
 
 | ID | Recorrido Dorado (`Golden Journey`) | Ruta de Verificación Repetible | Señal de Éxito Esperada | Señal Clara de Fallo |
 | :--- | :--- | :--- | :--- | :--- |
-| **`GJ-01`** | **Arranque en frío y salud integral en 3 puertas** | `bash ./init.sh` | Código `0`, `Overall: 100/100` (`25/25 PASS`) y cierre `CLEAN STATE`. | Parada inmediata (`Exit != 0`) con bloque `ERROR + POR QUÉ + SOLUCIÓN`. |
-| **`GJ-02`** | **Transición de tarea bajo `WIP = 1`, DAG y `Pass-State Gating`** | `node scripts/validate-harness.mjs --min-score 100` + `bash scripts/check-architecture.sh` | Máximo 1 tarea `in-progress`, dependencias en `done`, `required_files` con tamaño `> 0` y `evidence` no vacío al cerrar. | Caída de puntaje `< 100/100` o violación de esquema JSON si falta `evidence` o un archivo físico. |
-| **`GJ-03`** | **Entrega limpia y reinicio entre sesiones (`Clean Handoff`)** | Revisión de `progress.md` + `session-handoff.md` + `bash ./init.sh` en sesión nueva | Cero temporales (`*.tmp`, `*.swp`, `WIP.md`, `*.log` en `src/`) y marcadores de reinicio completos. | Alerta de `cleanup-scanner` en Puerta 1 o ambigüedad sobre el siguiente paso. |
-| **`GJ-APP`** | **Flujos críticos de usuario del producto (`src/`)** | Comandos E2E / integración del dominio (registrar aquí al implementar cada flujo de producto) | Respuesta válida, `RuntimeLogEntry` limpio con `correlationId` y estado final persistido tras reiniciar. | Excepción en logs estructurados, regresión de latencia o pérdida de estado tras reinicio. |
+| **`GJ-01`** | **Arranque en frío, `0 CRLF` y salud integral en 3 puertas** | `bash ./init.sh` | Código `0`, `0 CRLF`, `Overall: 100/100` (`25/25 PASS`) y cierre `CLEAN STATE`. | Parada inmediata (`Exit != 0`) con diagnóstico `ERROR + POR QUÉ + SOLUCIÓN`. |
+| **`GJ-02`** | **Transición de tarea bajo `WIP = 1`, DAG y `Pass-State Gating`** | `node scripts/validate-harness.mjs --min-score 100` + `bash scripts/check-architecture.sh` | Máximo 1 tarea `in-progress`, dependencias en `done`, `required_files` no vacíos y `evidence >= 10` chars al cerrar. | Puntaje `< 100/100` o violación de esquema JSON. |
+| **`GJ-03`** | **Entrega limpia, auditoría de hooks y reinicio (`Clean Handoff`)** | Inspección de `.agents/.runtime/hook-audit.jsonl` + `progress.md` + `session-handoff.md` + `bash ./init.sh` | Cero temporales, trazas `RuntimeLogEntry` válidas con `correlationId` y Puerta 1 en `Stop` en verde. | Bloqueo `"decision": "continue"` en `Stop` o alerta de `cleanup-scanner`. |
+| **`GJ-04`** | **Adaptación Camaleón (`Políglota` / `Brownfield` / `non-dev`)** | `node scripts/check-python.mjs` y/o `node scripts/check-deliverables.mjs` vía `bash ./init.sh` | `.venv` aislado y AST/tests limpios en Python; trinquete `<= maxLegacyLayerViolations` en `brownfield`; cero placeholders/enlaces rotos en `non-dev`. | Fallo aditivo en Puerta 3 o incremento del trinquete de capas heredadas. |
+| **`GJ-APP`** | **Flujos críticos de usuario del producto o entregable** | Comandos E2E / integración del dominio registrados al avanzar el proyecto | Respuesta válida, `RuntimeLogEntry` con `correlationId` y persistencia verificada tras reiniciar. | Excepción en logs estructurados, regresión funcional o enlaces/datos rotos. |
 
 ---
 
 ## 4. Bucle de Depuración de Observabilidad en 7 Pasos (`SOP observability-feedback-loop`)
 
-Cuando ocurre un fallo en tiempo de ejecución o el comportamiento real diverge del esperado, el agente debe operar sobre un **stack mínimo consultable localmente** (logs JSON estructurados, métricas de latencia/conteos de fallos y trazas cuando apliquen, recopilados localmente junto a una carga de trabajo repetible) y seguir estrictamente este bucle de **7 pasos**:
+Cuando ocurre un fallo en tiempo de ejecución, en un hook o en cualquiera de las 3 Puertas, el agente opera sobre las señales locales reales (salida Bolígrafo Rojo, `.agents/.runtime/hook-audit.jsonl` y logs de aplicación) siguiendo este bucle de **7 pasos**:
 
 ```mermaid
 flowchart LR
-    Q["1. Consultar<br/>(Logs / Métricas / Trazas)"] --> C["2. Correlacionar<br/>(Por correlationId y Capa)"]
+    Q["1. Consultar<br/>(hook-audit.jsonl / Salida Puerta)"] --> C["2. Correlacionar<br/>(Por correlationId y Capa)"]
     C --> R["3. Razonar<br/>(Causa Raíz en 6 Capas)"]
     R --> I["4. Implementar<br/>(Fix Mínimo en su Capa)"]
     I --> S["5. Reiniciar<br/>(Reinicio Limpio App/Entorno)"]
@@ -124,50 +130,41 @@ flowchart LR
     E --> V["7. Verificar<br/>(Evidencia ANTES vs DESPUÉS)"]
 ```
 
-1. **Consultar (`query`)**: Inspeccionar la salida real de la puerta fallida, los logs JSON locales (`level: "error"`) y los tiempos (`durationMs`).
-2. **Correlacionar (`correlate`)**: Agrupar todos los eventos de la operación mediante `correlationId` para localizar el punto exacto donde se corrompió el estado.
-3. **Razonar (`reason`)**: Identificar qué capa (`Types -> Config -> Repo -> Service -> Runtime -> UI`) es propietaria del defecto antes de tocar ningún archivo.
-4. **Implementar (`implement`)**: Aplicar la corrección mínima en la capa responsable sin debilitar validadores ni desbordar el alcance (`WIP = 1`).
-5. **Reiniciar (`restart`)**: Reiniciar limpiamente el servicio, worker o entorno afectado para descartar estado residual en memoria.
-6. **Volver a ejecutar (`re-run`)**: Correr exactamente la misma carga de trabajo o Recorrido Dorado que disparó el fallo, además de `bash ./init.sh`.
-7. **Verificar (`verify`)**: Confirmar con evidencia ejecutable que la señal de fallo desapareció, el sistema reinicia limpio y no surgieron regresiones.
-
-### Lista de Verificación de Sesión de Depuración y Reglas de Fiabilidad
-Antes de dar por resuelto un incidente de runtime, el agente debe poder responder con evidencia local:
-- **¿Qué falló?** y **¿qué señal local prueba el fallo?**
-- **¿Qué capa es propietaria del fallo?** y **¿qué cambió exactamente después de la corrección?**
-- **¿La aplicación se reinició limpiamente?** y **¿la misma carga de trabajo pasó tras volver a ejecutar?**
+1. **Consultar (`query`)**: Leer la salida exacta de la puerta fallida y filtrar `.agents/.runtime/hook-audit.jsonl` o logs del servicio por `level: "error"` y `durationMs`.
+2. **Correlacionar (`correlate`)**: Agrupar los pasos de la operación mediante `correlationId` para ubicar la frontera exacta donde falló el contrato.
+3. **Razonar (`reason`)**: Identificar qué capa (`Types -> Config -> Repo -> Service -> Runtime -> UI`) es propietaria del defecto antes de editar.
+4. **Implementar (`implement`)**: Aplicar la corrección mínima en la capa responsable sin relajar validadores, sin subir `maxLegacyLayerViolations` y manteniendo `WIP = 1`.
+5. **Reiniciar (`restart`)**: Reiniciar limpiamente el servicio, `.venv` o proceso afectado para descartar estado residual en memoria.
+6. **Volver a ejecutar (`re-run`)**: Correr exactamente la misma carga o Recorrido Dorado que disparó el fallo más `bash ./init.sh`.
+7. **Verificar (`verify`)**: Confirmar con evidencia ejecutable (`ANTES` vs. `DESPUÉS`) que la señal de error desapareció y el repositorio quedó en `clean-state`.
 
 **Invariantes Permanentes de Fiabilidad:**
-- **Fallo Rápido (`Fail-Fast`) y Cero Reintentos a Ciegas**: Prohibido re-ejecutar un comando fallido sin haber leído antes el diagnóstico y corregido la causa.
-- **Reiniciabilidad obligatoria**: Ninguna característica está completa si el sistema no puede reiniciarse limpiamente después (`clean-state` es parte de la fiabilidad, no una tarea separada).
-- **Barrera ante fallos repetidos**: Si un modo de fallo reaparece, promuévelo a prueba automatizada, benchmark o regla mecánica en `scripts/check-architecture.sh`.
+- **Fallo Rápido (`Fail-Fast`) y Cero Reintentos a Ciegas**: Prohibido re-ejecutar un comando fallido sin leer el diagnóstico y corregir la causa raíz.
+- **Frontera Honesta Local vs. Host**: La telemetría de herramientas/puertas vive localmente en `.agents/.runtime/hook-audit.jsonl`, mientras que las métricas internas de consumo de tokens del modelo residen en el host de Antigravity (`docs/SECURITY.md`).
+- **Barrera ante fallos repetidos**: Si un modo de fallo reaparece, conviértelo en prueba automatizada o regla mecánica en `scripts/check-architecture.sh`, `scripts/check-python.mjs` o `scripts/check-deliverables.mjs`.
 
 ---
 
-## 5. Validación de UI / Frontend y Bucle con Chrome DevTools (Activable para Proyectos con UI)
+## 5. Validación de UI / Frontend con Chrome DevTools (Proyectos con Interfaz Gráfica)
 
-Cuando el proyecto incluya interfaz gráfica (web, móvil o escritorio en `src/ui/`), la inspección estática del código es insuficiente. Todo trabajo de UI debe cumplir estas barreras de protección (y cuando la superficie visual crezca, codificar las convenciones específicas del proyecto en `docs/FRONTEND.md` y los tokens/componentes en `docs/references/design-system-reference-llms.txt` según la Expansión Progresiva de `AGENTS.md`):
+Cuando el proyecto incluya interfaz gráfica (web, móvil o escritorio en `src/ui/`, `src/components/`, `src/pages/` o `app/`), la inspección estática del código es insuficiente:
 
 ### Principios de UI y los 5 Estados Visibles Clave
-- **Claridad y consistencia**: Priorizar claridad antes que novedad, flujos descubribles y reiniciables, pocos componentes reutilizables frente a variantes de un solo uso, y consistencia en textos, navegación por teclado y jerarquía visual.
-- **Accesibilidad (`a11y`) como verificación normal**: Semántica DOM, etiquetas accesibles, foco visible, uso completo por teclado y contraste forman parte de la verificación estándar de cada entrega, nunca de un pulido opcional posterior.
-- **Cobertura obligatoria de los 5 estados visibles para el usuario**: Toda vista o interacción asíncrona debe especificar y verificar explícitamente:
-  1. **`vacío` (`empty`)**: Estado inicial comprensible cuando aún no existen registros o resultados.
-  2. **`cargando` (`loading`)**: Retroalimentación visual inmediata con bloqueo de envíos duplicados.
-  3. **`éxito` (`success`)**: Renderizado fiel de los datos confirmados y transición predecible.
-  4. **`error` (`error`)**: Mensaje claro y sanitizado ante fallos recuperables (prohibidos los fallos silenciosos).
-  5. **`reintento` (`retry`)**: Mecanismo directo para reintentar la acción fallida sin perder contexto ni recargar forzosamente.
-- **Regla anti-regresión de UI**: Siempre que se corrija un defecto visual o de interacción, se debe agregar o actualizar el paso de validación correspondiente.
+- **Claridad, consistencia y accesibilidad (`a11y`)**: Semántica DOM, etiquetas accesibles, foco visible, navegación completa por teclado y contraste forman parte de la verificación estándar de cada tarea.
+- **Cobertura obligatoria de los 5 estados visibles**:
+  1. **`vacío` (`empty`)**: Estado inicial comprensible cuando aún no existen datos.
+  2. **`cargando` (`loading`)**: Retroalimentación inmediata bloqueando envíos duplicados.
+  3. **`éxito` (`success`)**: Renderizado fiel de datos confirmados y transición predecible.
+  4. **`error` (`error`)**: Mensaje claro y sanitizado ante fallos recuperables (cero fallos silenciosos).
+  5. **`reintento` (`retry`)**: Acción directa para reintentar sin perder el trabajo del usuario.
 
 ### Bucle Principal de Validación con Chrome DevTools (8 Pasos `ANTES / DESPUÉS`)
-Con un comando de inicio estable (`START_CMD`), un recorrido reproducible y criterios observables de éxito (texto presente, botón habilitado, solicitud HTTP exitosa, consola limpia), el agente debe ejecutar este bucle hasta que el recorrido quede limpio:
-
-1. **Seleccionar la página objetivo** o instancia activa de la aplicación.
-2. **Limpiar el ruido obsoleto de la consola** antes de comenzar la prueba.
-3. **Capturar el estado `ANTES`** (instantánea del DOM, captura de pantalla y estado base de red/consola).
-4. **Disparar exactamente una ruta de UI** a la vez para aislar causa y efecto.
-5. **Observar los eventos en tiempo de ejecución** durante la interacción (mensajes de consola, peticiones de red y cambios en el DOM).
-6. **Capturar el estado `DESPUÉS`** (redactando cualquier token, clave API o PII en capturas y logs).
-7. **Aplicar la corrección en la capa responsable más pequeña** (`Types -> Config -> Repo -> Service -> Runtime -> UI`) y **reiniciar la aplicación** si el cambio lo requiere.
-8. **Volver a ejecutar la validación** sobre la misma ruta comparando `ANTES` vs. `DESPUÉS` hasta cumplir los **4 criterios de limpieza**: (a) el estado visible intencionado está presente, (b) no hay errores inesperados, (c) el ruido de consola fue eliminado o explicado, y (d) repetir la ruta produce idéntico resultado; actualizando entonces el plan activo, `docs/RELIABILITY.md` (si pasa a ser Recorrido Dorado) y `docs/product-specs/` (si cambió el comportamiento visible).
+Con `START_CMD` activo y criterios observables definidos:
+1. **Seleccionar la página objetivo** activa.
+2. **Limpiar el ruido previo de consola** antes de iniciar la prueba.
+3. **Capturar el estado `ANTES`** (instantánea DOM, captura visual y red/consola base).
+4. **Disparar una sola ruta de UI** a la vez para aislar causa y efecto.
+5. **Observar eventos en vivo** (consola, peticiones HTTP y mutaciones DOM).
+6. **Capturar el estado `DESPUÉS`** (redactando tokens o `PII` en capturas y trazas).
+7. **Corregir en la capa responsable más pequeña** (`Types -> Config -> Repo -> Service -> Runtime -> UI`) y reiniciar si corresponde.
+8. **Re-ejecutar la ruta** comparando `ANTES` vs. `DESPUÉS` hasta lograr estado visible correcto, cero errores inesperados, consola limpia y reproducibilidad exacta.

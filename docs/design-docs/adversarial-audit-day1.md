@@ -66,3 +66,35 @@ Ningún arnés basado en scripts locales es omnipotente. Estos son los **4 lími
 4. **Calidad Semántica de las Pruebas y de `evidence`**:
    - *Límite*: `Pass-State Gating` verifica mecánicamente que `required_files` existan con tamaño `> 0`, que `evidence` tenga al menos 10 caracteres y que `init.sh` devuelva `0`, pero un script estático no juzga por sí solo si un test unitario es tautológico (`expect(true).toBe(true)`).
    - *Control*: En cierres de hito o **Modo Crítico (`/goal`)**, el sub-agente **Checker `one-shot` aislado** inspecciona `git diff` y audita la calidad real de las pruebas bajo `evaluator-rubric.md` antes de consolidar el avance.
+
+---
+
+## Addendum v2.0 — Evolución Camaleón Universal (Políglota, Brownfield & Non-Dev)
+
+- **Fecha de actualización:** 2026-11-07
+- **Resultado verificado:** `6/6` escenarios E2E universales en verde (`universal-e2e-audit.mjs`), `12/12` vectores adversariales defendidos (`adversarial-audit.mjs`), `Overall: 100/100` y `0 CRLF` (`0x0D = 0`, `0 UTF-8 BOM`) en todo el repositorio.
+
+### Nuevos Controles Mecánicos Incorporados en v2.0
+1. **`harness.config.json` (Autoconfiguración Día 1 en 3 Perfiles)**:
+   - Centraliza sin fricción el perfil activo (`"auto"` / `"greenfield"`, `"brownfield"` y `"non-dev"`), el mapeo unificado `layerMap` (soportando tanto `{ "<capa>": ["carpeta1", ...] }` con reasignación limpia de alias como `{ "<carpeta>": "<capa>" }` en los tres consumidores), `python.*` y `nonDev.*`.
+2. **`scripts/check-python.mjs` + `detectGlobalPipInstall` (`scripts/lib/harness-guards.mjs`)**:
+   - `PreToolUse` bloquea determinísticamente instalaciones globales (`pip install`, `pip3 install`, `python -m pip install`, `uv pip install --system`) exigiendo aislamiento en `.venv`.
+   - `check-python.mjs` inspecciona el AST real de Python (`ast.parse`) para bloquear errores de sintaxis, saltos o retrocesos en las 6 capas (imports absolutos y relativos en `packageRoots`) y secretos literales quemados (`sk-*`, `ghp_*`, `AKIA*`, asignaciones duras a `*_API_KEY`/`*_SECRET` y credenciales en URLs de BD).
+3. **`init.sh` Políglota Aditivo (Fin del Enmascaramiento `if / elif`)**:
+   - La presencia de `package.json` ya no silencia otros lenguajes: Puerta 3 ejecuta aditivamente Node/Web, Python (con auto-bootstrap `.venv` previo a Puerta 1 y descubrimiento `unittest discover -s tests` con `PYTHONPATH="."` compatible con Python 3.14 sin `pytest`), Go, Rust, Dart/Flutter, JVM, .NET y validación AST sin ejecución de scripts PowerShell (`*.ps1`).
+4. **Trinquete Brownfield (`brownfield.maxLegacyLayerViolations` + `allowEmptyDirs`)**:
+   - Permite adoptar el arnés en repositorios heredados mapeando carpetas legadas en `layerMap`, tolerando hasta $N$ violaciones históricas con aviso explícito de *Ratchet* y bloqueando de inmediato la violación $N + 1$.
+5. **`scripts/check-deliverables.mjs` y Cobertura `Stop` con Árbol Limpio**:
+   - Valida estrictamente claves y tipos de `harness.config.json` y, en modo `non-dev` (o carpetas `deliverables/`), bloquea marcadores incompletos (`[PENDIENTE]`, `TODO:`, `[TODO]`, `FIXME`, `TBD`, `lorem ipsum` — con **cero falsos positivos** sobre la palabra española `"Todo"` / `"todo"`), enlaces locales rotos en Markdown y entregables `done` sin sustancia mínima (`minDeliverableWords`).
+   - El runner `scripts/harness-hooks.mjs` ejecuta `check-architecture.sh` + `check-deliverables.mjs` + `check-python.mjs` en `Stop` incluso cuando `git status --porcelain` está vacío, devolviendo código `2` en invocaciones CLI directas cuando bloquea (`deny` / `continue`) y preservando código `0` + JSON puro bajo `--agy` en `.agents/hooks.json`.
+
+### Evidencia Empírica Verificada (6 Escenarios E2E en Sandbox Aislado)
+
+| Escenario | Caso Probado en `os.tmpdir()` | Resultado |
+| :--- | :--- | :---: |
+| **`SCN-01`** | Batería completa de los 12 vectores adversariales originales (`ADV-01`..`ADV-12`, `harness-hooks.mjs = 240/280L`) | **PASS (`12/12 DEFENDED`)** |
+| **`SCN-02`** | Python puro (`mode: "auto"`): `PreToolUse` (`exit 2` pip global / `exit 0` `.venv`), auto-creación `.venv` offline, bloqueo `ui -> repo`, paso con `unittest` (`100/100`) y bloqueo AST de secreto `sk-proj-*` | **PASS** |
+| **`SCN-03`** | Políglota aditivo (`package.json` + Python + `scripts/helper.ps1`): `package.json` en verde NO oculta fallo en `app/broken.py`; al repararlo pasan Node + Python + AST PowerShell en `CLEAN STATE` | **PASS** |
+| **`SCN-04`** | Brownfield (`mode: "brownfield"`): directorio vacío permitido, `layerMap` personalizado (`models -> types`, `legacy_views -> legacy_dao`), `1/1` violación pasa con aviso *Ratchet* y `2/1` bloquea | **PASS** |
+| **`SCN-05`** | No-Desarrollo (`mode: "non-dev"`): `ARCHITECTURE.md` documental simplificado, bloqueo de `[PENDIENTE]` y de `[anexo](./no-existe.md)`, y paso `100/100` con prosa natural en español (`"Todo"` / `"todo"`) | **PASS** |
+| **`SCN-06`** | Hook `Stop` E2E: `exit 0` en repo limpio; `exit 2` (`decision: "continue"`) ante `[PENDIENTE]` en `non-dev` o error Python incluso con árbol Git limpio (`git status --porcelain` vacío) | **PASS** |

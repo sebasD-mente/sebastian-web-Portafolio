@@ -1,13 +1,13 @@
 # AGENTS.md
 
-Este repositorio está gobernado por un arnés de ingeniería para agentes de larga duración. Siguiendo el principio de **Codex**, este archivo es una **página de índice (~100 líneas)** centrada en invariantes y rutas de verificación, no una enciclopedia que microgestione la implementación. El objetivo es completar una sola tarea verificada a la vez y dejar el repositorio limpio y reiniciable (`restartable`).
+Este repositorio está gobernado por el **Arnés Camaleón Universal v2.0** para agentes autónomos de larga duración. Siguiendo el principio de **Codex**, este archivo es una **página de índice (~105 líneas)** centrada en invariantes y rutas de verificación, no una enciclopedia que microgestione la implementación. El objetivo es completar una sola tarea verificada a la vez y dejar el repositorio limpio y reiniciable (`restartable`).
 
 ## Startup Workflow
 
-Before writing code or modifying any project deliverable:
+- **Before writing code** or modifying any project deliverable:
 1. **Confirma el directorio de trabajo** con `pwd`.
 2. **Lee este archivo (`AGENTS.md`)** de principio a fin (y cualquier `AGENTS.md` local del subdirectorio que vayas a tocar).
-3. **Lee `progress.md` y `session-handoff.md`** para conocer el último estado verificado, riesgos abiertos y el siguiente paso recomendado.
+3. **Lee `harness.config.json`, `progress.md` y `session-handoff.md`** para conocer el perfil activo, el último estado verificado, riesgos y siguiente paso.
 4. **Lee `feature_list.json`** para inspeccionar el estado (`status`) y prioridades de las tareas.
 5. **Revisa los commits recientes** con `git log --oneline -5` (si el repositorio Git ya tiene historial).
 6. **Ejecuta `bash ./init.sh`** para verificar que el entorno y la línea base están sanos.
@@ -16,37 +16,43 @@ Before writing code or modifying any project deliverable:
 
 ## Working Rules
 
-- **Página de Índice e Invariantes sobre Microgestión (`Codex` / `Claude Code`)**: Mantén `AGENTS.md` conciso (~100 líneas) enfocado en restricciones innegociables y comandos de verificación (*"don't micromanage the implementation; focus on invariants"*). El detalle procedimental vive en `docs/` y `.agents/skills/` bajo demanda; en monorepos, los `AGENTS.md` de subdirectorios se cargan bajo demanda al leer ese directorio (`Organización -> Usuario -> Proyecto raíz -> Subdirectorio -> Override local *.local.md`).
-- **El Arnés lo lleva el Agente, NO el Usuario (Interacción 100% Natural)**: Está prohibido exigirle al usuario que edite archivos del arnés o hable en formato de lista de tareas. Conversa con naturalidad; tú traduces los acuerdos hacia `feature_list.json`, `sprint-contract.md`, `progress.md` y `session-handoff.md` (y en proyectos nuevos o *Brownfield*, inspeccionas y adaptas `feature_list.json` y `ARCHITECTURE.md` sin carga manual al humano).
-- **Dos Marchas de Trabajo (`Modo Diario Ágil` por defecto vs `Modo Crítico / Loop`)**: El **Modo Diario Ágil** es el predeterminado para tareas normales (implementar bajo `WIP = 1` + verificar `bash ./init.sh` + actualizar `feature_list.json` y `progress.md`, sin exigir `loop-state.md` ni sub-agente *Checker* salvo cierre de hito o solicitud del usuario); el **Modo Crítico / Loop (`/goal`)** activa `loop-state.md` y el sub-agente *Checker* `one-shot` aislado para cambios de arquitectura, seguridad o bucles autónomos.
+- **Página de Índice e Invariantes sobre Microgestión (`Codex` / `Claude Code`)**: Mantén `AGENTS.md` conciso (~100–110 líneas) enfocado en restricciones innegociables y comandos de verificación (*"don't micromanage the implementation; focus on invariants"*). El detalle procedimental vive en `docs/` y `.agents/skills/` bajo demanda (`Organización -> Usuario -> Proyecto raíz -> Subdirectorio -> Override local *.local.md`).
+- **El Arnés lo lleva el Agente y Autoconfigura `harness.config.json` el Día 1 (Interacción 100% Natural)**: Prohibido pedir ayuda técnica al usuario o exigirle editar archivos del arnés. Conversa con naturalidad y traduce los acuerdos hacia `harness.config.json`, `feature_list.json`, `sprint-contract.md`, `ARCHITECTURE.md`, `progress.md` y `session-handoff.md`, configurando `harness.config.json` automáticamente el Día 1 para cualquiera de los 3 escenarios:
+  1. **Código Nuevo (`greenfield` / `auto`)**: Web/Node, Python (con `.venv` obligatorio y validación AST en `scripts/check-python.mjs`), PowerShell, Dart/Flutter o repositorios mixtos políglotas.
+  2. **Repositorios Existentes (`brownfield`)**: Mapeando las carpetas reales en `harness.config.json` (`layerMap`) y usando el trinquete `maxLegacyLayerViolations` para no bloquear el arranque ni dar falsos verdes.
+  3. **Tareas de No-Desarrollo (`non-dev`)**: Investigación, documentación, análisis o estrategia, activando la Puerta 3 Documental (`scripts/check-deliverables.mjs`: cero placeholders, cero enlaces rotos, sustancia verificable y fuentes).
+- **Dos Marchas de Trabajo (`Modo Diario Ágil` por defecto vs `Modo Crítico / Loop`)**: El **Modo Diario Ágil** es el predeterminado para tareas normales (`WIP = 1` + `bash ./init.sh` + actualizar `feature_list.json` y `progress.md`, sin exigir `loop-state.md` ni *Checker* salvo cierre de hito o solicitud del usuario); el **Modo Crítico / Loop (`/goal`)** activa `loop-state.md` y el sub-agente *Checker* `one-shot` aislado.
 - **One feature at a time (`WIP = 1`)**: Elige exactamente UNA tarea no terminada de `feature_list.json` cuyas `dependencies` estén en `done` con sus `required_files` físicos creados en disco, y cambia su estado a `in-progress` (prohibido superar `WIP = 1` o saltarse el orden secuencial DAG; usa `blocked` si un requisito externo impide avanzar).
-- **Contrato Previo al Código (`sprint-contract.md`)**: Antes de implementar la tarea activa, actualiza `sprint-contract.md` con alcance incluido, exclusiones explícitas y criterios verificables.
+- **Contrato Previo al Entregable (`sprint-contract.md`)**: Antes de ejecutar la tarea activa, actualiza `sprint-contract.md` con alcance incluido, exclusiones explícitas y criterios verificables.
 - **Stay in scope**: Mantén todos tus cambios estrictamente dentro del alcance de la tarea activa sin refactorizar módulos ajenos. Registra peticiones nuevas en `feature_list.json` para ejecutarlas en orden.
-- **Verification required & Prohibido debilitar reglas**: Nunca declares una tarea terminada por inspección visual; ejecuta los comandos de verificación reales y jamás borres, comentes ni relajes pruebas o validadores.
-- **Separación estricta Maker-Checker (`zero-inheritance` y `One-Shot` por pasada)**: El *Maker* tiene prohibido autoaprobarse en `evaluator-rubric.md`. Para el rol *Checker* queda anulada cualquier directriz genérica de continuar sub-agentes existentes: **1 Checker = 1 sola auditoría (`one-shot`)**; toda auditoría o re-auditoría tras corregir un hallazgo DEBE lanzar una instancia `invoke_subagent` completamente nueva con ventana virgen, quedando estrictamente prohibido usar `send_message` hacia el `conversationId` de un *Checker* ya utilizado.
+- **Verification required & Prohibido debilitar reglas**: Nunca declares una tarea terminada por inspección visual; ejecuta los comandos reales de verificación (respetando `.venv` en Python y `0 CRLF`) y jamás borres, comentes ni relajes pruebas o validadores.
+- **Separación estricta Maker-Checker (`zero-inheritance` y `One-Shot` por pasada)**: El *Maker* tiene prohibido editar o autoaprobarse en `evaluator-rubric.md`. **1 Checker = 1 sola auditoría (`one-shot`)**; toda auditoría o re-auditoría DEBE lanzar una instancia `invoke_subagent` completamente nueva con ventana virgen, quedando prohibido usar `send_message` hacia el `conversationId` de un *Checker* ya utilizado.
 
 ## Required Artifacts
 
-- `.gitignore` — Protección de secretos (`.env*`), overrides locales (`*.local.md`), telemetría (`.agents/.runtime/`), builds y temporales.
-- `.gitattributes` — Garantía multiplataforma de fin de línea `LF` (`0 CRLF`) en `git clone` y `git worktree`, más reglas binarias para activos web.
+- `.gitignore` — Protección de secretos (`.env*`), overrides locales (`*.local.md`), `.venv/`, telemetría (`.agents/.runtime/`), builds y temporales.
+- `.gitattributes` — Garantía multiplataforma de fin de línea `LF` (`0 CRLF`) en `git clone` y `git worktree`, más reglas binarias para activos.
+- `harness.config.json` — Perfil Camaleón autoconfigurado el Día 1 (`auto`/`greenfield`, `brownfield` con `layerMap` + `maxLegacyLayerViolations` y `non-dev`).
 - `feature_list.json` — Fuente única de verdad para estado (`not-started`, `in-progress`, `blocked`, `done`), DAG, `verification` y `evidence`.
 - `scripts/feature-list.schema.json` — Esquema JSON Draft-07 canónico con `Pass-State Gating` y campos `area`/`user_visible_behavior`.
 - `progress.md` — Registro maestro de continuidad, decisiones (`por qué` + `Alternatives considered`) y estado actual.
-- `init.sh` — Punto de entrada POSIX multi-stack para instalación y verificación en 3 puertas (`set -euo pipefail`).
+- `init.sh` — Punto de entrada POSIX políglota aditivo para instalación y verificación en 3 puertas (`set -euo pipefail`).
 - `session-handoff.md` — Acta de entrega de turno obligatoria al finalizar cada sesión.
 - `clean-state-checklist.md` — Lista de verificación de las 5 dimensiones de estado limpio antes de cerrar sesión.
 - `memory/INDEX.md` — Índice de Auto-Memoria en Dos Pasos (tope de 200 líneas / 25 KB) hacia `memory/topics/*.md`.
-- `ARCHITECTURE.md` — Mapa de dominios, 6 capas (`Types -> Config -> Repo -> Service -> Runtime -> UI`), `Capability Seams`, interfaces transversales y puntos calientes.
-- `scripts/check-architecture.sh` — Vigilante mecánico de límites arquitectónicos, higiene `cleanup-scanner` y Bolígrafo Rojo (`ERROR + POR QUÉ + SOLUCIÓN`).
-- `docs/RELIABILITY.md` — Observabilidad de Runtime: logs JSON estructurados con `correlationId` y fiabilidad en 3 puertas.
-- `sprint-contract.md` — Contrato formal de alcance (`Scope`), exclusiones explícitas y criterios de éxito previos al código.
-- `evaluator-rubric.md` — Rúbrica objetiva de 0 a 12 puntos exclusiva para el Agente Evaluador (*Checker*) `one-shot` en contexto aislado (`zero-inheritance`).
-- `docs/QUALITY_SCORE.md` — Semáforo de salud (`A-D`) por dominio/capa y registro de Estudios de Ablación.
-- `docs/SECURITY.md` — Presupuesto de contexto (`Write-Select-Compress-Isolate`), 5 niveles de compactación, 4 capas de extensión, `Fail-Closed`, `Turn Event Pipeline`, Bootstrap en 4 etapas y `Model-Visible Means Logged`.
+- `ARCHITECTURE.md` — Mapa de dominios, 6 capas (`Types -> Config -> Repo -> Service -> Runtime -> UI`), Perfiles Camaleón, `Capability Seams` y puntos calientes.
+- `scripts/check-architecture.sh` — Vigilante mecánico de límites arquitectónicos, `0 CRLF`, JSON estricto, higiene `cleanup-scanner` y Bolígrafo Rojo.
+- `scripts/check-python.mjs` — Verificador políglota de Python (aislamiento `.venv`, AST/sintaxis, fronteras de 6 capas y pruebas/linters).
+- `scripts/check-deliverables.mjs` — Verificador de Puerta 3 Documental para modo `non-dev` (cero placeholders, cero enlaces rotos, sustancia y fuentes).
+- `docs/RELIABILITY.md` — Observabilidad de Runtime: logs JSON `RuntimeLogEntry` con `correlationId`, `.agents/.runtime/hook-audit.jsonl` y 3 puertas aditivas.
+- `sprint-contract.md` — Contrato formal de alcance (`Scope`), exclusiones explícitas y criterios de éxito previos a la ejecución.
+- `evaluator-rubric.md` — Rúbrica objetiva de 0 a 12 puntos (Código y `non-dev`) exclusiva para el Agente Evaluador (*Checker*) `one-shot` bajo `zero-inheritance`.
+- `docs/QUALITY_SCORE.md` — Semáforo de salud (`A-D`) por dominio/capa, instantánea `v2.0-universal-chameleon` y registro de Estudios de Ablación.
+- `docs/SECURITY.md` — Presupuesto (`Write-Select-Compress-Isolate`), `Fail-Closed`, candado anti-`pip` global, `Turn Event Pipeline`, Bootstrap y `Model-Visible Means Logged`.
 - `.agents/hooks.json` — Candados deterministas nativos de ciclo de vida (`PreToolUse`, `PostToolUse` y `Stop`, incluyendo herramientas MCP).
-- `scripts/harness-hooks.mjs` — Runner Node.js multiplataforma (`stdin`/`stdout` JSON) de hooks nativos, auditoría `RuntimeLogEntry` y Candado 3 `one-shot`.
-- `scripts/lib/harness-guards.mjs` — Políticas puras `Fail-Closed` de rutas protegidas, comandos destructivos, aislamiento de rúbrica y clasificación `Checker`.
-- `docs/design-docs/adversarial-audit-day1.md` — Auditoría adversarial Día 1 (`12/12` vectores controlados), límites residuales y guía para stacks web modernos.
+- `scripts/harness-hooks.mjs` — Runner Node.js multiplataforma (`stdin`/`stdout` JSON) de hooks nativos, auditoría `hook-audit.jsonl` y Candado 3 `one-shot`.
+- `scripts/lib/harness-guards.mjs` — Políticas puras `Fail-Closed` de rutas protegidas, anti-`pip` global, comandos destructivos, aislamiento de rúbrica y `Checker`.
+- `docs/design-docs/adversarial-audit-day1.md` — Reporte de auditoría adversarial Día 1 y evolución Camaleón v2.0.
 - `goal.md` — Loop Basado en Objetivo (`/goal`) con 3 categorías de archivos y Disyuntor de 4 Candados (`4-Lock Circuit Breaker`).
 - `maker-prompt.md` — Instrucciones operativas por ronda para el Agente Constructor (*Maker*).
 - `checker-prompt.md` — Instrucciones operativas para el Agente Evaluador Independiente (*Checker*) `one-shot` bajo `zero-inheritance`.
@@ -57,45 +63,40 @@ Before writing code or modifying any project deliverable:
 
 ## Progressive Expansion (Anti-Doc Bloat — SOP `encode-knowledge-into-repo`)
 
-Cuando decisiones de producto, diseño o referencias residan fuera del repositorio (chats, tickets o acuerdos verbales), codifícalas **bajo demanda** creando únicamente el artefacto necesario (y enlázalo arriba en `Required Artifacts` recién después de crearlo con contenido real):
-- **Comportamiento de producto y aceptación**: `docs/product-specs/` (y `docs/PRODUCT_SENSE.md` para criterios transversales).
-- **Razonamiento de diseño duradero**: `docs/design-docs/`.
-- **Planes multi-sesión y deuda pospuesta**: `docs/exec-plans/active/`, `docs/exec-plans/completed/` y `docs/exec-plans/tech-debt-tracker.md`.
-- **Restricciones de UI, diseño y accesibilidad**: `docs/FRONTEND.md`.
-- **Referencias externas compactas para LLM y derivados**: `docs/references/*-llms.txt` y `docs/generated/` (no editable a mano).
+Codifica decisiones externas **bajo demanda** creando solo el artefacto necesario (y enlázalo en `Required Artifacts` recién después de crearlo con contenido real):
+- **Producto y diseño**: `docs/product-specs/`, `docs/PRODUCT_SENSE.md`, `docs/design-docs/` y `docs/FRONTEND.md`.
+- **Planes, referencias y derivados**: `docs/exec-plans/{active,completed}/`, `docs/exec-plans/tech-debt-tracker.md`, `docs/references/*-llms.txt` y `docs/generated/`.
 
 ## Definition of Done
 
-Una tarea está terminada (`done` only when) SOLO cuando TODAS las siguientes condiciones se cumplen:
-
-- [ ] El comportamiento o entregable objetivo está implementado por completo.
-- [ ] Los pasos listados en `verification` de la tarea y `bash ./init.sh` se ejecutaron realmente (tests, lint, type-check o build según aplique).
-- [ ] La evidencia ejecutable (`Verification Evidence`: comando exacto y salida obtenida) quedó registrada en `evidence` de `feature_list.json` y en `progress.md`.
-- [ ] El repositorio permanece limpio y reiniciable (`restartable`) desde la ruta de inicio estándar.
+- **Compuerta de cierre (`done` only when / done only when)**: Una tarea está terminada SOLO cuando TODAS las siguientes condiciones se cumplen:
+- [ ] El comportamiento de código o entregable `non-dev` objetivo está implementado por completo sin placeholders ni violaciones de alcance.
+- [ ] Los pasos listados en `verification` de la tarea y `bash ./init.sh` se ejecutaron realmente (tests, lint, type-check, build, `check-python.mjs` o `check-deliverables.mjs`).
+- [ ] La evidencia ejecutable (`Verification Evidence`: comando exacto y salida obtenida) quedó registrada en `evidence` (`>= 10` caracteres) de `feature_list.json` y en `progress.md`.
+- [ ] El repositorio permanece limpio y reiniciable (`restartable`) desde la ruta de inicio estándar (`0 CRLF`, cero temporales).
 
 ## Verification Commands
 
 ```bash
-bash ./init.sh                                     # Verificación completa en 3 puertas (Puertas 1, 2 y 3)
-bash scripts/check-architecture.sh                 # Vigilante mecánico de 6 capas, higiene y Bolígrafo Rojo
+bash ./init.sh                                     # Verificación completa en 3 puertas aditivas (test, verify, lint, type, build)
+bash scripts/check-architecture.sh                 # Vigilante mecánico de 6 capas, Perfiles Camaleón, 0 CRLF y Bolígrafo Rojo
 node scripts/validate-harness.mjs --min-score 100  # Auditoría matemática 100/100 (WIP=1, DAG y Pass-State Gating)
 ```
-- `bash ./init.sh` (ejecuta Puerta 1 Estática/Arquitectura, Puerta 2 Comportamiento/Subsistemas y Puerta 3 Sistema Completo/Build/Test)
-- `bash scripts/check-architecture.sh` (verifica `ARCHITECTURE.md`, 6 capas, enlaces en `Required Artifacts` y `cleanup-scanner`)
+- `bash ./init.sh` (ejecuta Puerta 1 Estática/Arquitectura, Puerta 2 Comportamiento `100/100` y Puerta 3 Políglota/Documental: `check-python.mjs`, `check-deliverables.mjs`, build/test)
+- `bash scripts/check-architecture.sh` (verifica `ARCHITECTURE.md`, `harness.config.json`, 6 capas, enlaces en `Required Artifacts` y `cleanup-scanner`)
 - `node scripts/validate-harness.mjs --min-score 100` (verifica `100/100` en los 5 subsistemas del arnés)
 
 ## Escalation
 
-Si durante la ejecución encuentras cualquiera de estas situaciones, escala de forma estructurada en lugar de improvisar:
-- **Architecture decisions (Decisiones de arquitectura)**: Consulta `ARCHITECTURE.md` (y `docs/design-docs/` si existe); si requiere alterar límites de capas o invariantes, consulta al usuario antes de codificar.
-- **Unclear requirements (Requisitos ambiguos)**: Revisa `feature_list.json`, `sprint-contract.md` y `docs/product-specs/` (si existe); si persiste la ambigüedad, pregunta al usuario.
-- **Repeated test failures (Fallos repetidos de pruebas)**: Respeta los disyuntores de `goal.md` / `loop-state.md`, documenta el diagnóstico en `progress.md`, marca `"status": "blocked"` si depende de un bloqueo externo y solicita revisión humana.
-- **Scope ambiguity (Ambigüedad de alcance)**: Relee `feature_list.json` (`Definition of Done`) y `sprint-contract.md`; anota cualquier alcance adicional como tarea futura sin romper `WIP = 1`.
+Si encuentras cualquiera de estas situaciones, escala de forma estructurada (usando `ask_question` dentro del turno o dejando el árbol limpio con `"status": "blocked"`):
+- **Architecture decisions**: Consulta `ARCHITECTURE.md` y `harness.config.json`; si requiere alterar límites de capas o invariantes, consulta al usuario antes de codificar.
+- **Unclear requirements**: Revisa `feature_list.json`, `sprint-contract.md` y `docs/product-specs/` (si existe); si persiste la ambigüedad, pregunta al usuario con `ask_question`.
+- **Repeated test failures**: Respeta los disyuntores de `goal.md` / `loop-state.md`, documenta el diagnóstico en `progress.md`, marca `"status": "blocked"` si depende de un bloqueo externo y solicita revisión humana.
+- **Scope ambiguity**: Relee `feature_list.json` (`Definition of Done`) y `sprint-contract.md`; anota alcance adicional como tarea futura sin romper `WIP = 1`.
 
 ## End of Session
 
-Before ending a session or when context usage reaches 65%:
-
+- **Before ending** a session or when context usage reaches 65%:
 1. Ejecuta `bash ./init.sh` y confirma que el estado es limpio (`clean state`).
 2. Actualiza `progress.md` con lo completado, decisiones tomadas, archivos modificados y evidencia.
 3. Actualiza `feature_list.json` con el estado real y el campo `evidence` documentado.

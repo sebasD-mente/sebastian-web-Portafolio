@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ../scripts/harness-hooks.mjs pre-tool-use",
+            "command": "node ../scripts/harness-hooks.mjs pre-tool-use --agy",
             "timeout": 30
           }
         ]
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ../scripts/harness-hooks.mjs post-tool-use",
+            "command": "node ../scripts/harness-hooks.mjs post-tool-use --agy",
             "timeout": 30
           }
         ]
@@ -28,7 +28,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "node ../scripts/harness-hooks.mjs stop",
+        "command": "node ../scripts/harness-hooks.mjs stop --agy",
         "timeout": 60
       }
     ]

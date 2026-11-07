@@ -1,4 +1,4 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -70,6 +70,24 @@ export async function writeText(filePath, contents) {
   await writeFile(filePath, contents, 'utf8');
 }
 
+function resolveHarnessMode(byPath, root) {
+  try {
+    const inline = byPath.get('harness.config.json');
+    if (typeof inline === 'string' && inline.trim()) {
+      const parsed = JSON.parse(inline);
+      if (typeof parsed?.mode === 'string' && parsed.mode.trim()) return parsed.mode.trim();
+    }
+    const cfgPath = path.join(path.resolve(root), 'harness.config.json');
+    if (existsSync(cfgPath) && statSync(cfgPath).isFile()) {
+      const parsed = JSON.parse(readFileSync(cfgPath, 'utf8'));
+      if (typeof parsed?.mode === 'string' && parsed.mode.trim()) return parsed.mode.trim();
+    }
+  } catch {
+    return 'auto';
+  }
+  return 'auto';
+}
+
 export function scoreHarness(files, root = process.cwd()) {
   const byPath = new Map(files.map((file) => [file.path, file.content]));
   const allText = files.map((file) => `${file.path}\n${file.content}`).join('\n\n');
@@ -78,11 +96,22 @@ export function scoreHarness(files, root = process.cwd()) {
   const progress = byPath.get('progress.md') || '';
   const init = byPath.get('init.sh') || '';
   const handoff = byPath.get('session-handoff.md') || '';
+  const isNonDev = resolveHarnessMode(byPath, root) === 'non-dev';
+
+  const startupNeedles = isNonDev
+    ? ['Startup Workflow', 'Before writing code', 'Before modifying', 'Antes de modificar']
+    : ['Startup Workflow', 'Before writing code'];
+  const testNeedles = isNonDev
+    ? ['test', 'pytest', 'vitest', 'cargo test', 'go test', 'dotnet test', '--min-score', 'verify', 'verificación']
+    : ['test', 'pytest', 'vitest', 'cargo test', 'go test', 'dotnet test'];
+  const staticNeedles = isNonDev
+    ? ['build', 'type', 'lint', 'compile', 'check-architecture.sh', 'architecture']
+    : ['build', 'type', 'lint', 'compile'];
 
   const checks = {
     instructions: [
       hasFile(byPath, ['AGENTS.md', 'CLAUDE.md'], 'Agent instruction file exists'),
-      structuredHas(agents, ['Startup Workflow', 'Before writing code'], 'Startup workflow documented'),
+      structuredHas(agents, startupNeedles, 'Startup workflow documented'),
       structuredHas(agents, ['Definition of Done', 'done only when'], 'Definition of done documented'),
       structuredHas(agents, ['Verification Commands', './init.sh', 'test', 'verify'], 'Verification commands discoverable'),
       structuredHas(agents, ['feature_list.json', 'progress.md'], 'State artifacts routed from instructions')
@@ -97,8 +126,8 @@ export function scoreHarness(files, root = process.cwd()) {
     verification: [
       hasFile(byPath, ['init.sh'], 'Verification entrypoint exists'),
       textHas(init, ['set -e', 'set -euo pipefail'], 'Verification fails fast'),
-      textHas(init + agents, ['test', 'pytest', 'vitest', 'cargo test', 'go test', 'dotnet test'], 'Test command documented'),
-      textHas(init + agents, ['build', 'type', 'lint', 'compile'], 'Static/build check documented'),
+      textHas(init + agents, testNeedles, 'Test command documented'),
+      textHas(init + agents, staticNeedles, 'Static/build check documented'),
       textHas(allText, ['Evidence', 'Verification Evidence', 'command and output'], 'Verification evidence is recorded')
     ],
     scope: [
@@ -205,6 +234,18 @@ export function findDependencyCycle(features) {
   return null;
 }
 
+function isSafeRepoRelativePath(resolvedRoot, relPath) {
+  if (typeof relPath !== 'string' || relPath.trim().length === 0 || relPath.includes('\0')) {
+    return false;
+  }
+  if (path.isAbsolute(relPath) || path.posix.isAbsolute(relPath) || path.win32.isAbsolute(relPath) || /^[a-zA-Z]:/.test(relPath)) {
+    return false;
+  }
+  const full = path.resolve(resolvedRoot, relPath);
+  const rel = path.relative(resolvedRoot, full);
+  return Boolean(rel) && rel !== '.' && rel !== '..' && !rel.startsWith('../') && !rel.startsWith('..\\') && !path.isAbsolute(rel);
+}
+
 export function validateFeatureListObject(parsed, root = process.cwd()) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return { valid: false, reason: 'feature_list.json root must be a JSON object' };
@@ -246,12 +287,7 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
       && feature.dependencies.every((depId) => typeof depId === 'string' && depId !== feature.id && seenIds.has(depId))
       && Array.isArray(feature.required_files)
       && feature.required_files.length > 0
-      && feature.required_files.every((relPath) => {
-        if (typeof relPath !== 'string' || relPath.trim().length === 0 || path.isAbsolute(relPath)) return false;
-        const full = path.resolve(resolvedRoot, relPath);
-        const rel = path.relative(resolvedRoot, full);
-        return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel);
-      })
+      && feature.required_files.every((relPath) => isSafeRepoRelativePath(resolvedRoot, relPath))
       && Array.isArray(feature.verification)
       && feature.verification.length > 0
       && feature.verification.every((step) => typeof step === 'string' && step.trim().length > 0);
@@ -284,9 +320,11 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
 
     const hasPhysicalFilesIfDone = !isDone || feature.required_files.every((relPath) => {
       const full = path.resolve(resolvedRoot, relPath);
-      if (!existsSync(full)) return false;
-      const st = statSync(full);
-      return st.isFile() && st.size > 0;
+      try {
+        return existsSync(full) && statSync(full).isFile() && statSync(full).size > 0;
+      } catch {
+        return false;
+      }
     });
     if (!hasPhysicalFilesIfDone) {
       return { valid: false, reason: `feature '${feature.id}' is marked done with missing, non-file, or empty required_files on disk` };
