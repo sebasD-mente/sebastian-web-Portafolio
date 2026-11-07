@@ -78,8 +78,8 @@ Ningún arnés basado en scripts locales es omnipotente. Estos son los **4 lími
 1. **`harness.config.json` (Autoconfiguración Día 1 en 3 Perfiles)**:
    - Centraliza sin fricción el perfil activo (`"auto"` / `"greenfield"`, `"brownfield"` y `"non-dev"`), el mapeo unificado `layerMap` (soportando tanto `{ "<capa>": ["carpeta1", ...] }` con reasignación limpia de alias como `{ "<carpeta>": "<capa>" }` en los tres consumidores), `python.*` y `nonDev.*`.
 2. **`scripts/check-python.mjs` + `detectGlobalPipInstall` (`scripts/lib/harness-guards.mjs`)**:
-   - `PreToolUse` bloquea determinísticamente instalaciones globales (`pip install`, `pip3 install`, `python -m pip install`, `uv pip install --system`) exigiendo aislamiento en `.venv`.
-   - `check-python.mjs` inspecciona el AST real de Python (`ast.parse`) para bloquear errores de sintaxis, saltos o retrocesos en las 6 capas (imports absolutos y relativos en `packageRoots`) y secretos literales quemados (`sk-*`, `ghp_*`, `AKIA*`, asignaciones duras a `*_API_KEY`/`*_SECRET` y credenciales en URLs de BD).
+   - `PreToolUse` bloquea determinísticamente instalaciones globales (`pip install`, `pip3 install`, `/usr/bin/env pip install`, `env FOO=bar pip install`, `python -m pip install`, `python -Im pip install`, `uv pip install --system`, `uv pip install --python python3` / `--python=3.12`) y propaga activaciones `source .venv/.../activate` **únicamente** a través de `&&` (bloqueando `. ./bad/activate; pip install`), exigiendo aislamiento real en `.venv`.
+   - `check-python.mjs` inspecciona el AST real de Python (`ast.parse`) para bloquear errores de sintaxis, saltos o retrocesos en las 6 capas (imports absolutos y relativos en `packageRoots`) y secretos literales quemados tanto en asignaciones (`Assign`/`AnnAssign`) como en llamadas (`ast.keyword`, ej. `OpenAI(api_key=...)`), diccionarios (`ast.Dict`, ej. `{"OPENAI_API_KEY": ...}`) y constantes string sueltas con prefijos de alta certeza (`sk-proj-*`, `sk_live_*`, `ghp_*`, `AKIA*`, `AIza*`).
 3. **`init.sh` Políglota Aditivo (Fin del Enmascaramiento `if / elif`)**:
    - La presencia de `package.json` ya no silencia otros lenguajes: Puerta 3 ejecuta aditivamente Node/Web, Python (con auto-bootstrap `.venv` previo a Puerta 1 y descubrimiento `unittest discover -s tests` con `PYTHONPATH="."` compatible con Python 3.14 sin `pytest`), Go, Rust, Dart/Flutter, JVM, .NET y validación AST sin ejecución de scripts PowerShell (`*.ps1`).
 4. **Trinquete Brownfield (`brownfield.maxLegacyLayerViolations` + `allowEmptyDirs`)**:
@@ -93,8 +93,16 @@ Ningún arnés basado en scripts locales es omnipotente. Estos son los **4 lími
 | Escenario | Caso Probado en `os.tmpdir()` | Resultado |
 | :--- | :--- | :---: |
 | **`SCN-01`** | Batería completa de los 12 vectores adversariales originales (`ADV-01`..`ADV-12`, `harness-hooks.mjs = 240/280L`) | **PASS (`12/12 DEFENDED`)** |
-| **`SCN-02`** | Python puro (`mode: "auto"`): `PreToolUse` (`exit 2` pip global / `exit 0` `.venv`), auto-creación `.venv` offline, bloqueo `ui -> repo`, paso con `unittest` (`100/100`) y bloqueo AST de secreto `sk-proj-*` | **PASS** |
+| **`SCN-02`** | Python puro (`mode: "auto"`): `PreToolUse` (`exit 2` pip global + bordes `/usr/bin/env`, `-Im`, `uv --python`, `;` vs `&&` / `exit 0` `.venv`), auto `.venv` offline, bloqueo `ui -> repo`, `unittest` (`100/100`) y bloqueo AST de secretos en `Assign`, `OpenAI(api_key=...)`, `Dict` y tokens sueltos | **PASS** |
 | **`SCN-03`** | Políglota aditivo (`package.json` + Python + `scripts/helper.ps1`): `package.json` en verde NO oculta fallo en `app/broken.py`; al repararlo pasan Node + Python + AST PowerShell en `CLEAN STATE` | **PASS** |
 | **`SCN-04`** | Brownfield (`mode: "brownfield"`): directorio vacío permitido, `layerMap` personalizado (`models -> types`, `legacy_views -> legacy_dao`), `1/1` violación pasa con aviso *Ratchet* y `2/1` bloquea | **PASS** |
 | **`SCN-05`** | No-Desarrollo (`mode: "non-dev"`): `ARCHITECTURE.md` documental simplificado, bloqueo de `[PENDIENTE]` y de `[anexo](./no-existe.md)`, y paso `100/100` con prosa natural en español (`"Todo"` / `"todo"`) | **PASS** |
 | **`SCN-06`** | Hook `Stop` E2E: `exit 0` en repo limpio; `exit 2` (`decision: "continue"`) ante `[PENDIENTE]` en `non-dev` o error Python incluso con árbol Git limpio (`git status --porcelain` vacío) | **PASS** |
+
+### Límites de Diseño Intencionales en v2.0 y Controles Asociados
+1. **Fast-Path de `Stop` con Árbol Git Limpio (`git status --porcelain` vacío) vs. Timeout de `60s`**:
+   - *Decisión de diseño*: Cuando el árbol Git está limpio, `Stop` ejecuta determinísticamente `check-architecture.sh` (Puerta 1), `validate-harness.mjs` (Puerta 2 `100/100`), `check-deliverables.mjs` y `check-python.mjs`, pero omite suites de pruebas pesadas (`npm test` / `pytest`) para no exceder el timeout duro de `60s` del host runtime.
+   - *Control*: La ejecución completa de `bash ./init.sh` (incluyendo Puerta 3 de tests/build) es obligatoria **antes** de cada `git commit` y su salida verificable en `progress.md` / `feature_list.json` (`evidence`) es auditada por el Checker.
+2. **Editabilidad Día 1 de `harness.config.json` vs. Incremento Oportunista del Ratchet Brownfield**:
+   - *Decisión de diseño*: `harness.config.json` no está bloqueado en `PreToolUse` para permitir al *Maker* autoconfigurar el perfil del proyecto en el Día 1 (`mode`, `layerMap`, `packageRoots`, `nonDev`) sin fricción manual.
+   - *Control*: Cualquier modificación o incremento oportunista de `brownfield.maxLegacyLayerViolations` queda expuesto en el historial Git y es auditado obligatoriamente vía `git diff` por el **Checker `one-shot` aislado** (`checker-prompt.md`).

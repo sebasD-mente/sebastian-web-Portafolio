@@ -169,10 +169,68 @@ function unwrapOuterParens(s) {
   return null;
 }
 
+function baseNameOfVerb(rawVerb) {
+  return String(rawVerb || '').replace(/^['"]|['"]$/g, '').replace(/\\/g, '/').split('/').pop().toLowerCase().replace(/\.(?:exe|cmd|bat)$/i, '');
+}
+
 function extractVerbName(text) {
   const m = text.match(/^(?:'([^']+)'|"([^"]+)"|([^\s"']+))/);
-  const rawVerb = m ? (m[1] || m[2] || m[3] || '') : '';
-  return rawVerb.replace(/\\/g, '/').split('/').pop().toLowerCase().replace(/\.(?:exe|cmd|bat)$/i, '');
+  return baseNameOfVerb(m ? (m[1] || m[2] || m[3] || '') : '');
+}
+
+function stripLeadingWrappers(seg) {
+  const tokens = seg.replace(/^\{\s+/, '').replace(/\s*\}\s*$/, '').match(/'[^']*'|"[^"]*"|\S+/g) || [];
+  let idx = 0;
+  while (idx < tokens.length) {
+    const raw = tokens[idx].replace(/^['"]|['"]$/g, '');
+    const base = baseNameOfVerb(raw);
+    if (raw === '&' || raw === '--') { idx += 1; continue; }
+    if (/^[A-Za-z_]\w*=/.test(raw)) { idx += 1; continue; }
+    if (base === 'sudo') {
+      idx += 1;
+      while (idx < tokens.length) {
+        const f = tokens[idx].replace(/^['"]|['"]$/g, '');
+        if (f === '--') { idx += 1; break; }
+        if (f === '-u' || f === '--user' || f === '-g' || f === '--group') { idx += 2; continue; }
+        if (f.startsWith('-')) { idx += 1; continue; }
+        break;
+      }
+      continue;
+    }
+    if (base === 'env') {
+      idx += 1;
+      while (idx < tokens.length) {
+        const f = tokens[idx].replace(/^['"]|['"]$/g, '');
+        if (f === '--') { idx += 1; break; }
+        if (f === '-u' || f === '--unset' || f === '-C' || f === '--chdir' || f === '-S' || f === '--split-string') { idx += 2; continue; }
+        if (f.startsWith('-') && !f.includes('=')) { idx += 1; continue; }
+        break;
+      }
+      continue;
+    }
+    if (base === 'command' || base === 'nohup') {
+      idx += 1;
+      while (idx < tokens.length && tokens[idx].replace(/^['"]|['"]$/g, '').startsWith('-')) {
+        const f = tokens[idx].replace(/^['"]|['"]$/g, '');
+        idx += 1;
+        if (f === '--') break;
+      }
+      continue;
+    }
+    if (base === 'nice') {
+      idx += 1;
+      while (idx < tokens.length) {
+        const f = tokens[idx].replace(/^['"]|['"]$/g, '');
+        if (f === '--') { idx += 1; break; }
+        if (f === '-n' || f === '--adjustment') { idx += 2; continue; }
+        if (/^-(?:\d+|\+\d+|-\d+)$/.test(f) || f.startsWith('--adjustment=')) { idx += 1; continue; }
+        break;
+      }
+      continue;
+    }
+    break;
+  }
+  return tokens.slice(idx).join(' ');
 }
 
 export function collectActiveClauses(raw, depth = 0) {
@@ -190,7 +248,7 @@ export function collectActiveClauses(raw, depth = 0) {
       const nextVerb = extractVerbName(parts[idx + 1].text.trim());
       if (!WRAPPER_VERBS.has(nextVerb)) continue;
     }
-    const stripped = seg.replace(/^\{\s+/, '').replace(/\s*\}\s*$/, '').replace(/^(?:(?:[A-Za-z_]\w*=\S+|env|sudo|command|nohup|&)\s+)+/i, '');
+    const stripped = stripLeadingWrappers(seg);
     const verb = extractVerbName(stripped);
     if (['echo', 'printf', 'write-output', 'write-host'].includes(verb)) {
       clauses.push(stripped.replace(/'[^']*'|"(?:\\.|[^"\\])*"/g, '""'));
@@ -297,21 +355,33 @@ function isVenvActivationClause(seg) {
 }
 
 function inspectPipInstallArgs(pipArgs, execInVenv, explicitPath, clauseVenv) {
-  let subcommand = '', hasReadOnlyFlag = false, pythonTarget = '', hasUserFlag = false;
+  let subcommand = '', hasReadOnlyFlag = false, pythonTarget = '', hasPythonFlag = false, hasUserFlag = false;
   for (let j = 0; j < pipArgs.length; j += 1) {
     const t = pipArgs[j];
     if (t === '--help' || t === '-h' || t === '--version' || t === '-V' || t === '--dry-run') hasReadOnlyFlag = true;
     else if (t === '--user') hasUserFlag = true;
-    else if (t === '--python' && pipArgs[j + 1]) pythonTarget = pipArgs[++j];
-    else if (t.startsWith('--python=')) pythonTarget = t.slice(9);
+    else if (t === '--python') { hasPythonFlag = true; pythonTarget = pipArgs[++j] || ''; }
+    else if (t.startsWith('--python=')) { hasPythonFlag = true; pythonTarget = t.slice(9); }
     else if (!subcommand && PIP_VALUE_OPTS_RE.test(t)) j += 1;
     else if (!t.startsWith('-') && !subcommand) subcommand = t.toLowerCase();
   }
   if (subcommand !== 'install' || hasReadOnlyFlag) return null;
+  if (hasPythonFlag) {
+    return hasVenvSegment(pythonTarget, true) ? null : 'pip install apuntando a intérprete Python fuera de .venv';
+  }
   if (execInVenv) return null;
-  if (pythonTarget && hasVenvSegment(pythonTarget, true)) return null;
-  if (!explicitPath && !pythonTarget && !hasUserFlag && clauseVenv) return null;
+  if (!explicitPath && !hasUserFlag && clauseVenv) return null;
   return 'pip install global sin entorno virtual (.venv)';
+}
+
+function collectUvPythonTargets(argList, out) {
+  for (let j = 0; j < argList.length; j += 1) {
+    const t = argList[j];
+    if (t === '--python' || t === '-p') { out.push(argList[++j] || ''); }
+    else if (t.startsWith('--python=')) { out.push(t.slice(9)); }
+    else if (t.startsWith('-p=')) { out.push(t.slice(3)); }
+    else if (t.startsWith('-p') && !t.startsWith('--') && t.length > 2) { out.push(t.slice(2)); }
+  }
 }
 
 function checkClauseGlobalPip(seg, localVenv, envUvSystem) {
@@ -319,16 +389,75 @@ function checkClauseGlobalPip(seg, localVenv, envUvSystem) {
   let idx = 0, clauseVenv = localVenv, clauseUvSystem = envUvSystem;
   while (idx < rawTokens.length) {
     const u = rawTokens[idx].replace(/^['"]|['"]$/g, '');
-    if (/^sudo$/i.test(u)) {
+    const uBase = baseNameOfVerb(u);
+    if (u === '&' || u === '--') { idx += 1; continue; }
+    if (uBase === 'sudo') {
       clauseVenv = false;
       idx += 1;
-      while (idx < rawTokens.length && /^-[A-Za-z]+$/.test(rawTokens[idx])) idx += 1;
+      while (idx < rawTokens.length) {
+        const sf = rawTokens[idx].replace(/^['"]|['"]$/g, '');
+        if (sf === '--') { idx += 1; break; }
+        if (sf === '-u' || sf === '--user' || sf === '-g' || sf === '--group') { idx += 2; continue; }
+        if (sf.startsWith('-')) { idx += 1; continue; }
+        break;
+      }
       continue;
     }
-    if (u === '&' || /^(?:env|command|nohup)$/i.test(u)) { idx += 1; continue; }
+    if (uBase === 'env') {
+      idx += 1;
+      while (idx < rawTokens.length) {
+        const ef = rawTokens[idx].replace(/^['"]|['"]$/g, '');
+        if (ef === '--') { idx += 1; break; }
+        if (ef === '-' || ef === '-i' || ef === '--ignore-environment') { clauseVenv = false; idx += 1; continue; }
+        if (ef === '-u' || ef === '--unset') {
+          if ((rawTokens[idx + 1] || '').replace(/^['"]|['"]$/g, '') === 'VIRTUAL_ENV') clauseVenv = false;
+          idx += 2;
+          continue;
+        }
+        if (ef.startsWith('--unset=')) {
+          if (ef.slice(8) === 'VIRTUAL_ENV') clauseVenv = false;
+          idx += 1;
+          continue;
+        }
+        if (ef === '-C' || ef === '--chdir' || ef === '-S' || ef === '--split-string') { idx += 2; continue; }
+        if (ef.startsWith('-') && !ef.includes('=')) { idx += 1; continue; }
+        break;
+      }
+      continue;
+    }
+    if (uBase === 'command') {
+      idx += 1;
+      let lookupOnly = false;
+      while (idx < rawTokens.length) {
+        const cf = rawTokens[idx].replace(/^['"]|['"]$/g, '');
+        if (cf === '--') { idx += 1; break; }
+        if (/^-[p]*[vV]/.test(cf)) { lookupOnly = true; idx += 1; continue; }
+        if (cf.startsWith('-')) { idx += 1; continue; }
+        break;
+      }
+      if (lookupOnly) return null;
+      continue;
+    }
+    if (uBase === 'nohup') {
+      idx += 1;
+      if ((rawTokens[idx] || '').replace(/^['"]|['"]$/g, '') === '--') idx += 1;
+      continue;
+    }
+    if (uBase === 'nice') {
+      idx += 1;
+      while (idx < rawTokens.length) {
+        const nf = rawTokens[idx].replace(/^['"]|['"]$/g, '');
+        if (nf === '--') { idx += 1; break; }
+        if (nf === '-n' || nf === '--adjustment') { idx += 2; continue; }
+        if (/^-(?:\d+|\+\d+|-\d+)$/.test(nf) || nf.startsWith('--adjustment=')) { idx += 1; continue; }
+        break;
+      }
+      continue;
+    }
     if (/^[A-Za-z_]\w*=/.test(u)) {
-      const [k, v = ''] = u.split('=', 2);
-      const cleanVal = v.replace(/^['"]|['"]$/g, '').trim();
+      const eqPos = u.indexOf('=');
+      const k = u.slice(0, eqPos);
+      const cleanVal = u.slice(eqPos + 1).replace(/^['"]|['"]$/g, '').trim();
       if (k === 'VIRTUAL_ENV') clauseVenv = Boolean(cleanVal);
       if (k === 'UV_SYSTEM_PYTHON') clauseUvSystem = /^(?:1|true)$/i.test(cleanVal);
       idx += 1;
@@ -340,28 +469,31 @@ function checkClauseGlobalPip(seg, localVenv, envUvSystem) {
   if (tokens.length === 0) return null;
 
   const execToken = tokens[0];
-  const baseExec = execToken.replace(/\\/g, '/').split('/').pop().toLowerCase().replace(/\.(?:exe|cmd|bat)$/i, '');
+  const baseExec = baseNameOfVerb(execToken);
   const explicitPath = /[\\/]/.test(execToken);
   const execInVenv = explicitPath && hasVenvSegment(execToken, false);
 
   if (baseExec === 'uv') {
     let i = 1;
     while (i < tokens.length && tokens[i].startsWith('-')) {
-      if (/^--(?:directory|project|cache-dir|config-file|python-preference)$/.test(tokens[i])) i += 2;
+      if (/^(?:--(?:directory|project|cache-dir|config-file|python-preference|python)|-p)$/.test(tokens[i])) i += 2;
       else i += 1;
     }
     if ((tokens[i] || '').toLowerCase() !== 'pip') return null;
+    const preArgs = tokens.slice(1, i);
     const rest = tokens.slice(i + 1);
     const uvPipSub = rest.find((t) => !t.startsWith('-'))?.toLowerCase() || '';
     if (uvPipSub !== 'install' && uvPipSub !== 'sync') return null;
     if (rest.some((t) => t === '--help' || t === '-h' || t === '--dry-run' || t === '--version' || t === '-V')) return null;
-    if (clauseUvSystem || rest.some((t) => t === '--system' || t === '--system=true')) {
+    if (clauseUvSystem || preArgs.some((t) => t === '--system' || t === '--system=true') || rest.some((t) => t === '--system' || t === '--system=true')) {
       return 'uv pip install --system (instalación en Python global del sistema)';
     }
-    for (let j = 0; j < rest.length; j += 1) {
-      const pyVal = (rest[j] === '--python' || rest[j] === '-p') ? rest[j + 1] : (rest[j].startsWith('--python=') ? rest[j].slice(9) : '');
-      if (pyVal && /[\\/]/.test(pyVal) && !hasVenvSegment(pyVal, true)) {
-        return 'uv pip install apuntando a intérprete Python global';
+    const uvPyTargets = [];
+    collectUvPythonTargets(preArgs, uvPyTargets);
+    collectUvPythonTargets(rest, uvPyTargets);
+    for (const pyVal of uvPyTargets) {
+      if (!pyVal || !hasVenvSegment(pyVal, true)) {
+        return 'uv pip install apuntando a intérprete Python fuera de .venv';
       }
     }
     return null;
@@ -375,9 +507,10 @@ function checkClauseGlobalPip(seg, localVenv, envUvSystem) {
     let k = 1, modName = '', pipArgs = [];
     while (k < tokens.length) {
       const pt = tokens[k];
-      if (pt === '-m') { modName = tokens[k + 1] || ''; pipArgs = tokens.slice(k + 2); break; }
-      if (pt.startsWith('-m') && pt.length > 2) { modName = pt.slice(2); pipArgs = tokens.slice(k + 1); break; }
-      if (pt === '-c' || pt === '-' || !pt.startsWith('-')) break;
+      if (/^-[A-Za-z]*m$/.test(pt)) { modName = tokens[k + 1] || ''; pipArgs = tokens.slice(k + 2); break; }
+      const inlineMod = pt.match(/^-[A-Za-z]*m(pip(?:\d+(?:\.\d+)*)?)$/i);
+      if (inlineMod) { modName = inlineMod[1]; pipArgs = tokens.slice(k + 1); break; }
+      if (pt === '-c' || /^-[A-Za-z]*c/.test(pt) || pt === '-' || !pt.startsWith('-')) break;
       if (pt === '-W' || pt === '-X' || pt === '--check-hash-based-pycs') { k += 2; continue; }
       k += 1;
     }
@@ -398,20 +531,27 @@ function scanPipScope(raw, depth, inheritedVenv, envUvSystem) {
   let localVenv = inheritedVenv;
   for (let idx = 0; idx < parts.length; idx += 1) {
     const seg = parts[idx].text.trim();
+    const keepVenvAcross = parts[idx].sep === '&&';
     const inner = unwrapOuterParens(seg);
     if (inner !== null) {
       const parenHit = scanPipScope(inner, depth + 1, localVenv, envUvSystem);
       if (parenHit) return parenHit;
+      if (!keepVenvAcross) localVenv = inheritedVenv;
       continue;
     }
     if (parts[idx].sep === '|' && /^(?:'[^']*'|"(?:\\.|[^"\\])*")$/.test(seg) && parts[idx + 1]) {
       const nextVerb = extractVerbName(parts[idx + 1].text.trim());
-      if (!WRAPPER_VERBS.has(nextVerb)) continue;
+      if (!WRAPPER_VERBS.has(nextVerb)) {
+        localVenv = inheritedVenv;
+        continue;
+      }
     }
-    const strippedForVerb = seg.replace(/^\{\s+/, '').replace(/\s*\}\s*$/, '').replace(/^(?:(?:[A-Za-z_]\w*=\S+|env|sudo|command|nohup|&)\s+)+/i, '');
+    const strippedForVerb = stripLeadingWrappers(seg);
     const verb = extractVerbName(strippedForVerb);
-    if (['echo', 'printf', 'write-output', 'write-host'].includes(verb)) continue;
-    if (verb === 'git' && /\bcommit\b/i.test(strippedForVerb)) continue;
+    if (['echo', 'printf', 'write-output', 'write-host'].includes(verb) || (verb === 'git' && /\bcommit\b/i.test(strippedForVerb))) {
+      if (!keepVenvAcross) localVenv = inheritedVenv;
+      continue;
+    }
     if (WRAPPER_VERBS.has(verb)) {
       for (const qm of strippedForVerb.matchAll(/'([^']*)'|"((?:\\.|[^"\\])*)"/g)) {
         const qHit = scanPipScope(qm[1] !== undefined ? qm[1] : qm[2].replace(/\\"/g, '"'), depth + 1, localVenv, envUvSystem);
@@ -422,14 +562,16 @@ function scanPipScope(raw, depth, inheritedVenv, envUvSystem) {
         const tHit = scanPipScope(tail, depth + 1, localVenv, envUvSystem);
         if (tHit) return tHit;
       }
+      if (!keepVenvAcross) localVenv = inheritedVenv;
       continue;
     }
     if (isVenvActivationClause(seg)) {
-      if (parts[idx].sep !== '||') localVenv = true;
+      localVenv = keepVenvAcross;
       continue;
     }
     const rule = checkClauseGlobalPip(seg, localVenv, envUvSystem);
     if (rule) return { blocked: true, rule };
+    if (!keepVenvAcross) localVenv = inheritedVenv;
   }
   return null;
 }

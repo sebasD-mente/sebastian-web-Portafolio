@@ -252,10 +252,11 @@ PLACEHOLDER_SUBSTRINGS = (
 )
 
 REAL_SECRET_PREFIX_RE = re.compile(
-    r"^(?:Bearer\s+)?(?:"
+    r"(?:^|(?:Bearer|Token|Basic)\s+)(?:"
+    r"sk-proj-[A-Za-z0-9_-]{10,}|"
     r"sk-[A-Za-z0-9_-]{10,}|"
     r"sk_live_[A-Za-z0-9]{10,}|"
-    r"ghp_[A-Za-z0-9]{12,}|"
+    r"gh[pousr]_[A-Za-z0-9]{12,}|"
     r"github_pat_[A-Za-z0-9_]{12,}|"
     r"AIza[0-9A-Za-z_-]{16,}|"
     r"AKIA[0-9A-Z]{12,}|"
@@ -264,12 +265,12 @@ REAL_SECRET_PREFIX_RE = re.compile(
 )
 
 SECRET_VAR_RE = re.compile(
-    r"^(?:[A-Za-z0-9]+_)*(?:API_KEY|APIKEY|SECRET_KEY|ACCESS_TOKEN|AUTH_TOKEN|PRIVATE_KEY|CLIENT_SECRET)$",
+    r"^(?:[A-Za-z0-9]+_)*(?:API_KEY|APIKEY|API_SECRET|SECRET_KEY|ACCESS_TOKEN|AUTH_TOKEN|BEARER_TOKEN|PRIVATE_KEY|CLIENT_SECRET|JWT_SECRET|WEBHOOK_SECRET)$",
     re.IGNORECASE,
 )
 
 DB_URL_VAR_RE = re.compile(
-    r"^(?:[A-Za-z0-9]+_)*(?:DATABASE_URL|DB_URL|SQLALCHEMY_DATABASE_URI|REDIS_URL|MONGO_URI|MONGODB_URI)$",
+    r"^(?:[A-Za-z0-9]+_)*(?:DATABASE_URL|DB_URL|SQLALCHEMY_DATABASE_URI|REDIS_URL|MONGO_URI|MONGODB_URI|DSN)$",
     re.IGNORECASE,
 )
 
@@ -480,64 +481,102 @@ for rel_path in files:
                                             "spec": f"from {node.module} import {alias.name}",
                                         })
 
-    # C. Detección de secretos quemados obvios en AST (fuera de tests/)
-    if not in_tests_dir:
-        for node in ast.walk(tree):
-            targets = []
-            val_node = None
-            if isinstance(node, ast.Assign):
-                for t in node.targets:
-                    targets.extend(extract_target_names(t))
-                val_node = node.value
-            elif isinstance(node, ast.AnnAssign) and node.value is not None:
-                targets.extend(extract_target_names(node.target))
-                val_node = node.value
+    # C. Detección de secretos quemados en AST: asignaciones, kwargs, dicts y tokens de alta certeza (fuera de tests)
+    lower_fname = raw_parts[-1].lower()
+    is_test_file = in_tests_dir or lower_fname.startswith("test_") or lower_fname.endswith("_test.py")
+    if not is_test_file:
+        flagged_const_ids = set()
 
-            if not targets or not (isinstance(val_node, ast.Constant) and isinstance(val_node.value, str)):
-                continue
-
+        def inspect_named_secret(var_name, val_node, fallback_lineno, context_kind):
+            if not isinstance(var_name, str) or not var_name.strip():
+                return False
+            if not (isinstance(val_node, ast.Constant) and isinstance(val_node.value, str)):
+                return False
             raw_val = val_node.value.strip()
             if not raw_val:
-                continue
+                return False
+            lineno = getattr(val_node, "lineno", None) or fallback_lineno or 1
 
-            lineno = getattr(node, "lineno", 1)
-            for var_name in targets:
-                if REAL_SECRET_PREFIX_RE.search(raw_val) and not is_placeholder_value(raw_val, min_len=10):
-                    secret_findings.append({
-                        "file": rel_path,
-                        "line": lineno,
-                        "var": var_name,
-                        "kind": "prefijo de credencial real detectado",
-                    })
-                    break
+            m_tok = REAL_SECRET_PREFIX_RE.search(raw_val)
+            if m_tok and not is_placeholder_value(m_tok.group(0), min_len=10):
+                flagged_const_ids.add(id(val_node))
+                secret_findings.append({
+                    "file": rel_path,
+                    "line": lineno,
+                    "var": var_name,
+                    "kind": "prefijo de credencial real detectado",
+                })
+                return True
 
-                if DB_URL_VAR_RE.match(var_name):
-                    m = URL_CRED_RE.match(raw_val)
-                    if m:
-                        pwd = m.group(2)
-                        if pwd.lower() not in DUMMY_DB_PASSWORDS and not is_placeholder_value(pwd, min_len=4):
-                            secret_findings.append({
-                                "file": rel_path,
-                                "line": lineno,
-                                "var": var_name,
-                                "kind": "credenciales literales embebidas en URL de conexión",
-                            })
-                            break
-
-                if SECRET_VAR_RE.match(var_name):
-                    if (
-                        not is_placeholder_value(raw_val, min_len=8)
-                        and " " not in raw_val
-                        and not re.match(r"^[A-Z][A-Z0-9_]+$", raw_val)
-                        and not raw_val.startswith(("/", "./", "../"))
-                    ):
+            if DB_URL_VAR_RE.match(var_name):
+                m_url = URL_CRED_RE.match(raw_val)
+                if m_url:
+                    pwd = m_url.group(2)
+                    if pwd.lower() not in DUMMY_DB_PASSWORDS and not is_placeholder_value(pwd, min_len=4):
+                        flagged_const_ids.add(id(val_node))
                         secret_findings.append({
                             "file": rel_path,
                             "line": lineno,
                             "var": var_name,
-                            "kind": "asignación literal dura en variable sensible",
+                            "kind": "credenciales literales embebidas en URL de conexión",
                         })
+                        return True
+
+            if SECRET_VAR_RE.match(var_name):
+                if (
+                    not is_placeholder_value(raw_val, min_len=8)
+                    and " " not in raw_val
+                    and not re.match(r"^[A-Z][A-Z0-9_]+$", raw_val)
+                    and not raw_val.startswith(("/", "./", "../", "http://", "https://"))
+                ):
+                    flagged_const_ids.add(id(val_node))
+                    secret_findings.append({
+                        "file": rel_path,
+                        "line": lineno,
+                        "var": var_name,
+                        "kind": context_kind,
+                    })
+                    return True
+            return False
+
+        for node in ast.walk(tree):
+            node_line = getattr(node, "lineno", 1)
+            if isinstance(node, ast.Assign):
+                targets = []
+                for t in node.targets:
+                    targets.extend(extract_target_names(t))
+                for var_name in targets:
+                    if inspect_named_secret(var_name, node.value, node_line, "asignación literal dura en variable sensible"):
                         break
+            elif isinstance(node, ast.AnnAssign) and node.value is not None:
+                for var_name in extract_target_names(node.target):
+                    if inspect_named_secret(var_name, node.value, node_line, "asignación literal dura en variable sensible"):
+                        break
+            elif isinstance(node, ast.keyword) and isinstance(node.arg, str):
+                inspect_named_secret(node.arg, node.value, node_line, "argumento keyword literal en parámetro sensible")
+            elif isinstance(node, ast.Dict):
+                for k_node, v_node in zip(node.keys, node.values):
+                    if isinstance(k_node, ast.Constant) and isinstance(k_node.value, str) and v_node is not None:
+                        inspect_named_secret(
+                            k_node.value,
+                            v_node,
+                            getattr(k_node, "lineno", node_line),
+                            "valor literal duro en clave sensible de diccionario",
+                        )
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in flagged_const_ids:
+                raw_val = node.value.strip()
+                if not raw_val:
+                    continue
+                m_tok = REAL_SECRET_PREFIX_RE.search(raw_val)
+                if m_tok and not is_placeholder_value(m_tok.group(0), min_len=12):
+                    secret_findings.append({
+                        "file": rel_path,
+                        "line": getattr(node, "lineno", 1),
+                        "var": "<literal>",
+                        "kind": "prefijo de token de alta certeza detectado en constante string",
+                    })
 
 print(json.dumps({
     "syntaxErrors": syntax_errors,

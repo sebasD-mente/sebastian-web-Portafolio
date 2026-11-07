@@ -58,7 +58,8 @@
 timestamp	commit_hash	harness_score	checks_passed	ratchet_status	description
 2026-11-07T08:38	2fc7fe5	100/100	25/25	kept	baseline: instalar Plantilla-Maestra-Arnes en sebastian-web-portafolio en estado limpio Dia 1 (WIP=0)
 2026-11-07T09:07	77afc0a	100/100	25/25	kept	security: blindar 12 vectores adversariales, stacks web, comillas anidadas y 0 CRLF
-2026-11-07T10:45	HEAD->commit(feat-000)	100/100	25/25	kept	feat(harness): evolucionar a Universal Chameleon Harness v2.0 (6/6 E2E + 12/12 ADV PASS, WIP=0)
+2026-11-07T10:49	c066cff	100/100	25/25	kept	feat(harness): evolucionar a Universal Chameleon Harness v2.0 (6/6 E2E + 12/12 ADV PASS, WIP=0)
+2026-11-07T11:10	HEAD->commit(feat-000)	100/100	25/25	kept	fix(harness): endurecer escaneo AST Python de secretos y bordes de pip global (12/12 Checker polish)
 ```
 
 *(Nota operativa: si una ronda futura falla la verificación o recibe `❌ Fail` irreversible del Checker `one-shot`, se restaura el árbol limpio al último commit verde mediante `git restore --worktree --staged .` o `git checkout -- .` —compatible con `PreToolUse`— y se añade aquí una fila con `commit_hash = (reverted)` y `ratchet_status = reverted` documentando qué enfoque falló).*
