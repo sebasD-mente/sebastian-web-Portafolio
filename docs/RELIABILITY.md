@@ -1,6 +1,6 @@
 # RELIABILITY.md (Observabilidad de Runtime, Fiabilidad Aditiva en 3 Puertas y Validación UI / Non-Dev)
 
-Este documento define cómo el **Arnés Camaleón Universal v2.0** demuestra de forma determinista que el repositorio está saludable, registra señales observables reales en disco y permanece reiniciable (`restartable`), eliminando suposiciones y reintentos a ciegas (*blind retries*) en aplicaciones Web/Node, backends Python, proyectos políglotas, repositorios `brownfield` y entregables `non-dev`.
+Este documento define cómo el **Arnés Camaleón Universal v2.1** demuestra de forma determinista que el repositorio está saludable, registra señales observables reales en disco y permanece reiniciable (`restartable`), eliminando suposiciones y reintentos a ciegas (*blind retries*) en aplicaciones Web/Node, backends Python, proyectos políglotas, repositorios `brownfield` y entregables `non-dev`.
 
 ---
 
@@ -10,16 +10,16 @@ Todo proyecto gobernado por este arnés expone cuatro rutas operativas canónica
 
 | Ruta Estándar | Comando / Procedimiento Canónico | Propósito Operativo |
 | :--- | :--- | :--- |
-| **1. Arranque (`Startup`)** | `bash ./init.sh` | Confirma directorio, perfil `harness.config.json`, integridad de artefactos críticos (`0 CRLF`), sincronización inteligente y salud de línea base antes de editar. |
+| **1. Arranque (`Startup`)** | `bash ./init.sh` | Confirma directorio, perfil `harness.config.json` (`validateHarnessConfig`), integridad de artefactos críticos (`0 CRLF`, `0 UTF-8 BOM`), sincronización inteligente y salud de línea base antes de editar. |
 | **2. Verificación (`Verification`)** | `bash ./init.sh` (`check-architecture.sh` + `validate-harness.mjs` + `check-python.mjs` / `check-deliverables.mjs` / build & tests) | Ejecuta secuencialmente las 3 Puertas aditivas (Estática, Comportamiento `100/100` y Sistema Completo Políglota o Documental). |
 | **3. Iniciar aplicación o servicio (`Start app / service`)** | `RUN_START_COMMAND=1 bash ./init.sh` (o `START_CMD` configurado en `harness.config.json` / entorno) | Levanta la aplicación o servicio objetivo únicamente después de haber superado en verde las 3 puertas de verificación previas. |
 | **4. Depurar o inspeccionar runtime (`Debug / inspect runtime`)** | Inspección de `.agents/.runtime/hook-audit.jsonl` y logs de aplicación filtrando por `correlationId` / `level: "error"` + corrida aislada de la puerta afectada | Permite diagnosticar la causa raíz y la capa propietaria del fallo desde señales locales reales antes de modificar archivos. |
 
 ### Señales Requeridas en Tiempo de Ejecución (`Required Runtime Signals`)
 Está estrictamente prohibido emitir mensajes vagos como `"Algo salió mal"` o `"Fallo inesperado"`. El runtime del arnés y de la aplicación proporcionan cuatro señales observables:
-1. **Logs JSONL estructurados reales (`RuntimeLogEntry`)**: El runner `scripts/harness-hooks.mjs` persiste cada evaluación de `PreToolUse`, `PostToolUse` y `Stop` en `.agents/.runtime/hook-audit.jsonl`, y los módulos de `Runtime` de la aplicación siguen el mismo contrato.
-2. **Verificaciones de salud (`health checks`)**: Validación determinista de `.venv` en Python (`scripts/check-python.mjs`), sintaxis JSON estricta, integridad de enlaces/sustancia (`scripts/check-deliverables.mjs`) y disponibilidad de dependencias.
-3. **Datos de traza y latencia (`durationMs`)**: Medición explícita por evento/etapa (por ejemplo, `PostToolUse < 15 ms` y omisión de reinstalaciones redundantes en `Stop` con `HARNESS_SKIP_INSTALL=1` para evitar bloqueos por *timeout*).
+1. **Logs JSONL estructurados reales (`RuntimeLogEntry`)**: El runner `scripts/harness-hooks.mjs` (configurado en `.agents/hooks.json` con `PreInvocation` plano, `"matcher": "*"` en `PreToolUse`, `PostToolUse` sobre herramientas mutadoras y `Stop` plano) persiste cada evaluación en `.agents/.runtime/hook-audit.jsonl`, y los módulos de `Runtime` de la aplicación siguen el mismo contrato.
+2. **Verificaciones de salud (`health checks`)**: Validación centralizada de `harness.config.json` mediante `validateHarnessConfig` en las 3 puertas, `.venv` y AST en Python (`scripts/check-python.mjs`), sintaxis JSON estricta, integridad de enlaces/sustancia (`scripts/check-deliverables.mjs`) y disponibilidad de dependencias.
+3. **Datos de traza y latencia (`durationMs`)**: Medición explícita por evento/etapa (`PostToolUse < 15 ms`, `allowRubric` perezoso en `PreToolUse` y ejecución completa de `HARNESS_SKIP_INSTALL=1 bash ./init.sh` con `timeout: 45s` en `Stop` tanto con árbol sucio como con árbol limpio).
 4. **Estados de error accionables con Bolígrafo Rojo (`ERROR + POR QUÉ + SOLUCIÓN`)**: Con secretos, tokens y `PII` redactados automáticamente según `docs/SECURITY.md`.
 
 ---
@@ -47,14 +47,14 @@ Cada paso crítico de ejecución en hooks del arnés (`.agents/.runtime/hook-aud
   "level": "info",
   "component": "HarnessHooks",
   "action": "stop",
-  "durationMs": 185,
+  "durationMs": 310,
   "input": {
-    "terminationReason": "NO_TOOL_CALL",
-    "cleanGitTree": true
+    "scriptToRun": "init.sh",
+    "isGitClean": true
   },
   "output": {
     "decision": "stop",
-    "gate1": "PASS",
+    "gates": "1-3 PASS",
     "overallScore": 100
   },
   "error": null,
@@ -91,26 +91,26 @@ Cada paso crítico de ejecución en hooks del arnés (`.agents/.runtime/hook-aud
 
 ## 3. Contrato de Fiabilidad Aditiva en 3 Puertas (`init.sh`) y Recorridos Dorados (`Golden Journeys`)
 
-Ningún cambio en el repositorio se considera fiable hasta superar secuencialmente las **3 Puertas de Verificación** ejecutadas por `bash ./init.sh` (`set -euo pipefail`) y parametrizadas por `harness.config.json`:
+Ningún cambio en el repositorio se considera fiable hasta superar secuencialmente las **3 Puertas de Verificación** ejecutadas por `bash ./init.sh` (`set -euo pipefail`, y ejecutadas también en `Stop` mediante `HARNESS_SKIP_INSTALL=1 bash ./init.sh` con `timeout: 45s` tanto con árbol sucio como con árbol limpio) y parametrizadas por `harness.config.json` (validado centralizadamente por `validateHarnessConfig` en las 3 puertas):
 
-1. **Puerta 1 — Estática, `0 CRLF`, JSON Estricto y Límites Arquitectónicos (`Static & Architecture Gate`)**:
-   - Verifica la existencia física de los archivos vitales, `0 CRLF` (`\r`), sintaxis válida en todos los `.json` estrictos del árbol y ejecuta `bash scripts/check-architecture.sh` validando `ARCHITECTURE.md`, `harness.config.json`, las 6 capas (incluyendo superficies web `.astro/.vue/.svelte`, `components/`, `pages/`, `app/` y el trinquete `maxLegacyLayerViolations` en `brownfield`), Auto-Memoria (`<= 200L / 25KB`), cero enlaces muertos en `Required Artifacts` y `cleanup-scanner`.
+1. **Puerta 1 — Estática, `0 CRLF` / `0 BOM`, JSON Estricto y Límites Arquitectónicos (`Static & Architecture Gate`)**:
+   - Verifica la existencia física de los archivos vitales, `0 CRLF` (`\r`) y `0 UTF-8 BOM` (`0xEF 0xBB 0xBF`) en todos los archivos de texto, sintaxis válida en todos los `.json` estrictos del árbol y ejecuta `bash scripts/check-architecture.sh` validando `ARCHITECTURE.md`, `harness.config.json` (`validateHarnessConfig`), las 6 capas (incluyendo superficies web `.astro/.vue/.svelte`, `components/`, `pages/`, `app/` y el trinquete `maxLegacyLayerViolations` en `brownfield`), Auto-Memoria (`<= 200L / 25KB`), cero enlaces muertos en `Required Artifacts` y `cleanup-scanner`.
 2. **Puerta 2 — Comportamiento y Reglas de Subsistemas (`Behavioral Gate`)**:
-   - Ejecuta `node scripts/validate-harness.mjs --min-score 100` exigiendo `100/100` (`25/25 PASS`) en `instructions`, `state`, `verification`, `scope` y `lifecycle`, validando `WIP <= 1`, orden secuencial DAG sin ciclos y `Pass-State Gating` en paridad estricta con `scripts/feature-list.schema.json` (`evidence >= 10` caracteres, cero `../` fuera de raíz y `required_files` físicos con tamaño `> 0`).
+   - Ejecuta `node scripts/validate-harness.mjs --min-score 100` validando centralizadamente `harness.config.json` (`validateHarnessConfig`) y exigiendo `100/100` (`25/25 PASS`) en `instructions`, `state`, `verification`, `scope` y `lifecycle`, validando `WIP <= 1`, orden secuencial DAG sin ciclos y `Pass-State Gating` en paridad estricta con `scripts/feature-list.schema.json` (`evidence >= 10` caracteres, cero `../` fuera de raíz y `required_files` físicos con tamaño `> 0`).
 3. **Puerta 3 — Sistema Completo Políglota Aditivo y Puerta Documental (`End-to-End Polyglot & Non-Dev Gate`)**:
-   - A diferencia de una cascada excluyente donde `package.json` silenciaba otros lenguajes, la Puerta 3 ejecuta **de forma aditiva** cada validador aplicable al repositorio:
+   - A diferencia de una cascada excluyente donde `package.json` silenciaba otros lenguajes, la Puerta 3 valida primero `harness.config.json` (`validateHarnessConfig`) y ejecuta **de forma aditiva** cada validador aplicable al repositorio:
      - **Node / Web (`package.json`)**: Instala dependencias solo en arranque en frío (cuando falta `node_modules/` o `HARNESS_FORCE_INSTALL=1`, omitiendo en `Stop` mediante `HARNESS_SKIP_INSTALL=1`) y corre `check`/`typecheck`, `lint`, `test` y `build`.
-     - **Python (`scripts/check-python.mjs`)**: Cuando existen manifiestos o módulos Python (`pyproject.toml`, `requirements.txt`, `src/`, `app/`, `backend/`), verifica el aislamiento en `.venv`, parsea sintaxis/AST e imports de capas y ejecuta `pytest` / linters configurados.
-     - **Otros Stacks Políglotas**: Ejecuta aditivamente Go (`go test`), Rust (`cargo test`), JVM (Maven/Gradle), .NET (`dotnet test`), Dart/Flutter, PowerShell o los comandos declarados en `harness.config.json` / `VERIFY_CMD`.
-     - **No-Desarrollo (`scripts/check-deliverables.mjs`)**: Cuando `mode: "non-dev"` (o existen entregables documentales registrados en `harness.config.json`), verifica tamaño y estructura real, cero placeholders (`[PENDIENTE]`, `TODO`, `TBD`, `Lorem ipsum`), cero enlaces o imágenes locales rotas y presencia de referencias/fuentes verificables.
+     - **Python (`scripts/check-python.mjs`)**: Cuando existen manifiestos o módulos Python (`pyproject.toml`, `requirements.txt`, `src/`, `app/`, `backend/`), verifica el aislamiento en `.venv`, parsea sintaxis/AST (incluyendo literales/secretos en argumentos por defecto, `f-strings` y `os.environ`) e imports de capas y ejecuta `pytest` / `unittest` / linters configurados.
+     - **Otros Stacks Políglotas**: Ejecuta aditivamente Go (`go test`), Rust (`cargo test`), JVM (Maven/Gradle), .NET (`dotnet test`), Dart/Flutter, AST de PowerShell (`.ps1`) o los comandos declarados en `harness.config.json` / `VERIFY_CMD`.
+     - **No-Desarrollo (`scripts/check-deliverables.mjs`)**: Cuando `mode: "non-dev"` (o existen entregables documentales registrados en `harness.config.json`), verifica tamaño y estructura real (`countRealWords` inmune a comentarios HTML, tablas vacías o URLs), cero placeholders (`[PENDIENTE]`, `TODO`, `TBD`, `Lorem ipsum`), cero enlaces o imágenes locales rotas y presencia de referencias/fuentes verificables.
 
 ### Recorridos Dorados (`Golden Journeys`)
 
 | ID | Recorrido Dorado (`Golden Journey`) | Ruta de Verificación Repetible | Señal de Éxito Esperada | Señal Clara de Fallo |
 | :--- | :--- | :--- | :--- | :--- |
-| **`GJ-01`** | **Arranque en frío, `0 CRLF` y salud integral en 3 puertas** | `bash ./init.sh` | Código `0`, `0 CRLF`, `Overall: 100/100` (`25/25 PASS`) y cierre `CLEAN STATE`. | Parada inmediata (`Exit != 0`) con diagnóstico `ERROR + POR QUÉ + SOLUCIÓN`. |
+| **`GJ-01`** | **Arranque en frío, `0 CRLF`/`0 BOM` y salud integral en 3 puertas** | `bash ./init.sh` | Código `0`, `0 CRLF`, `0 BOM`, `Overall: 100/100` (`25/25 PASS`) y cierre `CLEAN STATE`. | Parada inmediata (`Exit != 0`) con diagnóstico `ERROR + POR QUÉ + SOLUCIÓN`. |
 | **`GJ-02`** | **Transición de tarea bajo `WIP = 1`, DAG y `Pass-State Gating`** | `node scripts/validate-harness.mjs --min-score 100` + `bash scripts/check-architecture.sh` | Máximo 1 tarea `in-progress`, dependencias en `done`, `required_files` no vacíos y `evidence >= 10` chars al cerrar. | Puntaje `< 100/100` o violación de esquema JSON. |
-| **`GJ-03`** | **Entrega limpia, auditoría de hooks y reinicio (`Clean Handoff`)** | Inspección de `.agents/.runtime/hook-audit.jsonl` + `progress.md` + `session-handoff.md` + `bash ./init.sh` | Cero temporales, trazas `RuntimeLogEntry` válidas con `correlationId` y Puerta 1 en `Stop` en verde. | Bloqueo `"decision": "continue"` en `Stop` o alerta de `cleanup-scanner`. |
+| **`GJ-03`** | **Entrega limpia, auditoría de hooks y reinicio (`Clean Handoff`)** | Inspección de `.agents/.runtime/hook-audit.jsonl` + `progress.md` + `session-handoff.md` + `bash ./init.sh` | Cero temporales, trazas `RuntimeLogEntry` válidas con `correlationId` y `HARNESS_SKIP_INSTALL=1 bash ./init.sh` (`timeout: 45s`) en `Stop` en verde en árbol sucio y limpio. | Bloqueo `"decision": "continue"` en `Stop` o alerta de `cleanup-scanner`. |
 | **`GJ-04`** | **Adaptación Camaleón (`Políglota` / `Brownfield` / `non-dev`)** | `node scripts/check-python.mjs` y/o `node scripts/check-deliverables.mjs` vía `bash ./init.sh` | `.venv` aislado y AST/tests limpios en Python; trinquete `<= maxLegacyLayerViolations` en `brownfield`; cero placeholders/enlaces rotos en `non-dev`. | Fallo aditivo en Puerta 3 o incremento del trinquete de capas heredadas. |
 | **`GJ-APP`** | **Flujos críticos de usuario del producto o entregable** | Comandos E2E / integración del dominio registrados al avanzar el proyecto | Respuesta válida, `RuntimeLogEntry` con `correlationId` y persistencia verificada tras reiniciar. | Excepción en logs estructurados, regresión funcional o enlaces/datos rotos. |
 

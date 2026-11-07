@@ -31,7 +31,7 @@ De fábrica, los modelos tienden a ser jueces indulgentes: aprueban pruebas unit
 
 | Ronda | Tarea / Hito Evaluado | Puntuación Checker vs. Humano | Divergencia Detectada | Ajuste Aplicado a la Rúbrica / Verificador |
 | :--- | :--- | :--- | :--- | :--- |
-| **0 (Baseline v2.0)** | Inicialización Camaleón Universal Día 1 | `N/A` (pendiente primera auditoría del proyecto) | Ninguna | Protocolo `One-Shot`, `Zero-Inheritance`, bloqueo `PreToolUse` de auto-edición Maker y criterios duales (`Código` + `non-dev`) activos desde Día 1 |
+| **0 (Baseline v2.1)** | Inicialización Camaleón Universal Día 1 | `N/A` (pendiente primera auditoría del proyecto) | Ninguna | Protocolo `One-Shot`, `Zero-Inheritance`, bloqueo `PreToolUse` de auto-edición Maker y criterios duales (`Código` + `non-dev`) activos desde Día 1 |
 
 ---
 

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Este repositorio está gobernado por el **Arnés Camaleón Universal v2.0** para agentes autónomos de larga duración. Siguiendo el principio de **Codex**, este archivo es una **página de índice (~105 líneas)** centrada en invariantes y rutas de verificación, no una enciclopedia que microgestione la implementación. El objetivo es completar una sola tarea verificada a la vez y dejar el repositorio limpio y reiniciable (`restartable`).
+Este repositorio está gobernado por el **Arnés Camaleón Universal v2.1** para agentes autónomos de larga duración. Siguiendo el principio de **Codex**, este archivo es una **página de índice (~105 líneas)** centrada en invariantes y rutas de verificación, no una enciclopedia que microgestione la implementación. El objetivo es completar una sola tarea verificada a la vez y dejar el repositorio limpio y reiniciable (`restartable`).
 
 ## Startup Workflow
 
@@ -47,7 +47,7 @@ Este repositorio está gobernado por el **Arnés Camaleón Universal v2.0** para
 - `docs/RELIABILITY.md` — Observabilidad de Runtime: logs JSON `RuntimeLogEntry` con `correlationId`, `.agents/.runtime/hook-audit.jsonl` y 3 puertas aditivas.
 - `sprint-contract.md` — Contrato formal de alcance (`Scope`), exclusiones explícitas y criterios de éxito previos a la ejecución.
 - `evaluator-rubric.md` — Rúbrica objetiva de 0 a 12 puntos (Código y `non-dev`) exclusiva para el Agente Evaluador (*Checker*) `one-shot` bajo `zero-inheritance`.
-- `docs/QUALITY_SCORE.md` — Semáforo de salud (`A-D`) por dominio/capa, instantánea `v2.0-universal-chameleon` y registro de Estudios de Ablación.
+- `docs/QUALITY_SCORE.md` — Semáforo de salud (`A-D`) por dominio/capa, instantánea `v2.1-universal-chameleon` y registro de Estudios de Ablación.
 - `docs/SECURITY.md` — Presupuesto (`Write-Select-Compress-Isolate`), `Fail-Closed`, candado anti-`pip` global, `Turn Event Pipeline`, Bootstrap y `Model-Visible Means Logged`.
 - `.agents/hooks.json` — Candados deterministas nativos de ciclo de vida (`PreToolUse`, `PostToolUse` y `Stop`, incluyendo herramientas MCP).
 - `scripts/harness-hooks.mjs` — Runner Node.js multiplataforma (`stdin`/`stdout` JSON) de hooks nativos, auditoría `hook-audit.jsonl` y Candado 3 `one-shot`.

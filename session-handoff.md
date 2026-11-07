@@ -26,7 +26,7 @@
 - `docs/SECURITY.md`, `docs/RELIABILITY.md`, `docs/GOTCHAS.md`, `docs/QUALITY_SCORE.md`, `docs/design-docs/adversarial-audit-day1.md`, `memory/topics/harness-rules.md`
 
 ## Decisions Made
-- Sincronización integral a **Universal Chameleon Harness v2.0** manteniendo `mode: "auto"`, `WIP = 0`, `0 CRLF` y el registro de diseño específico del proyecto en `docs/design-docs/adversarial-audit-day1.md`.
+- Sincronización integral a **Universal Chameleon Harness v2.1** (`v2.1-universal-chameleon`) manteniendo `mode: "auto"`, `WIP = 0`, `0 CRLF`, `0 UTF-8 BOM` y el registro de diseño específico del proyecto en `docs/design-docs/adversarial-audit-day1.md`.
 
 ## Blockers / Risks
 - Ninguno activo.

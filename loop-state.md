@@ -76,7 +76,7 @@ timestamp	commit_hash	harness_score	checks_passed	ratchet_status	description
 
 - **Final status:** `Idle` (`Completed` | `Failed` | `Manually stopped` | `In Progress` | `Idle`)
 - **Finished at:** `N/A`
-- **Summary:** `Universal Chameleon Harness v2.0 certificado en limpio (WIP = 0) y listo para ejecutar feat-001.`
+- **Summary:** `Universal Chameleon Harness v2.1 certificado en limpio (WIP = 0) y listo para ejecutar feat-001.`
 
 ---
 

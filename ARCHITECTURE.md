@@ -1,10 +1,10 @@
 # ARCHITECTURE.md
 
-Este documento es el mapa superior del sistema bajo el **Arnés Camaleón Universal v2.0**. Debe mantenerse conciso, definir qué dominios existen, cómo se adaptan los **3 Perfiles Camaleón (`harness.config.json`)** a proyectos nuevos, existentes o de no-desarrollo, qué capas pueden comunicarse entre sí y cómo se imponen mecánicamente las fronteras arquitectónicas.
+Este documento es el mapa superior del sistema bajo el **Arnés Camaleón Universal v2.1**. Debe mantenerse conciso, definir qué dominios existen, cómo se adaptan los **3 Perfiles Camaleón (`harness.config.json`)** a proyectos nuevos, existentes o de no-desarrollo, qué capas pueden comunicarse entre sí y cómo se imponen mecánicamente las fronteras arquitectónicas.
 
 ## 1. Forma General del Sistema
 
-- **Proyecto / Flujo de Trabajo:** Repositorio gobernado por el Arnés Camaleón Universal v2.0 para Agentes Autónomos de Larga Duración.
+- **Proyecto / Flujo de Trabajo:** Repositorio gobernado por el Arnés Camaleón Universal v2.1 para Agentes Autónomos de Larga Duración.
 - **Flujo Principal del Sistema:** Recibe especificaciones secuenciales (`feature_list.json`) y produce entregables verificados (software políglota o entregables de conocimiento `non-dev`) a través de **3 Puertas aditivas en orden estricto** (Estática -> Comportamiento -> Sistema Completo / Entregables), preservando el repositorio limpio, con `0 CRLF` y reiniciable (`clean-state`).
 - **Superficies de Ejecución:** Scripts POSIX (`init.sh`, `scripts/check-architecture.sh`), validadores y runners CLI en Node.js (`scripts/validate-harness.mjs`, `scripts/harness-hooks.mjs`, `scripts/check-python.mjs`, `scripts/check-deliverables.mjs`) y módulos o entregables del proyecto objetivo (`web`, `python`, `cli`, `desktop`, `services`, `powershell`, `flutter` o `non-dev`).
 - **Fuente de Verdad del Comportamiento:** `harness.config.json`, `feature_list.json`, `sprint-contract.md`, `ARCHITECTURE.md` y `docs/product-specs/` (cuando exista en el proyecto).
