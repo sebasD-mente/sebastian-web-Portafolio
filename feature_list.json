@@ -70,7 +70,7 @@
       "area": "system-deep-dive",
       "user_visible_behavior": "Al hacer clic en cualquiera de los 4 sistemas en producción, el cliente accede a una página de caso de estudio técnico profundo en /sistemas/[slug] donde puede inspeccionar la topología del pipeline, alternar pestañas de código real y revisar las métricas y desafíos resueltos.",
       "priority": "P1",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-002"
       ],
@@ -87,7 +87,7 @@
         "npm test",
         "npm run build"
       ],
-      "evidence": "",
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 12/12 tests PASS incluyendo tests/system-detail.test.ts, next build standalone OK prerenderizando las 4 rutas SSG /sistemas/[slug]).",
       "notes": "Garantizar que /sistemas/[slug]/page.tsx consuma datos únicamente desde src/service/systems.service.ts y tipos desde src/types/portfolio.ts."
     },
     {

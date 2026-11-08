@@ -192,6 +192,21 @@ export interface SystemsCatalogSnapshot {
   secondarySystems: ProductionSystem[];
 }
 
+export interface SystemDeepDiveNavigationLink {
+  order: ProductionSystem["order"];
+  slug: string;
+  title: string;
+  categoryLabel: string;
+  detailHref: string;
+}
+
+export interface SystemDeepDiveSnapshot {
+  system: ProductionSystem;
+  previousSystem: SystemDeepDiveNavigationLink;
+  nextSystem: SystemDeepDiveNavigationLink;
+  relatedSystems: SystemDeepDiveNavigationLink[];
+}
+
 export interface ProductionSystemsProvider {
   getHeroTelemetryCard(): HeroTelemetryCardData;
   getIndustrialBenchmarks(): IndustrialBenchmarkKpi[];

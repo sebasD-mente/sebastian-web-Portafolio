@@ -6,6 +6,8 @@ import type {
   ProductionSystem,
   ProductionSystemCategory,
   ProductionSystemsProvider,
+  SystemDeepDiveNavigationLink,
+  SystemDeepDiveSnapshot,
   SystemsCatalogSnapshot
 } from "@/types/portfolio";
 
@@ -45,6 +47,65 @@ export function getProductionSystemBySlug(
     return null;
   }
   return repo.getProductionSystemBySlug(slug);
+}
+
+export function getAllProductionSystemSlugs(
+  repo: ProductionSystemsProvider = defaultProductionSystemsRepository
+): { slug: string }[] {
+  return getProductionSystems(repo).map((system) => ({
+    slug: system.slug
+  }));
+}
+
+function toNavigationLink(
+  system: ProductionSystem
+): SystemDeepDiveNavigationLink {
+  return {
+    order: system.order,
+    slug: system.slug,
+    title: system.title,
+    categoryLabel: system.categoryLabel,
+    detailHref: system.detailHref
+  };
+}
+
+export function getProductionSystemDeepDiveBySlug(
+  slug: string,
+  repo: ProductionSystemsProvider = defaultProductionSystemsRepository
+): SystemDeepDiveSnapshot | null {
+  const normalizedSlug = typeof slug === "string" ? slug.trim() : "";
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  const orderedSystems = getProductionSystems(repo);
+  const currentIndex = orderedSystems.findIndex(
+    (item) => item.slug === normalizedSlug
+  );
+  if (currentIndex === -1 || orderedSystems.length === 0) {
+    return null;
+  }
+
+  const system = orderedSystems[currentIndex];
+  if (!system) {
+    return null;
+  }
+
+  const prevIndex =
+    (currentIndex - 1 + orderedSystems.length) % orderedSystems.length;
+  const nextIndex = (currentIndex + 1) % orderedSystems.length;
+
+  const previousCandidate = orderedSystems[prevIndex] ?? system;
+  const nextCandidate = orderedSystems[nextIndex] ?? system;
+
+  return {
+    system,
+    previousSystem: toNavigationLink(previousCandidate),
+    nextSystem: toNavigationLink(nextCandidate),
+    relatedSystems: orderedSystems
+      .filter((candidate) => candidate.slug !== system.slug)
+      .map(toNavigationLink)
+  };
 }
 
 export function filterProductionSystemsByCategory(
