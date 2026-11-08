@@ -159,7 +159,7 @@
       "area": "homelab-docker-deployment",
       "user_visible_behavior": "El proyecto cuenta con contenedorización lista para producción en Ubuntu Linux ('docker compose up -d --build'), healthcheck automático, SEO optimizado para dekolabs.org y guía paso a paso de puesta en marcha en el Home Lab.",
       "priority": "P1",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-005"
       ],
@@ -180,7 +180,7 @@
         "npm test",
         "npm run build"
       ],
-      "evidence": "",
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 24/24 tests PASS en 6 suites incluyendo tests/deployment-config.test.ts, next build standalone OK con /robots.txt, /sitemap.xml y las 4 rutas SSG /sistemas/[slug]).",
       "notes": "Enlazar docs/design-docs/homelab-deployment.md en Required Artifacts de AGENTS.md únicamente cuando el archivo haya sido creado con contenido real en esta tarea."
     }
   ]

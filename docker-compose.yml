@@ -1,0 +1,57 @@
+services:
+  dekolabs-portfolio:
+    container_name: dekolabs-portfolio
+    image: dekolabs/sebastian-portfolio:2.1-standalone
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      NEXT_TELEMETRY_DISABLED: "1"
+      HOMELAB_NODE_ID: "${HOMELAB_NODE_ID:-HOME-LAB: UBUNTU-NODE-01}"
+      HOMELAB_PUBLIC_DOMAIN: "${HOMELAB_PUBLIC_DOMAIN:-dekolabs.org}"
+      HOMELAB_DEPLOYED_REVISION: "${HOMELAB_DEPLOYED_REVISION:-v2.1-atelier-monolith}"
+    ports:
+      - "127.0.0.1:3000:3000"
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 1.0
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,size=32m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r)=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      org.dekolabs.service: "sebastian-web-portafolio"
+      org.dekolabs.architecture: "6-layer-chameleon-v2.1"
+      org.dekolabs.design-system: "atelier-monolith"
+      traefik.enable: "true"
+      traefik.http.routers.dekolabs.rule: "Host(`dekolabs.org`) || Host(`www.dekolabs.org`)"
+      traefik.http.routers.dekolabs.entrypoints: "websecure"
+      traefik.http.routers.dekolabs.tls.certresolver: "letsencrypt"
+      traefik.http.services.dekolabs.loadbalancer.server.port: "3000"
+    networks:
+      - homelab-edge
+
+networks:
+  homelab-edge:
+    driver: bridge
+    name: homelab-edge

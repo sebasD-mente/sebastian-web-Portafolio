@@ -1,0 +1,36 @@
+# Control de versiones y metadatos locales
+.git
+.gitignore
+.gitattributes
+
+# Dependencias y salidas de compilación locales (se generan limpias en las etapas Docker)
+node_modules
+.next
+out
+dist
+build
+coverage
+
+# Secretos y variables de entorno locales (Docs: docs/SECURITY.md)
+.env
+.env.*
+!.env.example
+
+# Entornos Python, telemetría de hooks y archivos temporales
+.venv
+venv
+__pycache__
+.agents/.runtime
+*.local.md
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Documentación, memoria y suites de prueba no requeridas en el contexto de imagen runtime
+docs
+memory
+tests

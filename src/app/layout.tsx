@@ -6,9 +6,36 @@ import "./globals.css";
 const siteMeta = getSiteMetadataSummary();
 
 export const metadata: Metadata = {
-  title: siteMeta.headlineTitle,
+  title: {
+    default: siteMeta.headlineTitle,
+    template: `%s | ${siteMeta.name} (${siteMeta.domain})`
+  },
   description: siteMeta.summary,
-  metadataBase: new URL(siteMeta.canonicalUrl)
+  metadataBase: new URL(siteMeta.canonicalUrl),
+  applicationName: `${siteMeta.name} — ${siteMeta.domain}`,
+  authors: [{ name: siteMeta.name, url: siteMeta.canonicalUrl }],
+  creator: siteMeta.name,
+  publisher: siteMeta.name,
+  alternates: {
+    canonical: "/"
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    url: siteMeta.canonicalUrl,
+    siteName: `${siteMeta.name} // ${siteMeta.domain}`,
+    title: siteMeta.headlineTitle,
+    description: siteMeta.summary
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteMeta.headlineTitle,
+    description: siteMeta.summary
+  },
+  robots: {
+    index: true,
+    follow: true
+  }
 };
 
 const FOUC_THEME_SCRIPT = `
