@@ -1,16 +1,24 @@
 import React from "react";
 import { getSiteFoundationSnapshot } from "@/service/site.service";
+import { getSystemsCatalogSnapshot } from "@/service/systems.service";
 import { AppShell } from "@/ui/components/AppShell";
+import { BenchmarksStrip } from "@/ui/components/BenchmarksStrip";
+import { HeroSection } from "@/ui/components/HeroSection";
+import { ProductionSystemsSection } from "@/ui/components/ProductionSystemsSection";
 
 export default function HomePage() {
-  const snapshot = getSiteFoundationSnapshot();
+  const siteSnapshot = getSiteFoundationSnapshot();
+  const catalogSnapshot = getSystemsCatalogSnapshot();
+
   const {
     identity,
     navigation,
     ambientTelemetry,
     defaultTheme,
     architectureLayers
-  } = snapshot;
+  } = siteSnapshot;
+
+  const { heroTelemetry, benchmarks, systems } = catalogSnapshot;
 
   return (
     <AppShell
@@ -19,93 +27,35 @@ export default function HomePage() {
       ambientTelemetry={ambientTelemetry}
       defaultTheme={defaultTheme}
     >
-      {/* Hero Foundation & Ambient Ledger */}
-      <section className="border-b border-[var(--outline-variant)] py-16 lg:py-24">
-        <div className="swiss-container grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          <div className="lg:col-span-8 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 border border-[var(--outline-variant)] bg-[var(--surface-container-low)] rounded-[2px]">
-              <span className="mono-label text-[var(--secondary)]">
-                ATELIER MONOLITH // {identity.domain.toUpperCase()}
-              </span>
-            </div>
+      {/* 1. Hero Editorial (8 cols) + KERNEL & HOME LAB TELEMETRY Card (4 cols) */}
+      <HeroSection
+        identity={identity}
+        telemetryCard={heroTelemetry}
+        defaultTheme={defaultTheme}
+      />
 
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.06] text-[var(--primary)]">
-              {identity.tagline}
-            </h1>
+      {/* 2. Industrial Benchmarks Strip (4 Verified KPIs) */}
+      <BenchmarksStrip benchmarks={benchmarks} />
 
-            <p className="text-base sm:text-lg text-[var(--on-surface-variant)] max-w-3xl leading-relaxed">
-              {identity.summary}
-            </p>
+      {/* 3. Operational Catalog of 4 Production Systems (7/5, 5/7 & 2-Col Split) */}
+      <ProductionSystemsSection systems={systems} />
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <a
-                href={identity.primaryCtaHref}
-                className="px-5 py-3 bg-[var(--primary)] text-[var(--background)] rounded-[2px] mono-label hover:opacity-90 transition-opacity"
-              >
-                {identity.primaryCtaLabel}
-              </a>
-              <a
-                href={identity.secondaryCtaHref}
-                className="px-5 py-3 border border-[var(--outline-variant)] bg-[var(--surface-container-low)] text-[var(--primary)] rounded-[2px] mono-label hover:bg-[var(--surface-container-high)] transition-colors"
-              >
-                {identity.secondaryCtaLabel}
-              </a>
-            </div>
-          </div>
-
-          <aside
-            aria-label="Estado del nodo y telemetría de arranque"
-            className="lg:col-span-4 border border-[var(--outline-variant)] bg-[var(--surface-container-low)] p-6 rounded-[2px] space-y-4"
-          >
-            <div className="flex items-center justify-between border-b border-[var(--outline-variant)] pb-3">
-              <span className="mono-label text-[var(--primary)]">
-                KERNEL &amp; HOME LAB TELEMETRY
-              </span>
-              <span className="mono-label text-[var(--tertiary-fixed)]">
-                {ambientTelemetry.status}
-              </span>
-            </div>
-
-            <dl className="space-y-3 mono-code">
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--on-surface-variant)]">NODE</dt>
-                <dd className="text-[var(--primary)] font-medium">
-                  {ambientTelemetry.nodeId}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--on-surface-variant)]">RUNTIME</dt>
-                <dd className="text-[var(--primary)] text-right">
-                  {ambientTelemetry.runtimeTarget}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--on-surface-variant)]">GATE SCORE</dt>
-                <dd className="text-[var(--secondary)] font-medium">
-                  {ambientTelemetry.harnessScore}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--on-surface-variant)]">DEFAULT THEME</dt>
-                <dd className="text-[var(--primary)] uppercase">{defaultTheme}</dd>
-              </div>
-            </dl>
-          </aside>
-        </div>
-      </section>
-
-      {/* 6-Layer Strict Architecture Foundation */}
+      {/* 4. 6-Layer Strict Architecture Foundation */}
       <section
         id="orquestacion-agentica"
-        className="border-b border-[var(--outline-variant)] py-14"
+        aria-labelledby="six-layer-architecture-heading"
+        className="border-b border-[var(--outline-variant)] py-16 bg-[var(--surface-container-lowest)]"
       >
         <div className="swiss-container space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <p className="mono-label text-[var(--secondary)]">
-                ARQUITECTURA VERIFICADA // FLUJO DIRECCIONAL DE 6 CAPAS
+                02 // ARQUITECTURA VERIFICADA · FLUJO DIRECCIONAL DE 6 CAPAS
               </p>
-              <h2 className="font-display text-2xl sm:text-3xl font-medium tracking-tight mt-1">
+              <h2
+                id="six-layer-architecture-heading"
+                className="font-display text-2xl sm:text-3xl font-semibold tracking-tight mt-1 text-[var(--primary)]"
+              >
                 Cimiento Estructural de {identity.domain}
               </h2>
             </div>
@@ -114,9 +64,12 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ul
+            role="list"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
             {architectureLayers.map((layer) => (
-              <article
+              <li
                 key={layer.layer}
                 className="border border-[var(--outline-variant)] bg-[var(--surface-container-low)] p-5 rounded-[2px] flex flex-col justify-between gap-4"
               >
@@ -136,50 +89,41 @@ export default function HomePage() {
                 <p className="mono-label text-[var(--on-surface-variant)] border-t border-[var(--outline-variant)] pt-3">
                   INVARIANTE: {layer.invariantRule}
                 </p>
-              </article>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
-      {/* Section Anchors for Upcoming DAG Features */}
-      <section
-        id="proyectos-destacados"
-        className="border-b border-[var(--outline-variant)] py-12"
-      >
-        <div className="swiss-container grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="border border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] p-5 rounded-[2px]">
-            <p className="mono-label text-[var(--secondary)]">01 // CATÁLOGO OPERACIONAL</p>
-            <h3 className="font-display text-lg font-medium mt-1">
-              Sistemas en Producción
-            </h3>
-            <p className="text-sm text-[var(--on-surface-variant)] mt-2">
-              Galería técnica de sistemas desplegados con métricas operativas, topología de pipeline e inspección de código.
-            </p>
-          </div>
-
+      {/* 5. Home Lab Telemetry & Direct Advisory Anchors */}
+      <section className="border-b border-[var(--outline-variant)] py-14 bg-[var(--background)]">
+        <div className="swiss-container grid grid-cols-1 md:grid-cols-2 gap-6">
           <div
             id="telemetria-homelab"
-            className="border border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] p-5 rounded-[2px]"
+            className="border border-[var(--outline-variant)] bg-[var(--surface-container-low)] p-6 rounded-[2px] space-y-2"
           >
-            <p className="mono-label text-[var(--tertiary-fixed)]">03 // HOME LAB NODE</p>
-            <h3 className="font-display text-lg font-medium mt-1">
+            <p className="mono-label text-[var(--tertiary-fixed)]">
+              03 // HOME LAB NODE · {ambientTelemetry.nodeId}
+            </p>
+            <h3 className="font-display text-xl font-semibold text-[var(--primary)]">
               Ubuntu Linux Standalone Runtime
             </h3>
-            <p className="text-sm text-[var(--on-surface-variant)] mt-2">
-              Contenedor Node 22 Alpine de baja huella de memoria (&lt;150MB RAM) operando detrás de Reverse Proxy en {identity.domain}.
+            <p className="text-sm text-[var(--on-surface-variant)] leading-relaxed">
+              Contenedor Node 22 Alpine de baja huella de memoria (&lt;150MB RAM) operando detrás de Reverse Proxy TLS 1.3 en {identity.domain}.
             </p>
           </div>
 
           <div
             id="contacto"
-            className="border border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] p-5 rounded-[2px]"
+            className="border border-[var(--outline-variant)] bg-[var(--surface-container-low)] p-6 rounded-[2px] space-y-2"
           >
-            <p className="mono-label text-[var(--primary)]">04 // CONTRATACIÓN DIRECTA</p>
-            <h3 className="font-display text-lg font-medium mt-1">
+            <p className="mono-label text-[var(--secondary)]">
+              04 // CONTRATACIÓN DIRECTA &amp; ADVISORY
+            </p>
+            <h3 className="font-display text-xl font-semibold text-[var(--primary)]">
               Implementación End-to-End &amp; Freelance
             </h3>
-            <p className="text-sm text-[var(--on-surface-variant)] mt-2">
+            <p className="text-sm text-[var(--on-surface-variant)] leading-relaxed">
               Disponible para contratos de arquitectura de software, sistemas de agentes autónomos e infraestructura dedicada.
             </p>
           </div>

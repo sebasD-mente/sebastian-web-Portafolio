@@ -41,7 +41,7 @@
       "area": "production-systems-showcase",
       "user_visible_behavior": "El visitante de dekolabs.org visualiza el Hero técnico de Sebastián con métricas de telemetría, benchmarks de impacto y el catálogo interactivo de los 4 sistemas en producción con etiquetas de stack en JetBrains Mono, estado operativo y enlaces hacia sus vistas de detalle.",
       "priority": "P0",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-001"
       ],
@@ -60,7 +60,7 @@
         "npm test",
         "npm run build"
       ],
-      "evidence": "",
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 8/8 tests PASS en tests/site.service.test.ts y tests/systems.service.test.ts, next build standalone OK en 2.7s).",
       "notes": "Adaptar los textos a la marca personal de Sebastián en dekolabs.org manteniendo la estética suiza minimalista de Stitch."
     },
     {

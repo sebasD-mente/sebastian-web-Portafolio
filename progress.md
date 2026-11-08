@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-07 18:46
-**Session ID:** sesion-005 (Implementación y Verificación de `feat-001`: Cimiento Next.js 15 Standalone, Sistema Visual Atelier Monolith y Esqueleto de 6 Capas)
-**Active Feature:** Ninguna (`WIP = 0`; `feat-001` completada y verificada en `done`, lista para iniciar `feat-002`)
+**Last Updated:** 2026-11-07 19:17
+**Session ID:** sesion-006 (Implementación y Verificación de `feat-002`: Hero Editorial, Tarjeta de Telemetría en Vivo y Catálogo de 4 Sistemas en Producción)
+**Active Feature:** Ninguna (`WIP = 0`; `feat-001` y `feat-002` completadas y verificadas en `done`, lista para iniciar `feat-003`)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -21,46 +21,51 @@
   - Desglose del roadmap completo en `feature_list.json` con **6 features secuenciales en DAG (`feat-001` a `feat-006`)**.
 - [x] **`feat-001` — Cimiento Next.js 15 Standalone, Sistema Visual Atelier Monolith y Esqueleto de 6 Capas (`status: "done"`)**:
   - Configuración completa de Next.js 15 (`output: "standalone"` en `next.config.ts`), TypeScript estricto (`tsconfig.json`), Tailwind CSS v4 (`postcss.config.mjs`, `src/app/globals.css`) y Vitest (`vitest.config.ts`).
-  - Implementación verificada de las 6 capas: `src/types/portfolio.ts`, `src/config/site.config.ts`, `src/repo/site.repo.ts`, `src/service/site.service.ts`, `src/runtime/logger.ts`, `src/ui/components/AppShell.tsx`, `src/app/layout.tsx` y `src/app/page.tsx`.
-  - Modo Claro (`light`) activo por defecto con prevención de FOUC, soporte `color-scheme` + `light-dark()`, sincronización entre pestañas y conmutador instantáneo a Modo Oscuro (`dark`).
-  - Suite unitaria `tests/site.service.test.ts` (4/4 tests en verde) validando servicios de fundación, conmutación de tema, metadatos SEO y logger estructurado `RuntimeLogEntry` con redacción de secretos.
+  - Implementación verificada de las 6 capas (`src/types/portfolio.ts`, `src/config/site.config.ts`, `src/repo/site.repo.ts`, `src/service/site.service.ts`, `src/runtime/logger.ts`, `src/ui/components/AppShell.tsx`, `src/app/layout.tsx` y `src/app/page.tsx`) y suite unitaria `tests/site.service.test.ts` (4/4 PASS).
+- [x] **`feat-002` — Hero Editorial, Tarjeta de Telemetría en Vivo y Catálogo de 4 Sistemas en Producción (`status: "done"`)**:
+  - Extensión de contratos en `src/types/portfolio.ts` para el catálogo de sistemas en producción, métricas operativas, topología de 3 etapas, código de inspección, desafíos resueltos, tarjeta `KERNEL & HOME LAB TELEMETRY` con sparkline y benchmarks industriales.
+  - Implementación del repositorio desacoplado `src/repo/systems.repo.ts` bajo Capability Seams (`ProductionSystemsProvider`) con los 4 sistemas reales de Sebastián en `dekolabs.org`:
+    1. **01 // Nexus — Distributed AI Inference & Event Mesh** (Layout `primary-7-5`)
+    2. **02 // Aegis — Zero-Trust Telemetry & Real-Time Ledger** (Layout invertido `primary-5-7`)
+    3. **03 // Chameleon v2.1 — Orquestación Agéntica & Harness Engineering** (Layout `secondary-split`)
+    4. **04 // Monolith Edge — Ubuntu Home Lab & Self-Hosted Cloud** (Layout `secondary-split`)
+  - Implementación de `src/service/systems.service.ts` con cálculo determinista de geometría SVG sparkline (`buildSparklineSvgGeometry`), filtrado por categoría y resolución por `slug`.
+  - Construcción de los componentes `src/ui/components/HeroSection.tsx`, `src/ui/components/BenchmarksStrip.tsx` y `src/ui/components/ProductionSystemsSection.tsx` integrados en `src/app/page.tsx`.
+  - Suite unitaria `tests/systems.service.test.ts` (4/4 PASS; 8/8 tests totales en verde).
 
 ### What's In Progress
-- Ninguna tarea en curso (`WIP = 0`; `feat-001` cerrada en `"done"`).
+- Ninguna tarea en curso (`WIP = 0`; `feat-002` cerrada en `"done"`).
 
 ### What's Next
-1. Iniciar `feat-002` (*Hero Editorial, Tarjeta de Telemetría en Vivo y Catálogo de 4 Sistemas en Producción*): cambiar su estado a `"in-progress"` en `feature_list.json` (`WIP = 1`) e implementar `src/repo/systems.repo.ts`, `src/service/systems.service.ts`, `src/ui/components/HeroSection.tsx`, `src/ui/components/BenchmarksStrip.tsx`, `src/ui/components/ProductionSystemsSection.tsx` y `tests/systems.service.test.ts`.
+1. Iniciar `feat-003` (*Vista de Detalle Técnico Profundo por Sistema (`/sistemas/[slug]`) e Inspector de Código*): cambiar su estado a `"in-progress"` en `feature_list.json` (`WIP = 1`) e implementar `src/app/sistemas/[slug]/page.tsx`, `src/ui/components/SystemDetailView.tsx`, `src/ui/components/CodeInspectorTabs.tsx` y `tests/system-detail.test.ts`.
 
 ## Blockers / Risks
-- Ninguno activo. (Recordatorio arquitectónico clave para las siguientes sesiones: `src/app/` y `src/ui/` pertenecen a la capa `UI` y tienen prohibido importar directamente desde `src/config/` o `src/repo/`; deben consumir siempre `src/service/` o `src/runtime/` y contratos de `src/types/`).
+- Ninguno activo. (Recordatorio arquitectónico: `src/app/` y `src/ui/` pertenecen a la capa `UI` y jamás deben importar directamente desde `src/config/` o `src/repo/`).
 
 ## Decisions Made
-- **Stack Técnico para `dekolabs.org` — Next.js 15 (App Router, TypeScript, Tailwind CSS, Vitest) con `output: 'standalone'` en Docker Multi-Stage (`node:22-alpine`)**:
-  - Context: Sebas requiere un sitio comercial fluido, sobrio, minimalista y escalable alojado en un contenedor dentro de su propio **Ubuntu Linux Home Lab** detrás de su Reverse Proxy existente bajo el dominio `dekolabs.org`.
+- **Modelo de Datos Unificado y Desacoplado en `src/repo/systems.repo.ts`**:
+  - Context: Sebastián actualizará progresivamente capturas, textos y métricas de sus proyectos en producción.
   - Alternatives considered:
-    1. *Astro 5 + Islas de React*: Excelente para sitios estáticos, pero Next.js 15 con `output: 'standalone'` ofrece integración nativa de App Router + Route Handlers (`/api/telemetry`, `/api/health`, `/api/contact`) en un único proceso Node.js ultraligero (`<150MB` RAM) ideal para Docker en Ubuntu.
-    2. *SPA React + Vite + Backend separado*: Descartado por requerir doble proceso o configuración extra de SSR/SEO para los casos de estudio profundos (`/sistemas/[slug]`).
-- **Identidad 100% Marca Personal (`Sebastián — Principal Software & AI Architect`) + Módulos de Orquestación Agéntica y Telemetría del Home Lab**:
-  - Context: Reemplazar el placeholder *"Alexis Vance"* del prototipo de Google Stitch por la identidad real de Sebastián en `dekolabs.org`, conservando la estructura de 4 sistemas destacados + vista de detalle profundo, e integrando su entorno de orquestación de agentes (**Universal Chameleon Harness v2.1**) y la telemetría de su Ubuntu Home Lab.
-  - Alternatives considered: Marca corporativa de agencia; descartada a favor de trato directo de alto nivel para contratos de implementación y freelance.
+    1. *Hardcodear textos en cada componente TSX*: Descartado porque dificulta el mantenimiento y rompe la separación de 6 capas.
+    2. *Centralizar los 4 sistemas con sus etapas de pipeline (`ETAPA 01..03`), pestañas de código y desafíos resueltos en `src/repo/systems.repo.ts` expuesto mediante `src/service/systems.service.ts`*: Elegido porque permite alimentar tanto el catálogo principal (`feat-002`) como las páginas dinámicas `/sistemas/[slug]` (`feat-003`) desde una única fuente de verdad tipada e inmutable.
 
 ## Files Modified This Session
-- `package.json`, `package-lock.json`, `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`, `vitest.config.ts`, `next-env.d.ts` - Configuración de Next.js 15 Standalone, TypeScript, Tailwind CSS v4 y Vitest con normalización automática `0 CRLF`
-- `src/types/portfolio.ts` - Contratos TypeScript puros de la capa `Types`
-- `src/config/site.config.ts` - Identidad de Sebastián en `dekolabs.org` y paleta *Atelier Monolith* en la capa `Config`
-- `src/repo/site.repo.ts` - Proveedor `SiteConfigProvider` bajo Capability Seams en la capa `Repo`
-- `src/service/site.service.ts` - Casos de uso consumidos por la UI en la capa `Service`
-- `src/runtime/logger.ts` - Emisor estructurado `RuntimeLogEntry` con `correlationId` y redacción de secretos en la capa `Runtime`
-- `src/ui/components/AppShell.tsx`, `src/app/globals.css`, `src/app/layout.tsx`, `src/app/page.tsx` - Sistema visual *Atelier Monolith* (Modo Claro por defecto + conmutador a Modo Oscuro), Ambient Telemetry Bar, Header y Footer en la capa `UI`
-- `tests/site.service.test.ts` - Pruebas unitarias de las capas `Service` y `Runtime` (4/4 PASS)
-- `feature_list.json`, `sprint-contract.md`, `progress.md`, `session-handoff.md` - Cierre verificado de `feat-001` en `"done"` y preparación de `feat-002`
+- `src/types/portfolio.ts` - Contratos del catálogo de 4 sistemas, tarjeta de telemetría con sparkline y KPIs industriales
+- `src/repo/systems.repo.ts` - Fuente de verdad desacoplada de los 4 sistemas en producción, benchmarks y telemetría de arranque
+- `src/service/systems.service.ts` - Casos de uso puros de consulta, filtrado, búsqueda por slug y geometría SVG sparkline
+- `src/ui/components/HeroSection.tsx` - Hero Editorial (8 cols) + tarjeta `KERNEL & HOME LAB TELEMETRY` (4 cols) con gráfico SVG sparkline accesible
+- `src/ui/components/BenchmarksStrip.tsx` - Franja de 4 KPIs industriales verificados
+- `src/ui/components/ProductionSystemsSection.tsx` - Catálogo interactivo de 4 sistemas (7/5, 5/7 y 2-col split) con filtros por dominio
+- `src/app/page.tsx` - Integración de Hero, Benchmarks y Catálogo Operacional en la página principal
+- `tests/systems.service.test.ts` - Suite unitaria validando catálogo, slugs, filtros, inmutabilidad y geometría SVG (4/4 PASS)
+- `feature_list.json`, `sprint-contract.md`, `progress.md`, `session-handoff.md` - Cierre verificado de `feat-002` en `"done"`
 
 ## Verification Evidence
-- [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas, vitest 4/4 PASS, next build standalone OK y 0 CRLF)`
+- [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas, vitest 8/8 PASS, next build standalone OK y 0 CRLF)`
 - [x] Architecture & Red-Pen check: `bash scripts/check-architecture.sh` -> `OK: Límites arquitectónicos, invariantes de 6 capas, Auto-Memoria, Seguridad e higiene estructural verificados sin violaciones.`
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `command and output verified: Overall: 100/100 (25/25 checks PASS)`
 
 ## Notes for Next Session
 En la siguiente sesión o turno:
 1. Ejecuta `bash ./init.sh` para confirmar `CLEAN STATE`.
-2. Cambia `feat-002` a `"status": "in-progress"` en `feature_list.json` (`WIP = 1`) e implementa el Hero Editorial, la tarjeta `KERNEL & HOME LAB TELEMETRY` con sparkline SVG, la franja de 4 KPIs y el catálogo de los 4 sistemas en producción.
+2. Cambia `feat-003` a `"status": "in-progress"` en `feature_list.json` (`WIP = 1`) e implementa la ruta dinámica `/sistemas/[slug]` con `generateStaticParams`, `SystemDetailView.tsx`, `CodeInspectorTabs.tsx` y `tests/system-detail.test.ts`.

@@ -76,6 +76,129 @@ export interface SiteConfigProvider {
   getArchitectureLayers(): ArchitectureLayerSummary[];
 }
 
+export interface HeroTelemetrySeriesPoint {
+  slot: string;
+  latencyMs: number;
+  throughputRps: number;
+}
+
+export interface HeroTelemetryCardData {
+  cardTitle: string;
+  nodeStatus: "ONLINE" | "DEGRADED" | "MAINTENANCE";
+  nodeId: string;
+  hostEnvironment: string;
+  activeContainers: number;
+  p99LatencyMs: number;
+  harnessGateScore: string;
+  uptimePercent: string;
+  memoryFootprint: string;
+  sparklineLabel: string;
+  sparklinePoints: HeroTelemetrySeriesPoint[];
+  executiveHighlights: string[];
+}
+
+export interface IndustrialBenchmarkKpi {
+  id: string;
+  code: string;
+  metricValue: string;
+  label: string;
+  context: string;
+  verificationTag: string;
+}
+
+export type ProductionSystemCategory =
+  | "distributed-systems"
+  | "ai-agents"
+  | "data-pipelines"
+  | "cloud-infrastructure";
+
+export type ProductionSystemLayoutVariant =
+  | "primary-7-5"
+  | "primary-5-7"
+  | "secondary-split";
+
+export interface SystemMetric {
+  label: string;
+  value: string;
+  deltaOrTarget: string;
+}
+
+export interface SystemArchitectureSpec {
+  label: string;
+  value: string;
+}
+
+export interface PipelineStage {
+  stageNumber: "ETAPA 01" | "ETAPA 02" | "ETAPA 03";
+  title: string;
+  latencyOrSlo: string;
+  description: string;
+  invariants: string[];
+}
+
+export interface CodeSnippetTab {
+  id: string;
+  filename: string;
+  layer: string;
+  language: string;
+  code: string;
+}
+
+export interface SolvedChallenge {
+  number: "01" | "02" | "03";
+  title: string;
+  problem: string;
+  solution: string;
+  impactMetric: string;
+}
+
+export interface SystemDeploymentLedger {
+  architecturePattern: string;
+  commitSha: string;
+  hostEnvironment: string;
+  verificationGate: string;
+}
+
+export interface ProductionSystem {
+  id: string;
+  order: "01" | "02" | "03" | "04";
+  slug: string;
+  title: string;
+  subtitle: string;
+  category: ProductionSystemCategory;
+  categoryLabel: string;
+  layoutVariant: ProductionSystemLayoutVariant;
+  status: "PRODUCTION // ONLINE" | "PRODUCTION // VERIFIED" | "ACTIVE // EDGE NODE";
+  liveMetricPill: string;
+  summary: string;
+  architecturalNarrative: string;
+  stackTags: string[];
+  metrics: SystemMetric[];
+  architectureSpecs: SystemArchitectureSpec[];
+  deploymentLedger: SystemDeploymentLedger;
+  terminalPreviewLines: string[];
+  liveUrl: string;
+  detailHref: string;
+  pipelineStages: PipelineStage[];
+  codeTabs: CodeSnippetTab[];
+  solvedChallenges: SolvedChallenge[];
+}
+
+export interface SystemsCatalogSnapshot {
+  heroTelemetry: HeroTelemetryCardData;
+  benchmarks: IndustrialBenchmarkKpi[];
+  systems: ProductionSystem[];
+  primarySystems: ProductionSystem[];
+  secondarySystems: ProductionSystem[];
+}
+
+export interface ProductionSystemsProvider {
+  getHeroTelemetryCard(): HeroTelemetryCardData;
+  getIndustrialBenchmarks(): IndustrialBenchmarkKpi[];
+  getAllProductionSystems(): ProductionSystem[];
+  getProductionSystemBySlug(slug: string): ProductionSystem | null;
+}
+
 export type RuntimeLogLevel = "info" | "warn" | "error";
 
 export interface RuntimeLogError {
