@@ -173,3 +173,36 @@ body {
     padding-right: 4rem;
   }
 }
+
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+.atelier-error-msg {
+  display: none;
+}
+
+.atelier-input:user-invalid,
+.atelier-input.user-invalid-fallback,
+.atelier-input[aria-invalid="true"] {
+  border-color: var(--amber-notice);
+}
+
+.atelier-input:user-invalid + .atelier-error-msg,
+.atelier-input.user-invalid-fallback + .atelier-error-msg,
+.atelier-input[aria-invalid="true"] + .atelier-error-msg {
+  display: flex;
+}
+
+.atelier-input:required:user-valid,
+.atelier-input.user-valid-fallback {
+  border-color: var(--tertiary-fixed);
+}

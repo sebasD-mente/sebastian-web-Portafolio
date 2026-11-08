@@ -325,3 +325,132 @@ export interface RuntimeLogEntry {
   error: RuntimeLogError | null;
   correlationId: string;
 }
+
+export interface HomeLabContainerStatus {
+  id: string;
+  name: string;
+  image: string;
+  role: string;
+  state: "running" | "healthy" | "standby";
+  memoryMb: number;
+  internalPort: string;
+}
+
+export interface HomeLabRuntimeMetrics {
+  processUptimeSeconds: number;
+  formattedUptime: string;
+  rssMemoryMb: number;
+  heapUsedMb: number;
+  memoryBudgetMb: number;
+  memoryWithinSlo: boolean;
+  nodeVersion: string;
+  platformArch: string;
+  loadAverage1m: string;
+}
+
+export type TerminalCommandId =
+  | "status"
+  | "containers"
+  | "gates"
+  | "network"
+  | "help";
+
+export interface TerminalCommandPreset {
+  id: TerminalCommandId;
+  command: string;
+  label: string;
+  description: string;
+  outputLines: string[];
+}
+
+export interface HomeLabTelemetrySnapshot {
+  timestamp: string;
+  correlationId: string;
+  nodeId: string;
+  status: "ONLINE" | "DEGRADED" | "MAINTENANCE";
+  domain: string;
+  hostOs: string;
+  reverseProxyIngress: string;
+  latencyMs: number;
+  availabilitySlo: string;
+  harnessScore: string;
+  deployedRevision: string;
+  runtimeMetrics: HomeLabRuntimeMetrics;
+  containers: HomeLabContainerStatus[];
+  terminalCommands: TerminalCommandPreset[];
+  initialTtyLines: string[];
+}
+
+export interface HomeLabHealthReport {
+  ok: boolean;
+  status: "healthy" | "degraded";
+  timestamp: string;
+  correlationId: string;
+  nodeId: string;
+  domain: string;
+  uptimeSeconds: number;
+  rssMemoryMb: number;
+  memoryBudgetMb: number;
+  checks: {
+    standaloneRuntime: "pass";
+    memoryBudget: "pass" | "warn";
+    harnessGates: "pass";
+  };
+}
+
+export interface HomeLabTelemetryProvider {
+  getRuntimeMetrics(): HomeLabRuntimeMetrics;
+  getActiveContainers(rssMemoryMb?: number): HomeLabContainerStatus[];
+  getTerminalCommandPresets(
+    metrics: HomeLabRuntimeMetrics,
+    containers: HomeLabContainerStatus[]
+  ): TerminalCommandPreset[];
+}
+
+export type EngagementModalityId =
+  | "end-to-end-implementation"
+  | "agentic-ai-systems"
+  | "homelab-cloud-architecture"
+  | "technical-advisory";
+
+export interface EngagementModalityOption {
+  id: EngagementModalityId;
+  code: string;
+  title: string;
+  slaResponse: string;
+  summary: string;
+  typicalDuration: string;
+}
+
+export interface ContactInquiryInput {
+  fullName: string;
+  email: string;
+  organization?: string;
+  modality: EngagementModalityId;
+  projectSummary: string;
+  websiteHoneypot?: string;
+}
+
+export interface ContactFieldErrors {
+  fullName?: string;
+  email?: string;
+  modality?: string;
+  projectSummary?: string;
+}
+
+export interface ContactValidationResult {
+  valid: boolean;
+  sanitized: ContactInquiryInput;
+  errors: ContactFieldErrors;
+  isSpamHoneypot: boolean;
+}
+
+export interface ContactSubmissionReceipt {
+  ok: boolean;
+  receiptId: string;
+  correlationId: string;
+  timestamp: string;
+  modalityLabel: string;
+  estimatedResponseWindow: string;
+  summaryMessage: string;
+}

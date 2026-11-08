@@ -125,7 +125,7 @@
       "area": "homelab-telemetry-and-contact",
       "user_visible_behavior": "La terminal en vivo muestra telemetría real/determinista del nodo Ubuntu Home Lab (latencia, uptime, contenedores, estado de dekolabs.org) y los clientes pueden contactar o solicitar una sesión técnica con validación instantánea.",
       "priority": "P1",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-004"
       ],
@@ -149,7 +149,7 @@
         "npm test",
         "npm run build"
       ],
-      "evidence": "",
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 20/20 tests PASS incluyendo tests/telemetry-and-contact.test.ts, next build standalone OK con rutas /api/health, /api/telemetry y /api/contact).",
       "notes": "Los archivos route.ts en src/app/api/ deben delegar a src/runtime/ o src/service/ sin importar directamente src/repo/ ni src/config/."
     },
     {
