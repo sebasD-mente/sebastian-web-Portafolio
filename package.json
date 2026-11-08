@@ -1,0 +1,29 @@
+{
+  "name": "sebastian-web-portafolio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portafolio comercial y galería de sistemas en producción de Sebastián (dekolabs.org) — Atelier Monolith",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && node -e \"const fs=require('node:fs');if(!fs.existsSync('.next/standalone/server.js'))process.exit(1);if(process.env.NEXT_DOCKER_BUILD!=='1')fs.rmSync('.next/standalone/node_modules',{recursive:true,force:true});for(const f of ['next-env.d.ts','tsconfig.json','package-lock.json'])if(fs.existsSync(f))fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/\\r\\n/g,'\\n'));\"",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "node -e \"const fs=require('node:fs');fs.rmSync('.next/standalone/node_modules',{recursive:true,force:true});for(const f of ['next-env.d.ts','tsconfig.json','package-lock.json'])if(fs.existsSync(f))fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/\\r\\n/g,'\\n'));\" && tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "next": "^15.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

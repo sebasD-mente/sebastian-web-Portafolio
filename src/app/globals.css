@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+:root {
+  /* Raw Atelier Monolith Light & Dark Tokens */
+  --bg-light: #ffffff;
+  --bg-dark: #121314;
+  --surface-lowest-light: #fafafa;
+  --surface-lowest-dark: #0d0e0f;
+  --surface-low-light: #f3f4f6;
+  --surface-low-dark: #1b1c1c;
+  --surface-high-light: #e5e7eb;
+  --surface-high-dark: #292a2a;
+  --outline-light: #d1d5db;
+  --outline-dark: #444748;
+  --primary-light: #0d0e0f;
+  --primary-dark: #ffffff;
+  --muted-light: #4b5563;
+  --muted-dark: #c4c7c8;
+  --secondary-light: #2563eb;
+  --secondary-dark: #7bd0ff;
+  --emerald-light: #059669;
+  --emerald-dark: #10b981;
+  --amber-light: #d97706;
+  --amber-dark: #f59e0b;
+
+  /* Default Light Mode assignments */
+  --background: var(--bg-light);
+  --surface-container-lowest: var(--surface-lowest-light);
+  --surface-container-low: var(--surface-low-light);
+  --surface-container-high: var(--surface-high-light);
+  --outline-variant: var(--outline-light);
+  --primary: var(--primary-light);
+  --on-surface-variant: var(--muted-light);
+  --secondary: var(--secondary-light);
+  --tertiary-fixed: var(--emerald-light);
+  --amber-notice: var(--amber-light);
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Fallback for browsers without light-dark() when OS prefers dark and no explicit light override is active */
+  @media (prefers-color-scheme: dark) {
+    --background: var(--bg-dark);
+    --surface-container-lowest: var(--surface-lowest-dark);
+    --surface-container-low: var(--surface-low-dark);
+    --surface-container-high: var(--surface-high-dark);
+    --outline-variant: var(--outline-dark);
+    --primary: var(--primary-dark);
+    --on-surface-variant: var(--muted-dark);
+    --secondary: var(--secondary-dark);
+    --tertiary-fixed: var(--emerald-dark);
+    --amber-notice: var(--amber-dark);
+  }
+
+  /* Modern CSS light-dark() resolution */
+  @supports (color: light-dark(white, black)) {
+    --background: light-dark(var(--bg-light), var(--bg-dark));
+    --surface-container-lowest: light-dark(var(--surface-lowest-light), var(--surface-lowest-dark));
+    --surface-container-low: light-dark(var(--surface-low-light), var(--surface-low-dark));
+    --surface-container-high: light-dark(var(--surface-high-light), var(--surface-high-dark));
+    --outline-variant: light-dark(var(--outline-light), var(--outline-dark));
+    --primary: light-dark(var(--primary-light), var(--primary-dark));
+    --on-surface-variant: light-dark(var(--muted-light), var(--muted-dark));
+    --secondary: light-dark(var(--secondary-light), var(--secondary-dark));
+    --tertiary-fixed: light-dark(var(--emerald-light), var(--emerald-dark));
+    --amber-notice: light-dark(var(--amber-light), var(--amber-dark));
+  }
+
+  /* Viewport-wide native UI theming with meta/class synchronization */
+  color-scheme: light dark;
+  accent-color: var(--secondary);
+  scrollbar-width: thin;
+  scrollbar-color: var(--outline-variant) var(--surface-container-lowest);
+
+  &:has(> head > meta[name="color-scheme"][content="light"]),
+  &.light {
+    color-scheme: light;
+    --background: var(--bg-light);
+    --surface-container-lowest: var(--surface-lowest-light);
+    --surface-container-low: var(--surface-low-light);
+    --surface-container-high: var(--surface-high-light);
+    --outline-variant: var(--outline-light);
+    --primary: var(--primary-light);
+    --on-surface-variant: var(--muted-light);
+    --secondary: var(--secondary-light);
+    --tertiary-fixed: var(--emerald-light);
+    --amber-notice: var(--amber-light);
+  }
+
+  &:has(> head > meta[name="color-scheme"][content="dark"]),
+  &.dark {
+    color-scheme: dark;
+    --background: var(--bg-dark);
+    --surface-container-lowest: var(--surface-lowest-dark);
+    --surface-container-low: var(--surface-low-dark);
+    --surface-container-high: var(--surface-high-dark);
+    --outline-variant: var(--outline-dark);
+    --primary: var(--primary-dark);
+    --on-surface-variant: var(--muted-dark);
+    --secondary: var(--secondary-dark);
+    --tertiary-fixed: var(--emerald-dark);
+    --amber-notice: var(--amber-dark);
+  }
+}
+
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--outline-variant);
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--surface-container-lowest);
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-tech {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  font-feature-settings: "tnum";
+}
+
+.mono-code {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+  font-feature-settings: "tnum";
+}
+
+.swiss-container {
+  width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .swiss-container {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .swiss-container {
+    padding-left: 4rem;
+    padding-right: 4rem;
+  }
+}

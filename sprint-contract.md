@@ -4,24 +4,24 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
 
 ---
 
-## Estado Actual del Contrato (`WIP = 0` — Arquitectura Estipulada; `feat-001` Lista para la Siguiente Sesión)
-- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0` al cierre de la sesión de diseño arquitectónico con Sebastián).
-- **Siguiente tarea secuencial lista para iniciar:** `feat-001` (*Cimiento Next.js 15 Standalone, Sistema Visual Atelier Monolith y Esqueleto de 6 Capas*).
+## Estado Actual del Contrato (`WIP = 0` — `feat-001` Completada; `feat-002` Lista para Iniciar)
+- **Última tarea completada (`done`):** `feat-001` (*Cimiento Next.js 15 Standalone, Sistema Visual Atelier Monolith y Esqueleto de 6 Capas*).
+- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`).
+- **Siguiente tarea secuencial lista para iniciar:** `feat-002` (*Hero Editorial, Tarjeta de Telemetría en Vivo y Catálogo de 4 Sistemas en Producción*).
 - **Especificación maestra de referencia:** `docs/product-specs/dekolabs-portfolio-spec.md` y `ARCHITECTURE.md` (Basadas en el prototipo Google Stitch `projects/10491405022475068698`).
 
-## Alcance Incluido (`Fair game`) para `feat-001` (Al Cambiar su Estado a `in-progress`)
-- Actualizar primero `feature_list.json` poniendo `"status": "in-progress"` en `feat-001` (`WIP = 1`).
-- Crear la configuración base de Next.js 15 + TypeScript + Tailwind CSS + Vitest con `output: 'standalone'`:
-  - `package.json`, `tsconfig.json`, `next.config.ts`, `postcss.config.mjs` (o configuración Tailwind equivalente) y `vitest.config.ts`.
-- Implementar el esqueleto inicial verificable de las **6 capas estrictas** en `src/`:
-  - `src/types/portfolio.ts` (`Types` — contratos base del portafolio, navegación, tema y telemetría ambiental).
-  - `src/config/site.config.ts` (`Config` — metadatos del dominio `dekolabs.org`, marca personal **Sebastián — Principal Software & AI Architect** y tokens *Atelier Monolith*).
-  - `src/repo/site.repo.ts` (`Repo` — proveedor inicial de configuración y estado ambiental).
-  - `src/service/site.service.ts` (`Service` — casos de uso consumibles por `UI` sin saltar a `Config`/`Repo`).
-  - `src/runtime/logger.ts` (`Runtime` — emisor JSON `RuntimeLogEntry` con `correlationId` y redacción de secretos).
-  - `src/ui/components/AppShell.tsx` (`UI` — Ambient Telemetry Strip, Header fijo con conmutador Light/Dark con **Modo Claro predeterminado** y Footer técnico).
-  - `src/app/layout.tsx`, `src/app/page.tsx` y `src/app/globals.css` (`UI` — fuentes `Inter`, `Space Grotesk` y `JetBrains Mono`, paleta *Atelier Monolith* con **Modo Claro `#FFFFFF` / `#F3F4F6` / `#0D0E0F` / `#2563EB` / `#059669` por defecto** y soporte Dark Mode `#121314` / `#0D0E0F`).
-- Añadir pruebas unitarias iniciales de la capa `Service`/`Runtime` para que `npm test` pase en verde.
+## Justificación de Dependencias en `package.json` (Regla Dura #4 de `ARCHITECTURE.md`)
+- **Runtime (`dependencies`)**:
+  - `next` (`^15.2.0`), `react` (`^19.0.0`), `react-dom` (`^19.0.0`): Framework principal acordado con Sebastián para App Router, SSR/SSG y empaquetado `output: 'standalone'` ultraligero en contenedor Docker (`node:22-alpine`) dentro del Ubuntu Linux Home Lab.
+- **Desarrollo y Verificación (`devDependencies`)**:
+  - `typescript`, `@types/node`, `@types/react`, `@types/react-dom`: Tipado estático estricto para validar contratos entre las 6 capas (`npm run typecheck`).
+  - `tailwindcss`, `@tailwindcss/postcss`, `postcss`: Motor de estilos utility-first sin runtime JS para materializar los tokens del sistema de diseño *Atelier Monolith* (Modo Claro por defecto + Modo Oscuro).
+  - `vitest`: Runner de pruebas unitarias rápido y determinista para validar las capas `Service` y `Runtime` dentro del presupuesto de tiempo del hook `Stop`.
+
+## Alcance Incluido (`Fair game`) para `feat-002` (Al Cambiar su Estado a `in-progress`)
+- Actualizar primero `feature_list.json` poniendo `"status": "in-progress"` en `feat-002` (`WIP = 1`).
+- Extender los contratos en `src/types/portfolio.ts` para el catálogo de los 4 sistemas en producción, métricas operativas y benchmarks industriales.
+- Crear `src/repo/systems.repo.ts`, `src/service/systems.service.ts`, `src/ui/components/HeroSection.tsx`, `src/ui/components/BenchmarksStrip.tsx`, `src/ui/components/ProductionSystemsSection.tsx` y `tests/systems.service.test.ts`, e integrarlos en `src/app/page.tsx`.
 
 ## Exclusiones Explícitas (Qué NO se va a tocar bajo ninguna circunstancia)
 - Prohibido implementar en `feat-001` el catálogo completo de los 4 sistemas (`feat-002`), la ruta dinámica `/sistemas/[slug]` (`feat-003`), la sección de orquestación agéntica (`feat-004`), los endpoints `/api/telemetry` y `/api/contact` (`feat-005`) o los archivos Docker (`feat-006`).
