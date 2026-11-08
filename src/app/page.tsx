@@ -1,21 +1,24 @@
 import React from "react";
+import { getAgenticStackSnapshot } from "@/service/agentic-stack.service";
 import { getSiteFoundationSnapshot } from "@/service/site.service";
 import { getSystemsCatalogSnapshot } from "@/service/systems.service";
+import { AgenticOrchestrationSection } from "@/ui/components/AgenticOrchestrationSection";
 import { AppShell } from "@/ui/components/AppShell";
 import { BenchmarksStrip } from "@/ui/components/BenchmarksStrip";
 import { HeroSection } from "@/ui/components/HeroSection";
 import { ProductionSystemsSection } from "@/ui/components/ProductionSystemsSection";
+import { TechStackMatrix } from "@/ui/components/TechStackMatrix";
 
 export default function HomePage() {
   const siteSnapshot = getSiteFoundationSnapshot();
   const catalogSnapshot = getSystemsCatalogSnapshot();
+  const agenticStackSnapshot = getAgenticStackSnapshot();
 
   const {
     identity,
     navigation,
     ambientTelemetry,
-    defaultTheme,
-    architectureLayers
+    defaultTheme
   } = siteSnapshot;
 
   const { heroTelemetry, benchmarks, systems } = catalogSnapshot;
@@ -40,62 +43,24 @@ export default function HomePage() {
       {/* 3. Operational Catalog of 4 Production Systems (7/5, 5/7 & 2-Col Split) */}
       <ProductionSystemsSection systems={systems} />
 
-      {/* 4. 6-Layer Strict Architecture Foundation */}
-      <section
-        id="orquestacion-agentica"
-        aria-labelledby="six-layer-architecture-heading"
-        className="border-b border-[var(--outline-variant)] py-16 bg-[var(--surface-container-lowest)]"
-      >
-        <div className="swiss-container space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <p className="mono-label text-[var(--secondary)]">
-                02 // ARQUITECTURA VERIFICADA · FLUJO DIRECCIONAL DE 6 CAPAS
-              </p>
-              <h2
-                id="six-layer-architecture-heading"
-                className="font-display text-2xl sm:text-3xl font-semibold tracking-tight mt-1 text-[var(--primary)]"
-              >
-                Cimiento Estructural de {identity.domain}
-              </h2>
-            </div>
-            <p className="mono-label text-[var(--on-surface-variant)]">
-              TYPES -&gt; CONFIG -&gt; REPO -&gt; SERVICE -&gt; RUNTIME -&gt; UI
-            </p>
-          </div>
+      {/* 4. Agentic Orchestration, 6-Layer Architecture & Harness Engineering v2.1 */}
+      <AgenticOrchestrationSection
+        domain={identity.domain}
+        architectureLayers={agenticStackSnapshot.architectureLayers}
+        makerCheckerSpec={agenticStackSnapshot.makerCheckerSpec}
+        workflowNodes={agenticStackSnapshot.workflowNodes}
+        verificationGates={agenticStackSnapshot.verificationGates}
+        mcpBridges={agenticStackSnapshot.mcpBridges}
+      />
 
-          <ul
-            role="list"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            {architectureLayers.map((layer) => (
-              <li
-                key={layer.layer}
-                className="border border-[var(--outline-variant)] bg-[var(--surface-container-low)] p-5 rounded-[2px] flex flex-col justify-between gap-4"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="mono-label text-[var(--secondary)]">
-                      CAPA 0{layer.order} // {layer.layer.toUpperCase()}
-                    </span>
-                    <code className="mono-label px-2 py-0.5 bg-[var(--surface-container-high)] text-[var(--primary)] rounded-[2px]">
-                      {layer.folder}
-                    </code>
-                  </div>
-                  <p className="text-sm text-[var(--primary)] font-medium">
-                    {layer.responsibility}
-                  </p>
-                </div>
-                <p className="mono-label text-[var(--on-surface-variant)] border-t border-[var(--outline-variant)] pt-3">
-                  INVARIANTE: {layer.invariantRule}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      {/* 5. Commercial Tech Stack Matrix & Delivery Blueprints */}
+      <TechStackMatrix
+        categories={agenticStackSnapshot.stackCategories}
+        capabilities={agenticStackSnapshot.stackCapabilities}
+        commercialBlueprints={agenticStackSnapshot.commercialBlueprints}
+      />
 
-      {/* 5. Home Lab Telemetry & Direct Advisory Anchors */}
+      {/* 6. Home Lab Telemetry & Direct Advisory Anchors */}
       <section className="border-b border-[var(--outline-variant)] py-14 bg-[var(--background)]">
         <div className="swiss-container grid grid-cols-1 md:grid-cols-2 gap-6">
           <div

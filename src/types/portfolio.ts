@@ -214,6 +214,98 @@ export interface ProductionSystemsProvider {
   getProductionSystemBySlug(slug: string): ProductionSystem | null;
 }
 
+export interface AgenticWorkflowNode {
+  step: "01" | "02" | "03" | "04" | "05";
+  nodeId: "research" | "implement" | "verify" | "human_approval" | "merge";
+  title: string;
+  actorRole: string;
+  isolationPolicy: string;
+  description: string;
+  deterministicArtifact: string;
+}
+
+export interface MakerCheckerSpec {
+  protocolVersion: string;
+  isolationMode: string;
+  rubricTarget: string;
+  circuitBreakerLocks: string[];
+  summary: string;
+}
+
+export interface HarnessVerificationGate {
+  gateNumber: "PUERTA 01" | "PUERTA 02" | "PUERTA 03";
+  title: string;
+  command: string;
+  focusArea: string;
+  invariantsChecked: string[];
+  passThreshold: string;
+}
+
+export interface McpIntegrationBridge {
+  id: string;
+  protocolCode: string;
+  serverName: string;
+  purpose: string;
+  securityBoundary: string;
+}
+
+export type StackCapabilityCategoryId =
+  | "all"
+  | "ai-agentic"
+  | "distributed-backend"
+  | "frontend-design"
+  | "cloud-homelab";
+
+export interface StackCapabilityCategoryOption {
+  id: StackCapabilityCategoryId;
+  code: string;
+  label: string;
+  count: number;
+}
+
+export interface StackCapabilityItem {
+  id: string;
+  technology: string;
+  category: Exclude<StackCapabilityCategoryId, "all">;
+  categoryLabel: string;
+  architecturalLayer: "Types" | "Config" | "Repo" | "Service" | "Runtime" | "UI" | "Cross-Layer";
+  productionRole: string;
+  commercialUseCase: string;
+  verificationStandard: string;
+  statusBadge: "PRODUCTION // CORE" | "VERIFIED // HARNESS" | "ENTERPRISE // READY";
+}
+
+export interface CommercialDeliveryBlueprint {
+  id: string;
+  code: string;
+  title: string;
+  engagementModel: string;
+  targetTimeline: string;
+  summary: string;
+  includedDeliverables: string[];
+  qualityGuarantee: string;
+}
+
+export interface AgenticStackSnapshot {
+  architectureLayers: ArchitectureLayerSummary[];
+  makerCheckerSpec: MakerCheckerSpec;
+  workflowNodes: AgenticWorkflowNode[];
+  verificationGates: HarnessVerificationGate[];
+  mcpBridges: McpIntegrationBridge[];
+  stackCategories: StackCapabilityCategoryOption[];
+  stackCapabilities: StackCapabilityItem[];
+  commercialBlueprints: CommercialDeliveryBlueprint[];
+}
+
+export interface AgenticStackProvider {
+  getMakerCheckerSpec(): MakerCheckerSpec;
+  getWorkflowNodes(): AgenticWorkflowNode[];
+  getVerificationGates(): HarnessVerificationGate[];
+  getMcpBridges(): McpIntegrationBridge[];
+  getStackCapabilities(): StackCapabilityItem[];
+  getCommercialBlueprints(): CommercialDeliveryBlueprint[];
+}
+
 export type RuntimeLogLevel = "info" | "warn" | "error";
 
 export interface RuntimeLogError {
