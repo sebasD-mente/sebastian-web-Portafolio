@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-07 12:26
-**Session ID:** sesion-003 (Sellado Red-Team / Blue-Team Universal Chameleon Harness v2.1)
-**Active Feature:** Ninguna (`WIP = 0`; listo para planificar e iniciar `feat-001` del portafolio web de Sebas)
+**Last Updated:** 2026-11-07 18:04
+**Session ID:** sesion-004 (Diseño Arquitectónico Integral de `dekolabs.org` desde Google Stitch y Planificación DAG `feat-001`..`feat-006`)
+**Active Feature:** Ninguna (`WIP = 0`; arquitectura estipulada y lista para que la siguiente sesión inicie `feat-001` con contexto limpio)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -12,38 +12,50 @@
 
 ### What's Done
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y cierre adversarial Día 1 (`12/12 DEFENDED`, `27/27 PASS`).
-- [x] Evolución y certificación de **Universal Chameleon Harness v2.0** (`6/6` escenarios E2E PASS, `12/12` vectores adversariales DEFENDED).
-- [x] Sellado integral **Red-Team / Blue-Team v2.1** tras campaña de 4 agentes Red-Team (400+ ataques + 5 tareas simuladas) y 3 cirujanos Blue-Team (`A`, `B`, `C`): `.agents/hooks.json` (`PreInvocation` plano), `scripts/lib/harness-guards.mjs`, `scripts/harness-hooks.mjs` (`220/280L` con `init.sh` en `Stop`), `scripts/lib/harness-utils.mjs`, `scripts/check-python.mjs` (AST en `defaults`/`f-strings`/`os.environ`), `scripts/check-deliverables.mjs` (`countRealWords` inmune a HTML comments/URLs), `scripts/check-architecture.sh` (links `memory/INDEX.md`, `0 CRLF`/`0 BOM`), `scripts/feature-list.schema.json`, `loop-state.md`, `docs/SECURITY.md` y `Addendum v2.1` en `docs/design-docs/adversarial-audit-day1.md` (`28/28` paridad SHA-256, `Overall: 100/100`, `0 CRLF`, `0 BOM`).
-- [x] Corrección final del arnés (auditor independiente F1/F2): alias de escritura del IDE (`write_to_file`, `replace_file_content`, `multi_replace_file_content`, `apply_patch`, ...) y red Fail-Closed genérica en `scripts/lib/harness-guards.mjs`, `PreToolUse` con `matcher: "*"` en `.agents/hooks.json`, `allowRubric` perezoso en `scripts/harness-hooks.mjs` (`221/280L`), `docs/SECURITY.md` actualizado y suites de auditoría aisladas en clon temporal (`universal-e2e-audit.mjs` `8/8`, `adversarial-audit.mjs` `12/12`, paridad `28/28` SHA-256).
-- [x] Sellado Checker v4: extracción generalizada de claves de ruta, verbos mutantes extra con lista de lecturas permitidas y normalización NTFS de rutas (`SCN-09` `28/28`, `universal-e2e-audit.mjs` `9/9`, `adversarial-audit.mjs` `12/12`).
+- [x] Evolución y certificación de **Universal Chameleon Harness v2.0** y **v2.1** (`9/9` escenarios E2E PASS, `12/12` vectores adversariales DEFENDED, `Overall: 100/100`, `0 CRLF`, `0 UTF-8 BOM`).
+- [x] **Inspección del prototipo en Google Stitch vía MCP (`stitch`)**: Extracción completa del proyecto `projects/10491405022475068698` (*Minimalist Software Developer Portfolio*), el sistema de diseño **Atelier Monolith** (`Inter`, `Space Grotesk`, `JetBrains Mono`, Dark `#121314`/`#0D0E0F` + Light `#FFFFFF`, acentos `#7BD0FF`/`#6FFBBE`) y sus pantallas de catálogo (`c3fb19d306f343d2bb456385f9a6f7c6`, `e8864088bfaa4c509d449223f881e21c`) y detalle técnico profundo (`606e1d34c8cd4d3f8f0f4b26306dcb56`).
+- [x] **Definición y formalización de la arquitectura de `dekolabs.org`**:
+  - Actualización de `harness.config.json` a `mode: "greenfield"` con `activeStacks: ["node", "nextjs", "typescript", "tailwindcss", "docker"]`.
+  - Creación de la especificación maestra `docs/product-specs/dekolabs-portfolio-spec.md` y enlace en `AGENTS.md` (`Required Artifacts`).
+  - Adaptación de `ARCHITECTURE.md` al dominio `dekolabs.org` bajo las 6 capas estrictas (`src/{types,config,repo,service,runtime,ui}` + `src/app/`).
+  - Desglose del roadmap completo en `feature_list.json` con **6 features secuenciales en DAG (`feat-001` a `feat-006`)**, preparación de `sprint-contract.md` para `feat-001` y registro en Auto-Memoria (`memory/topics/dekolabs-portfolio-context.md` + `memory/INDEX.md`).
 
 ### What's In Progress
-- Ninguna tarea en curso (`WIP = 0`).
+- Ninguna tarea en curso (`WIP = 0` por acuerdo con Sebas para que cada tarea de `feature_list.json` se ejecute en una sesión nueva con contexto fresco).
 
 ### What's Next
-1. Acordar con Sebas la arquitectura visual y técnica inicial del portafolio web, actualizar `harness.config.json`, `feature_list.json` y `sprint-contract.md`, y pasar `feat-001` a `in-progress` (`WIP = 1`).
+1. En la nueva sesión, ejecutar `bash ./init.sh`, cambiar `"status": "in-progress"` en `feat-001` dentro de `feature_list.json` (`WIP = 1`), e implementar el cimiento Next.js 15 (`output: 'standalone'`), el sistema visual *Atelier Monolith* y el esqueleto de 6 capas.
 
 ## Blockers / Risks
-- Ninguno activo (límites estructurales residuales y controles mecánicos v2.0 documentados en `docs/design-docs/adversarial-audit-day1.md`).
+- Ninguno activo. (Recordatorio arquitectónico clave para las siguientes sesiones: `src/app/` y `src/ui/` pertenecen a la capa `UI` y tienen prohibido importar directamente desde `src/config/` o `src/repo/`; deben consumir siempre `src/service/` o `src/runtime/` y contratos de `src/types/`).
 
 ## Decisions Made
-- **Actualización Integral a Universal Chameleon Harness v2.0 (`6/6 E2E` + `12/12 ADV`, `100/100`)**:
-  - Context: Evolucionar el cimiento del repositorio para soportar sin fricción proyectos políglotas aditivos (Web/Node + Python `.venv`/AST + PowerShell AST), repositorios heredados (`brownfield` con `layerMap` unificado y trinquete `maxLegacyLayerViolations`) y entregables documentales (`non-dev` libre de falsos positivos en español), manteniendo intacta la identidad de `sebastian-web-portafolio` (`WIP = 0`) y `0 CRLF`.
-  - Alternatives considered: Conservar el arnés v1 acoplado solo a Node/Web con `init.sh` excluyente (`if/elif`); descartado porque silenciaba scripts auxiliares Python/PowerShell y carecía de perfiles configurables en `harness.config.json` y verificación documental en `Stop`.
+- **Stack Técnico para `dekolabs.org` — Next.js 15 (App Router, TypeScript, Tailwind CSS, Vitest) con `output: 'standalone'` en Docker Multi-Stage (`node:22-alpine`)**:
+  - Context: Sebas requiere un sitio comercial fluido, sobrio, minimalista y escalable alojado en un contenedor dentro de su propio **Ubuntu Linux Home Lab** detrás de su Reverse Proxy existente bajo el dominio `dekolabs.org`.
+  - Alternatives considered:
+    1. *Astro 5 + Islas de React*: Excelente para sitios estáticos, pero Next.js 15 con `output: 'standalone'` ofrece integración nativa de App Router + Route Handlers (`/api/telemetry`, `/api/health`, `/api/contact`) en un único proceso Node.js ultraligero (`<150MB` RAM) ideal para Docker en Ubuntu.
+    2. *SPA React + Vite + Backend separado*: Descartado por requerir doble proceso o configuración extra de SSR/SEO para los casos de estudio profundos (`/sistemas/[slug]`).
+- **Identidad 100% Marca Personal (`Sebastián — Principal Software & AI Architect`) + Módulos de Orquestación Agéntica y Telemetría del Home Lab**:
+  - Context: Reemplazar el placeholder *"Alexis Vance"* del prototipo de Google Stitch por la identidad real de Sebastián en `dekolabs.org`, conservando la estructura de 4 sistemas destacados + vista de detalle profundo, e integrando su entorno de orquestación de agentes (**Universal Chameleon Harness v2.1**) y la telemetría de su Ubuntu Home Lab.
+  - Alternatives considered: Marca corporativa de agencia; descartada a favor de trato directo de alto nivel para contratos de implementación y freelance.
 
 ## Files Modified This Session
-- `harness.config.json` - Nuevo perfil Camaleón v2.0 (`mode: "auto"`, `layerMap`, `brownfield`, `python`, `nonDev`)
-- `scripts/check-python.mjs` y `scripts/check-deliverables.mjs` - Nuevos inspectores AST Python (`.venv`/capas/secretos) y Puerta 3 Documental (`non-dev` + validación estricta de `harness.config.json`)
-- `init.sh` y `scripts/check-architecture.sh` - Ejecución políglota aditiva, auto-bootstrap `.venv` previo a Puerta 1, soporte `unittest discover -s tests` en Python 3.14, AST PowerShell y resolución idéntica de `layerMap`
-- `.agents/hooks.json`, `scripts/harness-hooks.mjs` y `scripts/lib/harness-guards.mjs` - Candado anti-`pip` global, cobertura `Stop` completa en árbol limpio y salida `exit 2` CLI / `--agy` protojson
-- `AGENTS.md`, `ARCHITECTURE.md`, `evaluator-rubric.md`, `checker-prompt.md`, `.gitignore`, `.gitattributes`, `docs/SECURITY.md`, `docs/RELIABILITY.md`, `docs/GOTCHAS.md`, `docs/QUALITY_SCORE.md`, `memory/topics/harness-rules.md` - Sincronización completa v2.0
-- `docs/design-docs/adversarial-audit-day1.md`, `loop-state.md`, `progress.md`, `session-handoff.md` - Addendum v2.0, preservación de identidad `sebastian-web-portafolio` (`iteration: 1`, `WIP = 0`) y evidencia certificada
+- `harness.config.json` - Configurado en `mode: "greenfield"` con `activeStacks: ["node", "nextjs", "typescript", "tailwindcss", "docker"]`
+- `docs/product-specs/dekolabs-portfolio-spec.md` - Nueva especificación completa de producto, sistema visual *Atelier Monolith* (Stitch) y arquitectura de 6 capas para `dekolabs.org`
+- `AGENTS.md` - Enlazado `docs/product-specs/dekolabs-portfolio-spec.md` en `Required Artifacts`
+- `ARCHITECTURE.md` - Mapa de dominios, modelo de 6 capas en `src/`, `Capability Seams` y puntos calientes de `dekolabs.org`
+- `feature_list.json` - Roadmap DAG completo de 6 tareas (`feat-001`..`feat-006`) en estado `not-started` (`WIP = 0`)
+- `sprint-contract.md` - Contrato detallado listo para ejecutar `feat-001` en la próxima sesión
+- `memory/topics/dekolabs-portfolio-context.md` y `memory/INDEX.md` - Guardado en Dos Pasos con decisiones de marca personal, ID de Stitch `10491405022475068698` y arquitectura de despliegue en Ubuntu Home Lab
+- `progress.md` y `session-handoff.md` - Registro de decisiones, evidencia de verificación y entrega de turno
 
 ## Verification Evidence
 - [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas y 0 CRLF)`
 - [x] Architecture & Red-Pen check: `bash scripts/check-architecture.sh` -> `OK: Límites arquitectónicos, invariantes de 6 capas, Auto-Memoria, Seguridad e higiene estructural verificados sin violaciones.`
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `command and output verified: Overall: 100/100 (25/25 checks PASS)`
-- [x] Universal E2E & Adversarial Matrix: `universal-e2e-audit.mjs` (`9/9 PASS`, incl. `SCN-08` alias IDE y `SCN-09` claves/verbos/NTFS) + `adversarial-audit.mjs` (`12/12 DEFENDED`), ambas sobre clon temporal sin tocar el repo vivo
 
 ## Notes for Next Session
-Ejecuta `bash ./init.sh` (en Windows PowerShell vía Git Bash: `& "C:\Program Files\Git\bin\bash.exe" ./init.sh`) al iniciar la sesión, revisa `harness.config.json` y `docs/design-docs/adversarial-audit-day1.md`, y planifica `feat-001` del portafolio web de Sebas respetando `WIP = 1`.
+En la siguiente sesión nueva:
+1. Ejecuta `bash ./init.sh` para confirmar `CLEAN STATE`.
+2. Lee `docs/product-specs/dekolabs-portfolio-spec.md`, `ARCHITECTURE.md` y `sprint-contract.md`.
+3. Cambia `feat-001` a `"status": "in-progress"` en `feature_list.json` (`WIP = 1`) y construye el cimiento Next.js 15 + *Atelier Monolith* + 6 capas verificando las 3 puertas.

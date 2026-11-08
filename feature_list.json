@@ -3,23 +3,185 @@
   "features": [
     {
       "id": "feat-001",
-      "name": "Inicializar línea base y primer módulo del portafolio web",
-      "description": "Adaptar ARCHITECTURE.md y la estructura inicial del proyecto sebastian web Portafolio bajo las 6 capas arquitectónicas (Types -> Config -> Repo -> Service -> Runtime -> UI) verificando que init.sh pase en verde (100/100).",
-      "area": "architecture-baseline",
-      "user_visible_behavior": "El repositorio arranca en estado limpio (100/100) con arquitectura verificada mecánicamente y listo para desarrollar la primera funcionalidad.",
+      "name": "Cimiento Next.js 15 Standalone, Sistema Visual Atelier Monolith y Esqueleto de 6 Capas",
+      "description": "Inicializar el proyecto Next.js 15 (App Router, TypeScript estricto, Tailwind CSS y Vitest) configurado con output 'standalone' para contenedorización en Ubuntu Home Lab. Implementar los tokens de diseño 'Atelier Monolith' (extraídos del proyecto Google Stitch projects/10491405022475068698 con soporte Dark/Light Mode, fuentes Inter, Space Grotesk y JetBrains Mono) y crear el esqueleto inicial de las 6 capas en src/{types,config,repo,service,runtime,ui} junto con el Layout base (Ambient Telemetry Bar, Header fijo de Sebastián — Principal Software & AI Architect en dekolabs.org, conmutador de tema y Footer) pasando las 3 puertas de init.sh (typecheck, lint, test, build) al 100/100.",
+      "area": "architecture-foundation",
+      "user_visible_behavior": "El sitio dekolabs.org compila y levanta con el diseño base Atelier Monolith en modo oscuro por defecto y conmutador a modo claro, mostrando la barra de telemetría ambiental, navegación principal de Sebastián y pie de página técnico, con arquitectura de 6 capas verificada al 100/100.",
       "priority": "P0",
       "status": "not-started",
       "dependencies": [],
       "required_files": [
-        "ARCHITECTURE.md"
+        "package.json",
+        "tsconfig.json",
+        "next.config.ts",
+        "src/types/portfolio.ts",
+        "src/config/site.config.ts",
+        "src/repo/site.repo.ts",
+        "src/service/site.service.ts",
+        "src/runtime/logger.ts",
+        "src/ui/components/AppShell.tsx",
+        "src/app/layout.tsx",
+        "src/app/page.tsx"
       ],
       "verification": [
         "bash ./init.sh",
         "bash scripts/check-architecture.sh",
-        "node scripts/validate-harness.mjs --min-score 100"
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
       ],
       "evidence": "",
-      "notes": "El agente traduce las peticiones naturales del usuario hacia feature_list.json y sprint-contract.md respetando WIP = 1."
+      "notes": "Respetar estrictamente las 6 capas: src/app/ y src/ui/ NUNCA deben importar directamente de src/config/ ni src/repo/; todo dato o configuración se consume a través de src/service/ y contratos de src/types/."
+    },
+    {
+      "id": "feat-002",
+      "name": "Hero Editorial, Tarjeta de Telemetría en Vivo y Catálogo de 4 Sistemas en Producción",
+      "description": "Implementar en las capas Types -> Repo -> Service -> UI la sección Hero Editorial de Sebastián (8 columnas de propuesta de valor + 4 columnas de tarjeta KERNEL & HOME LAB TELEMETRY con sparkline SVG), la franja de 4 KPIs industriales y el Catálogo Operacional de los 4 Sistemas en Producción (2 sistemas principales a 12 columnas con layout alternado 7/5 y 5/7 + 2 sistemas secundarios en grid de 2 columnas, incluyendo el módulo de Orquestación Agéntica) fiel al prototipo de Google Stitch (pantallas c3fb19d306f343d2bb456385f9a6f7c6 y e8864088bfaa4c509d449223f881e21c).",
+      "area": "production-systems-showcase",
+      "user_visible_behavior": "El visitante de dekolabs.org visualiza el Hero técnico de Sebastián con métricas de telemetría, benchmarks de impacto y el catálogo interactivo de los 4 sistemas en producción con etiquetas de stack en JetBrains Mono, estado operativo y enlaces hacia sus vistas de detalle.",
+      "priority": "P0",
+      "status": "not-started",
+      "dependencies": [
+        "feat-001"
+      ],
+      "required_files": [
+        "src/repo/systems.repo.ts",
+        "src/service/systems.service.ts",
+        "src/ui/components/HeroSection.tsx",
+        "src/ui/components/BenchmarksStrip.tsx",
+        "src/ui/components/ProductionSystemsSection.tsx",
+        "tests/systems.service.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "Adaptar los textos a la marca personal de Sebastián en dekolabs.org manteniendo la estética suiza minimalista de Stitch."
+    },
+    {
+      "id": "feat-003",
+      "name": "Vista de Detalle Técnico Profundo por Sistema (/sistemas/[slug]) e Inspector de Código",
+      "description": "Implementar la ruta dinámica SSG/SSR '/sistemas/[slug]' (con generateStaticParams) basada en la pantalla de detalle de Google Stitch (606e1d34c8cd4d3f8f0f4b26306dcb56): barra breadcrumb de telemetría, Hero del sistema + Ledger de Metadata de Despliegue, grid de 4 KPIs, Consola de Mando y Diagnóstico, diagrama estructural con las 3 Etapas del Pipeline (ETAPA 01, 02, 03), tabla de especificaciones técnicas, Inspector Interactivo de Código con pestañas funcionales (readonly) y sección de 3 Desafíos de Ingeniería Resueltos.",
+      "area": "system-deep-dive",
+      "user_visible_behavior": "Al hacer clic en cualquiera de los 4 sistemas en producción, el cliente accede a una página de caso de estudio técnico profundo en /sistemas/[slug] donde puede inspeccionar la topología del pipeline, alternar pestañas de código real y revisar las métricas y desafíos resueltos.",
+      "priority": "P1",
+      "status": "not-started",
+      "dependencies": [
+        "feat-002"
+      ],
+      "required_files": [
+        "src/app/sistemas/[slug]/page.tsx",
+        "src/ui/components/SystemDetailView.tsx",
+        "src/ui/components/CodeInspectorTabs.tsx",
+        "tests/system-detail.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "Garantizar que /sistemas/[slug]/page.tsx consuma datos únicamente desde src/service/systems.service.ts y tipos desde src/types/portfolio.ts."
+    },
+    {
+      "id": "feat-004",
+      "name": "Módulo de Orquestación de Agentes IA, Harness Engineering v2.1 y Matriz de Stack Comercial",
+      "description": "Construir el módulo dedicado a 'Agentic Orchestration, Stack & Harness Engineering' que exhibe el entorno de desarrollo de Sebastián: visualización de la arquitectura de 6 capas, el flujo Maker-Checker One-Shot (Zero-Inheritance), integración MCP, las 3 Puertas deterministas del Arnés Camaleón v2.1 y la matriz completa del stack tecnológico disponible para prestar servicios freelance o por contratos de implementación end-to-end.",
+      "area": "agentic-orchestration-stack",
+      "user_visible_behavior": "Los clientes pueden explorar cómo Sebastián orquesta agentes autónomos con control de calidad determinista (100/100) y qué capacidades técnicas del stack están disponibles para sus proyectos comerciales.",
+      "priority": "P1",
+      "status": "not-started",
+      "dependencies": [
+        "feat-003"
+      ],
+      "required_files": [
+        "src/repo/agentic-stack.repo.ts",
+        "src/service/agentic-stack.service.ts",
+        "src/ui/components/AgenticOrchestrationSection.tsx",
+        "src/ui/components/TechStackMatrix.tsx",
+        "tests/agentic-stack.service.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "Conectar los enlaces de navegación de 'Arquitectura & Stack' hacia esta sección y presentar casos de uso claros para clientes."
+    },
+    {
+      "id": "feat-005",
+      "name": "Telemetría Ubuntu Home Lab (/api/telemetry), Terminal Interactiva en Vivo y Canal de Contratación",
+      "description": "Implementar bajo Capability Seams el proveedor de telemetría del Ubuntu Home Lab en src/repo/telemetry.repo.ts, la lógica de agregación y validación de contacto en src/service/, los controladores HTTP con logs RuntimeLogEntry (correlationId) en src/runtime/ y los endpoints '/api/health', '/api/telemetry' y '/api/contact', conectándolos a la Terminal Interactiva en Vivo (TTY stream) y a la sección de Contratación / Agenda de Sesión Técnica en la UI.",
+      "area": "homelab-telemetry-and-contact",
+      "user_visible_behavior": "La terminal en vivo muestra telemetría real/determinista del nodo Ubuntu Home Lab (latencia, uptime, contenedores, estado de dekolabs.org) y los clientes pueden contactar o solicitar una sesión técnica con validación instantánea.",
+      "priority": "P1",
+      "status": "not-started",
+      "dependencies": [
+        "feat-004"
+      ],
+      "required_files": [
+        "src/repo/telemetry.repo.ts",
+        "src/service/telemetry.service.ts",
+        "src/service/contact.service.ts",
+        "src/runtime/telemetry.handler.ts",
+        "src/runtime/contact.handler.ts",
+        "src/app/api/health/route.ts",
+        "src/app/api/telemetry/route.ts",
+        "src/app/api/contact/route.ts",
+        "src/ui/components/LiveTerminalSection.tsx",
+        "src/ui/components/ContactAdvisorySection.tsx",
+        "tests/telemetry-and-contact.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "Los archivos route.ts en src/app/api/ deben delegar a src/runtime/ o src/service/ sin importar directamente src/repo/ ni src/config/."
+    },
+    {
+      "id": "feat-006",
+      "name": "Empaquetado Docker Multi-Stage para Ubuntu Home Lab, SEO dekolabs.org y Guía de Despliegue",
+      "description": "Crear la capa de contenedorización de producción para el Ubuntu Linux Home Lab de Sebastián: 'Dockerfile' multi-stage sobre node:22-alpine (usuario no-root 'nextjs', salida standalone ligera <150MB RAM, HEALTHCHECK contra /api/health en puerto 3000), 'docker-compose.yml' preparado para conectarse al Reverse Proxy existente (Cloudflare Tunnel / Traefik / Nginx / Caddy) para dekolabs.org, '.dockerignore', '.env.example', metadatos SEO (OpenGraph, robots.txt, sitemap.xml) y documentación operativa en docs/design-docs/homelab-deployment.md.",
+      "area": "homelab-docker-deployment",
+      "user_visible_behavior": "El proyecto cuenta con contenedorización lista para producción en Ubuntu Linux ('docker compose up -d --build'), healthcheck automático, SEO optimizado para dekolabs.org y guía paso a paso de puesta en marcha en el Home Lab.",
+      "priority": "P1",
+      "status": "not-started",
+      "dependencies": [
+        "feat-005"
+      ],
+      "required_files": [
+        "Dockerfile",
+        "docker-compose.yml",
+        ".dockerignore",
+        ".env.example",
+        "src/app/robots.ts",
+        "src/app/sitemap.ts",
+        "docs/design-docs/homelab-deployment.md",
+        "tests/deployment-config.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "Enlazar docs/design-docs/homelab-deployment.md en Required Artifacts de AGENTS.md únicamente cuando el archivo haya sido creado con contenido real en esta tarea."
     }
   ]
 }

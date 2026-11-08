@@ -1,6 +1,12 @@
 {
-  "mode": "auto",
-  "activeStacks": [],
+  "mode": "greenfield",
+  "activeStacks": [
+    "node",
+    "nextjs",
+    "typescript",
+    "tailwindcss",
+    "docker"
+  ],
   "layerMap": {
     "types": ["types", "schemas", "interfaces", "contracts", "domain"],
     "config": ["config", "settings", "constants"],

@@ -60,6 +60,7 @@ Este repositorio está gobernado por el **Arnés Camaleón Universal v2.1** para
 - `.agents/skills/maker-checker/SKILL.md` — Skill bajo demanda del bucle `Maker-Checker` con `description <= 150` caracteres (`Gotcha #12`).
 - `graph.md` — Ingeniería de Grafos de 5 nodos (`research -> implement -> verify -> human_approval -> merge`), `error_layer` y patrones `Coordinator`, `Fork` y `Swarm`.
 - `docs/GOTCHAS.md` — Tabla de los 15 Gotchas críticos de producción, auditoría de las 25 verificaciones (`structuredHas`) y protocolo de Estudios de Ablación.
+- `docs/product-specs/dekolabs-portfolio-spec.md` — Especificación de producto, sistema de diseño *Atelier Monolith* (Google Stitch) y arquitectura de 6 capas para `dekolabs.org`.
 
 ## Progressive Expansion (Anti-Doc Bloat — SOP `encode-knowledge-into-repo`)
 

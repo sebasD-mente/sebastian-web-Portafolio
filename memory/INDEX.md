@@ -27,3 +27,4 @@
 ## Índice de Temas Activos (1 línea de gancho por archivo)
 
 - `[feedback/project]` [harness-rules.md](topics/harness-rules.md) — Interacción natural, WIP=1, 5 niveles e `init.sh` multiplataforma (Linux/macOS y Windows PowerShell).
+- `[project/reference]` [dekolabs-portfolio-context.md](topics/dekolabs-portfolio-context.md) — Marca personal de Sebastián en `dekolabs.org`, Stitch ID `10491405022475068698` (*Atelier Monolith*) y despliegue Docker en Ubuntu Home Lab.
