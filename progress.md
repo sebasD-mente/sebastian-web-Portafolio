@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-07 18:04
-**Session ID:** sesion-004 (Diseño Arquitectónico Integral de `dekolabs.org` desde Google Stitch y Planificación DAG `feat-001`..`feat-006`)
+**Last Updated:** 2026-11-07 18:37
+**Session ID:** sesion-004 (Diseño Arquitectónico Integral de `dekolabs.org` desde Google Stitch con Modo Claro por defecto y Planificación DAG `feat-001`..`feat-006`)
 **Active Feature:** Ninguna (`WIP = 0`; arquitectura estipulada y lista para que la siguiente sesión inicie `feat-001` con contexto limpio)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
@@ -13,7 +13,7 @@
 ### What's Done
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y cierre adversarial Día 1 (`12/12 DEFENDED`, `27/27 PASS`).
 - [x] Evolución y certificación de **Universal Chameleon Harness v2.0** y **v2.1** (`9/9` escenarios E2E PASS, `12/12` vectores adversariales DEFENDED, `Overall: 100/100`, `0 CRLF`, `0 UTF-8 BOM`).
-- [x] **Inspección del prototipo en Google Stitch vía MCP (`stitch`)**: Extracción completa del proyecto `projects/10491405022475068698` (*Minimalist Software Developer Portfolio*), el sistema de diseño **Atelier Monolith** (`Inter`, `Space Grotesk`, `JetBrains Mono`, Dark `#121314`/`#0D0E0F` + Light `#FFFFFF`, acentos `#7BD0FF`/`#6FFBBE`) y sus pantallas de catálogo (`c3fb19d306f343d2bb456385f9a6f7c6`, `e8864088bfaa4c509d449223f881e21c`) y detalle técnico profundo (`606e1d34c8cd4d3f8f0f4b26306dcb56`).
+- [x] **Inspección del prototipo en Google Stitch vía MCP (`stitch`)**: Extracción completa del proyecto `projects/10491405022475068698` (*Minimalist Software Developer Portfolio*), el sistema de diseño **Atelier Monolith** (`Inter`, `Space Grotesk`, `JetBrains Mono`, **Modo Claro `#FFFFFF`/`#F3F4F6` como predeterminado** + Modo Oscuro `#121314`/`#0D0E0F`, acentos `#2563EB`/`#059669`) y sus pantallas de catálogo (`e8864088bfaa4c509d449223f881e21c`, `c3fb19d306f343d2bb456385f9a6f7c6`) y detalle técnico profundo (`606e1d34c8cd4d3f8f0f4b26306dcb56`).
 - [x] **Definición y formalización de la arquitectura de `dekolabs.org`**:
   - Actualización de `harness.config.json` a `mode: "greenfield"` con `activeStacks: ["node", "nextjs", "typescript", "tailwindcss", "docker"]`.
   - Creación de la especificación maestra `docs/product-specs/dekolabs-portfolio-spec.md` y enlace en `AGENTS.md` (`Required Artifacts`).

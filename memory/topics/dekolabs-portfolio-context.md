@@ -12,7 +12,8 @@
 
 - **Project ID:** `10491405022475068698` (`projects/10491405022475068698`)
 - **Título en Stitch:** *Minimalist Software Developer Portfolio*
-- **Design System:** **Atelier Monolith** (Estilo Tipográfico Internacional Suizo, modo oscuro predeterminado `#121314`/`#0D0E0F` + modo claro `#FFFFFF`, tipografías `Inter`, `Space Grotesk` y `JetBrains Mono`, acentos `#7BD0FF` / `#38BDF8` y `#6FFBBE` / `#10B981`).
+- **Design System:** **Atelier Monolith** (Estilo Tipográfico Internacional Suizo, **Modo Claro predeterminado `#FFFFFF` / `#F3F4F6`** + conmutador a Modo Oscuro `#121314` / `#0D0E0F`, tipografías `Inter`, `Space Grotesk` y `JetBrains Mono`, acentos `#2563EB` / `#7BD0FF` y `#059669` / `#6FFBBE`).
+- **Evolución Incremental de Contenido y Diseño:** El prototipo de Stitch es un punto de partida vivo; la arquitectura de 6 capas separa los datos/imágenes (`src/repo/`) de los componentes (`src/ui/`) para que Sebastián pueda pulir el diseño, cambiar secciones e incorporar progresivamente las fotos, capturas y métricas reales de sus proyectos en cualquier momento sin fricción.
 - **Pantallas Clave en Stitch:**
   - `projects/10491405022475068698/screens/c3fb19d306f343d2bb456385f9a6f7c6` — Home / Sistemas en Producción (Tema Oscuro).
   - `projects/10491405022475068698/screens/e8864088bfaa4c509d449223f881e21c` — Home / Sistemas en Producción (Tema Claro).

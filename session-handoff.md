@@ -6,7 +6,7 @@
 - **Branch / commit:** `main` (Arquitectura y roadmap de `dekolabs.org` estipulados sobre Universal Chameleon Harness v2.1)
 
 ## Completed This Session
-- [x] Conexión e inspección vía MCP `stitch` del proyecto `projects/10491405022475068698` (*Minimalist Software Developer Portfolio*): extracción del sistema de diseño **Atelier Monolith** y de las pantallas de catálogo (Dark/Light) y detalle de sistema (`Kronos Cloud Runtime`).
+- [x] Conexión e inspección vía MCP `stitch` del proyecto `projects/10491405022475068698` (*Minimalist Software Developer Portfolio*): extracción del sistema de diseño **Atelier Monolith** (con **Modo Claro como tema predeterminado** por solicitud de Sebastián + conmutador a Modo Oscuro) y de las pantallas de catálogo y detalle de sistema.
 - [x] Alineación arquitectónica con Sebastián mediante preguntas estructuradas:
   1. **Stack**: Next.js 15 (App Router, TypeScript, Tailwind CSS, Vitest) con `output: 'standalone'` sobre contenedor Docker multi-stage (`node:22-alpine`).
   2. **Identidad Comercial**: 100% Marca Personal (**Sebastián — Principal Software & AI Architect**) bajo `https://dekolabs.org`.

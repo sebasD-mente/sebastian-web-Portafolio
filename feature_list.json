@@ -4,9 +4,9 @@
     {
       "id": "feat-001",
       "name": "Cimiento Next.js 15 Standalone, Sistema Visual Atelier Monolith y Esqueleto de 6 Capas",
-      "description": "Inicializar el proyecto Next.js 15 (App Router, TypeScript estricto, Tailwind CSS y Vitest) configurado con output 'standalone' para contenedorización en Ubuntu Home Lab. Implementar los tokens de diseño 'Atelier Monolith' (extraídos del proyecto Google Stitch projects/10491405022475068698 con soporte Dark/Light Mode, fuentes Inter, Space Grotesk y JetBrains Mono) y crear el esqueleto inicial de las 6 capas en src/{types,config,repo,service,runtime,ui} junto con el Layout base (Ambient Telemetry Bar, Header fijo de Sebastián — Principal Software & AI Architect en dekolabs.org, conmutador de tema y Footer) pasando las 3 puertas de init.sh (typecheck, lint, test, build) al 100/100.",
+      "description": "Inicializar el proyecto Next.js 15 (App Router, TypeScript estricto, Tailwind CSS y Vitest) configurado con output 'standalone' para contenedorización en Ubuntu Home Lab. Implementar los tokens de diseño 'Atelier Monolith' (extraídos del proyecto Google Stitch projects/10491405022475068698 con Modo Claro 'light' como predeterminado y conmutador a Modo Oscuro 'dark', fuentes Inter, Space Grotesk y JetBrains Mono) y crear el esqueleto inicial de las 6 capas en src/{types,config,repo,service,runtime,ui} junto con el Layout base (Ambient Telemetry Bar, Header fijo de Sebastián — Principal Software & AI Architect en dekolabs.org, conmutador de tema y Footer) pasando las 3 puertas de init.sh (typecheck, lint, test, build) al 100/100.",
       "area": "architecture-foundation",
-      "user_visible_behavior": "El sitio dekolabs.org compila y levanta con el diseño base Atelier Monolith en modo oscuro por defecto y conmutador a modo claro, mostrando la barra de telemetría ambiental, navegación principal de Sebastián y pie de página técnico, con arquitectura de 6 capas verificada al 100/100.",
+      "user_visible_behavior": "El sitio dekolabs.org compila y levanta con el diseño base Atelier Monolith en Modo Claro por defecto y conmutador a Modo Oscuro, mostrando la barra de telemetría ambiental, navegación principal de Sebastián y pie de página técnico, con arquitectura de 6 capas verificada al 100/100.",
       "priority": "P0",
       "status": "not-started",
       "dependencies": [],

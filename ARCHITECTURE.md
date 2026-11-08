@@ -88,7 +88,7 @@ flowchart TD
 | **Logging y trazabilidad** | Esquema `RuntimeLogEntry` de `docs/RELIABILITY.md` + adaptador en `src/runtime/` y `.agents/.runtime/hook-audit.jsonl` | Salida JSON estructurada con `correlationId` y redacción de secretos (`redactSecrets`) en endpoints `/api/health`, `/api/telemetry` y `/api/contact`. Prohibido `console.log` no estructurado en `src/{types,config,repo,service}`. |
 | **Autenticación y secretos** | Reglas de `docs/SECURITY.md` + validación en `src/config/` | Variables del contenedor documentadas en `.env.example`; archivos `.env*` ignorados en Git y bloqueados en `PreToolUse`. Ninguna credencial literal en el bundle cliente. |
 | **APIs externas y MCP** | Clientes/proveedores en `src/repo/` bajo `Capability Seams` y herramientas MCP interceptadas en `.agents/hooks.json` | Timeouts explícitos, validación de entrada en formularios de contacto y políticas `Fail-Closed`. |
-| **Perfiles y Tema Visual** | `harness.config.json` para el arnés y `src/config/` -> `src/service/` para configuración del sitio y tema *Atelier Monolith* | Soporte nativo Dark/Light (`class="dark"` por defecto) fiel a los tokens de Google Stitch. |
+| **Perfiles y Tema Visual** | `harness.config.json` para el arnés y `src/config/` -> `src/service/` para configuración del sitio y tema *Atelier Monolith* | Soporte nativo Light/Dark (**Modo Claro `class="light"` por defecto** + conmutador a Modo Oscuro) fiel a los tokens de Google Stitch. |
 
 ## 6. Puntos Calientes Actuales (Current Hotspots)
 

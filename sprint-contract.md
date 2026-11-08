@@ -19,8 +19,8 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
   - `src/repo/site.repo.ts` (`Repo` — proveedor inicial de configuración y estado ambiental).
   - `src/service/site.service.ts` (`Service` — casos de uso consumibles por `UI` sin saltar a `Config`/`Repo`).
   - `src/runtime/logger.ts` (`Runtime` — emisor JSON `RuntimeLogEntry` con `correlationId` y redacción de secretos).
-  - `src/ui/components/AppShell.tsx` (`UI` — Ambient Telemetry Strip, Header fijo con conmutador Dark/Light y Footer técnico).
-  - `src/app/layout.tsx`, `src/app/page.tsx` y `src/app/globals.css` (`UI` — fuentes `Inter`, `Space Grotesk` y `JetBrains Mono`, paleta *Atelier Monolith* `#121314` / `#0D0E0F` / `#FFFFFF` / `#7BD0FF` / `#6FFBBE`).
+  - `src/ui/components/AppShell.tsx` (`UI` — Ambient Telemetry Strip, Header fijo con conmutador Light/Dark con **Modo Claro predeterminado** y Footer técnico).
+  - `src/app/layout.tsx`, `src/app/page.tsx` y `src/app/globals.css` (`UI` — fuentes `Inter`, `Space Grotesk` y `JetBrains Mono`, paleta *Atelier Monolith* con **Modo Claro `#FFFFFF` / `#F3F4F6` / `#0D0E0F` / `#2563EB` / `#059669` por defecto** y soporte Dark Mode `#121314` / `#0D0E0F`).
 - Añadir pruebas unitarias iniciales de la capa `Service`/`Runtime` para que `npm test` pase en verde.
 
 ## Exclusiones Explícitas (Qué NO se va a tocar bajo ninguna circunstancia)

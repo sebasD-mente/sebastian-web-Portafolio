@@ -21,20 +21,22 @@
 
 Estética inspirada en el **Estilo Tipográfico Internacional Suizo** fusionado con instrumentación moderna de ingeniería: austero, hiper-enfocado, geométrico y sin adornos superfluos.
 
-### 2.1 Paleta Cromática Dual (Modo Oscuro Predeterminado + Modo Claro)
+### 2.1 Paleta Cromática Dual (Modo Claro Predeterminado + Modo Oscuro)
 
-| Token Semántico | Modo Oscuro (Default — `class="dark"`) | Modo Claro (`class="light"`) | Uso Arquitectónico |
+El sitio arranca con el **Modo Claro (`class="light"`) como tema predeterminado**, proyectando limpieza editorial suiza, máxima legibilidad y sobriedad comercial desde el primer vistazo, e incluye un conmutador instantáneo al **Modo Oscuro (`class="dark"`)** en el Header.
+
+| Token Semántico | Modo Claro (Default — `class="light"`) | Modo Oscuro (`class="dark"`) | Uso Arquitectónico |
 | :--- | :--- | :--- | :--- |
-| **`background` / `surface`** | `#121314` / `#000000` (Obsidiana) | `#FFFFFF` (Blanco Puro) | Lienzo base de la galería |
-| **`surface-container-lowest`** | `#0D0E0F` / `#0A0A0A` | `#FFFFFF` / `#FAFAFA` | Fondos de terminales, barras de telemetría y marcos |
-| **`surface-container-low`** | `#1B1C1C` / `#141414` | `#F3F4F6` / `#F4F4F5` | Tarjetas de sistemas en producción y paneles técnicos |
-| **`surface-container-high`** | `#292A2A` | `#E5E7EB` | Chips de stack, divisores y botones secundarios |
-| **`outline-variant`** | `#444748` / `#262626` (`1px solid`) | `#D1D5DB` / `#E5E5E5` (`1px solid`) | Hairlines de precisión (cero sombras difusas decorativas) |
-| **`primary`** | `#FFFFFF` (Blanco Puro) | `#0D0E0F` / `#0A0A0A` | Titulares principales, CTAs primarios e inversión de alto contraste |
-| **`on-surface-variant`** | `#C4C7C8` / `#A3A3A3` | `#4B5563` / `#525252` | Cuerpo editorial y descripciones técnicas |
-| **`secondary` (Electric Ice Blue)** | `#7BD0FF` / `#38BDF8` | `#2563EB` | Estados activos del runtime, trazas de arquitectura y enlaces técnicos |
-| **`tertiary-fixed` (Emerald Pulse)** | `#6FFBBE` / `#10B981` | `#059669` | Indicadores de producción en vivo, SLOs cumplidos y nodos online |
-| **`amber-notice`** | `#F59E0B` | `#D97706` | Nodos experimentales, builds canary o alertas operativas |
+| **`background` / `surface`** | `#FFFFFF` (Blanco Puro) | `#121314` / `#000000` (Obsidiana) | Lienzo base de la galería |
+| **`surface-container-lowest`** | `#FFFFFF` / `#FAFAFA` | `#0D0E0F` / `#0A0A0A` | Fondos de marcos, tarjetas elevadas y barras de estado |
+| **`surface-container-low`** | `#F3F4F6` / `#F4F4F5` | `#1B1C1C` / `#141414` | Tarjetas de sistemas en producción y paneles técnicos |
+| **`surface-container-high`** | `#E5E7EB` | `#292A2A` | Chips de stack, divisores y botones secundarios |
+| **`outline-variant`** | `#D1D5DB` / `#E5E5E5` (`1px solid`) | `#444748` / `#262626` (`1px solid`) | Hairlines de precisión (cero sombras difusas decorativas) |
+| **`primary`** | `#0D0E0F` / `#0A0A0A` | `#FFFFFF` (Blanco Puro) | Titulares principales, CTAs primarios e inversión de alto contraste |
+| **`on-surface-variant`** | `#4B5563` / `#525252` | `#C4C7C8` / `#A3A3A3` | Cuerpo editorial y descripciones técnicas |
+| **`secondary` (Tech Blue)** | `#2563EB` | `#7BD0FF` / `#38BDF8` | Estados activos del runtime, trazas de arquitectura y enlaces técnicos |
+| **`tertiary-fixed` (Emerald Pulse)** | `#059669` | `#6FFBBE` / `#10B981` | Indicadores de producción en vivo, SLOs cumplidos y nodos online |
+| **`amber-notice`** | `#D97706` | `#F59E0B` | Nodos experimentales, builds canary o alertas operativas |
 
 ### 2.2 Tipografía de Doble Motor y Escala
 
@@ -107,7 +109,7 @@ Para cumplir al 100% con `scripts/check-architecture.sh` (cero saltos de capa `U
 
 1. **`src/types/` (`Types`)**: Contratos TypeScript puros (`ProductionSystem`, `SystemMetric`, `PipelineStage`, `CodeSnippetTab`, `SolvedChallenge`, `AgenticWorkflowNode`, `StackCapability`, `HomeLabTelemetrySnapshot`, `ContactInquiry`).
 2. **`src/config/` (`Config`)**: Configuración validada del sitio (`dekolabs.org`), metadatos SEO de Sebastián, tokens de tema *Atelier Monolith* y lectura segura de variables de entorno del contenedor Ubuntu.
-3. **`src/repo/` (`Repo`)**: Catálogo estructurado de los sistemas en producción, especificaciones de casos de estudio, datos del stack/arnés agéntico y adaptador de lectura de métricas del host/contenedor Linux (`os`, `process`, o endpoint interno del Home Lab).
+3. **`src/repo/` (`Repo`)**: Catálogo estructurado y desacoplado de los sistemas en producción (diseñado como fuente de datos limpia para que Sebastián pueda reemplazar o agregar progresivamente fotos reales, capturas, textos, métricas y proyectos sin tocar la lógica ni romper componentes visuales), especificaciones de casos de estudio, datos del stack/arnés agéntico y adaptador de lectura de métricas del host/contenedor Linux (`os`, `process`, o endpoint interno del Home Lab).
 4. **`src/service/` (`Service`)**: Casos de uso y lógica de dominio pura (`getProductionSystems`, `getSystemBySlug`, `getAgenticCapabilities`, `buildHomeLabTelemetryReport`, `validateContactInquiry`).
 5. **`src/runtime/` (`Runtime`)**: Controladores de rutas API (`/api/health`, `/api/telemetry`, `/api/contact`) y adaptador de logging estructurado `RuntimeLogEntry` con `correlationId`.
 6. **`src/ui/` y `src/app/` (`UI`)**: Componentes visuales *Atelier Monolith* (`src/ui/components/`) y rutas del App Router de Next.js (`src/app/page.tsx`, `src/app/sistemas/[slug]/page.tsx`, `src/app/api/...`), consumiendo exclusivamente `src/service/`, `src/runtime/` y `src/types/`.
