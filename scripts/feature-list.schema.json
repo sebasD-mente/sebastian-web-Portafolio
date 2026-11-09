@@ -93,6 +93,14 @@
             },
             "description": "Physical deliverables on disk required before closing as 'done'"
           },
+          "deprecated_files": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Repo-relative files from ancestor features deprecated and physically removed by this feature"
+          },
           "verification": {
             "type": "array",
             "minItems": 1,

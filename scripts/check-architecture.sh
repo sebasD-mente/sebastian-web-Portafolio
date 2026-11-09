@@ -1704,22 +1704,42 @@ fl_check="$(node -e '
             `Corrige \x27${relPath}\x27 en la tarea \x27${f.id}\x27 para que apunte a un archivo interno del proyecto.`
           );
         }
-        if (f.status === "done") {
-          if (!fs.existsSync(full)) {
+      }
+      if (f.deprecated_files !== undefined) {
+        if (!Array.isArray(f.deprecated_files)) {
+          fail(
+            `Campo \x27deprecated_files\x27 inválido en la tarea \x27${f.id}\x27 de \x27feature_list.json\x27.`,
+            "deprecated_files debe ser un arreglo de rutas relativas internas al repositorio.",
+            `Define \x27deprecated_files\x27 como un arreglo en la tarea \x27${f.id}\x27.`
+          );
+        }
+        const seenDep = new Set();
+        for (const relPath of f.deprecated_files) {
+          if (typeof relPath !== "string" || !relPath.trim() || relPath.includes("\0") || path.isAbsolute(relPath) || path.posix.isAbsolute(relPath) || path.win32.isAbsolute(relPath) || /^[a-zA-Z]:/.test(relPath)) {
             fail(
-              `Pass-State Gating fallido en tarea \x27${f.id}\x27 (status=\x27done\x27): el archivo requerido \x27${relPath}\x27 no existe en disco.`,
-              "Prohibido marcar una tarea como \x27done\x27 si alguno de sus entregables físicos declarados en \x27required_files\x27 no existe.",
-              `Crea el entregable real \x27${relPath}\x27 o regresa la tarea \x27${f.id}\x27 a \x27in-progress\x27.`
+              `Ruta inválida o absoluta \x27${String(relPath)}\x27 en \x27deprecated_files\x27 de la tarea \x27${f.id}\x27.`,
+              "deprecated_files solo acepta rutas relativas internas al repositorio.",
+              `Reemplaza \x27${String(relPath)}\x27 en la tarea \x27${f.id}\x27 por una ruta relativa dentro del repositorio.`
             );
           }
-          const st = fs.statSync(full);
-          if (!st.isFile() || st.size <= 0) {
+          const full = path.resolve(resolvedRoot, relPath);
+          const rel = path.relative(resolvedRoot, full);
+          if (!rel || rel === "." || rel === ".." || rel.startsWith("../") || rel.startsWith("..\\") || path.isAbsolute(rel)) {
             fail(
-              `Pass-State Gating fallido en tarea \x27${f.id}\x27 (status=\x27done\x27): el archivo requerido \x27${relPath}\x27 no es un archivo regular o está vacío (0 bytes).`,
-              "Todo entregable requerido de una tarea \x27done\x27 debe ser un archivo físico con tamaño > 0 bytes.",
-              `Escribe el contenido real en \x27${relPath}\x27 o regresa la tarea \x27${f.id}\x27 a \x27in-progress\x27.`
+              `Escape de directorio en \x27deprecated_files\x27 de la tarea \x27${f.id}\x27: \x27${relPath}\x27 sale de la raíz del repositorio.`,
+              "Pass-State Gating prohíbe referenciar archivos fuera del workspace.",
+              `Corrige \x27${relPath}\x27 en la tarea \x27${f.id}\x27 para que apunte a un archivo interno del proyecto.`
             );
           }
+          const canon = rel.replace(/\\/g, "/");
+          if (seenDep.has(canon)) {
+            fail(
+              `Ruta duplicada \x27${relPath}\x27 en \x27deprecated_files\x27 de la tarea \x27${f.id}\x27.`,
+              "Cada archivo deprecado debe declararse una sola vez por tarea.",
+              `Elimina la entrada duplicada \x27${relPath}\x27 en \x27deprecated_files\x27 de \x27${f.id}\x27.`
+            );
+          }
+          seenDep.add(canon);
         }
       }
       if (f.status === "done") {
@@ -1749,6 +1769,102 @@ fl_check="$(node -e '
             `Dependencia inválida \x27${depId}\x27 en la tarea \x27${f.id}\x27 dentro de \x27feature_list.json\x27.`,
             "Toda dependencia en \x27dependencies\x27 debe referenciar el \x27id\x27 existente de otra tarea distinta en \x27feature_list.json\x27.",
             `Corrige \x27dependencies\x27 en la tarea \x27${f.id}\x27.`
+          );
+        }
+      }
+    }
+
+    const byId = new Map(data.features.map((f) => [f.id, f]));
+    const ancestorsById = new Map();
+    const descendantsById = new Map(data.features.map((f) => [f.id, new Set()]));
+    const getAncs = (id, visited = new Set()) => {
+      if (ancestorsById.has(id)) return ancestorsById.get(id);
+      const anc = new Set();
+      const feat = byId.get(id);
+      for (const depId of (feat ? feat.dependencies : [])) {
+        if (!byId.has(depId) || visited.has(depId)) continue;
+        visited.add(depId);
+        anc.add(depId);
+        for (const t of getAncs(depId, visited)) anc.add(t);
+      }
+      ancestorsById.set(id, anc);
+      return anc;
+    };
+    for (const f of data.features) {
+      for (const ancId of getAncs(f.id)) descendantsById.get(ancId).add(f.id);
+    }
+    const canonRel = (p) => path.relative(resolvedRoot, path.resolve(resolvedRoot, p)).replace(/\\/g, "/");
+    const reqCanonById = new Map(data.features.map((f) => [f.id, new Set(f.required_files.map(canonRel))]));
+    const depCanonById = new Map(data.features.map((f) => [f.id, new Set((f.deprecated_files || []).map(canonRel))]));
+
+    for (const f of data.features) {
+      for (const relPath of (f.deprecated_files || [])) {
+        const canon = canonRel(relPath);
+        if (reqCanonById.get(f.id).has(canon)) {
+          fail(
+            `Candado Anti-Trampa #1 en tarea \x27${f.id}\x27: el archivo \x27${relPath}\x27 figura simultáneamente en \x27required_files\x27 y \x27deprecated_files\x27.`,
+            "Prohibido auto-deprecar un archivo requerido en la misma tarea.",
+            `Elimina \x27${relPath}\x27 de \x27deprecated_files\x27 o de \x27required_files\x27 en la tarea \x27${f.id}\x27.`
+          );
+        }
+        const ancs = ancestorsById.get(f.id) || new Set();
+        const fromAncestor = [...ancs].some((ancId) => reqCanonById.get(ancId)?.has(canon));
+        if (!fromAncestor) {
+          fail(
+            `Candado Anti-Trampa #2 en tarea \x27${f.id}\x27: \x27${relPath}\x27 en \x27deprecated_files\x27 no pertenece al \x27required_files\x27 de ningún ancestro en el DAG.`,
+            "Solo se permite deprecar archivos introducidos por tareas ancestrales alcanzables mediante dependencies.",
+            `Verifica el linaje en \x27dependencies\x27 o retira \x27${relPath}\x27 de \x27deprecated_files\x27 en \x27${f.id}\x27.`
+          );
+        }
+      }
+    }
+
+    for (const f of data.features) {
+      if (f.status !== "done") continue;
+      const descs = descendantsById.get(f.id) || new Set();
+      for (const relPath of f.required_files) {
+        const canon = canonRel(relPath);
+        const isDeprecated = [...descs].some((descId) => {
+          const desc = byId.get(descId);
+          if (!desc || (desc.status !== "in-progress" && desc.status !== "done")) return false;
+          if (!depCanonById.get(descId)?.has(canon)) return false;
+          const laterDescs = descendantsById.get(descId) || new Set();
+          return ![...laterDescs].some((lId) => {
+            const l = byId.get(lId);
+            return l && (l.status === "in-progress" || l.status === "done") && reqCanonById.get(lId)?.has(canon);
+          });
+        });
+        if (isDeprecated) continue;
+        const full = path.resolve(resolvedRoot, relPath);
+        if (!fs.existsSync(full)) {
+          fail(
+            `Pass-State Gating fallido en tarea \x27${f.id}\x27 (status=\x27done\x27): el archivo requerido \x27${relPath}\x27 no existe en disco.`,
+            "Prohibido marcar una tarea como \x27done\x27 si alguno de sus entregables físicos declarados en \x27required_files\x27 no existe y no ha sido deprecado en el DAG.",
+            `Crea el entregable real \x27${relPath}\x27 o regresa la tarea \x27${f.id}\x27 a \x27in-progress\x27.`
+          );
+        }
+        const st = fs.statSync(full);
+        if (!st.isFile() || st.size <= 0) {
+          fail(
+            `Pass-State Gating fallido en tarea \x27${f.id}\x27 (status=\x27done\x27): el archivo requerido \x27${relPath}\x27 no es un archivo regular o está vacío (0 bytes).`,
+            "Todo entregable requerido de una tarea \x27done\x27 debe ser un archivo físico con tamaño > 0 bytes.",
+            `Escribe el contenido real en \x27${relPath}\x27 o regresa la tarea \x27${f.id}\x27 a \x27in-progress\x27.`
+          );
+        }
+      }
+      for (const relPath of (f.deprecated_files || [])) {
+        const canon = canonRel(relPath);
+        const reRequired = [...descs].some((lId) => {
+          const l = byId.get(lId);
+          return l && (l.status === "in-progress" || l.status === "done") && reqCanonById.get(lId)?.has(canon);
+        });
+        if (reRequired) continue;
+        const full = path.resolve(resolvedRoot, relPath);
+        if (fs.existsSync(full)) {
+          fail(
+            `Candado Anti-Zombi fallido en tarea \x27${f.id}\x27 (status=\x27done\x27): el archivo deprecado \x27${relPath}\x27 sigue existiendo físicamente en disco.`,
+            "Cuando una tarea con deprecated_files pasa a \x27done\x27, los archivos deprecados deben haber sido eliminados físicamente del árbol fuente.",
+            `Elimina el archivo zombi \x27${relPath}\x27 con \x27git rm ${relPath}\x27 o regresa \x27${f.id}\x27 a \x27in-progress\x27.`
           );
         }
       }

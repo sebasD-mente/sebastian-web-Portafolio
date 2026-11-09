@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-08 19:11
-**Session ID:** sesion-013 (Planificación y Declaración en el Arnés de `feat-008`: Evolución de Raíz Event-Sourced DAG Deprecation con `deprecated_files` y Purga Física de Componentes Zombi)
-**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-007` en `"done"` y `feat-008` estructurada en `"not-started"` lista para que una sesión limpia la ejecute)
+**Last Updated:** 2026-11-08 19:25
+**Session ID:** sesion-014 (Implementación y Cierre Verificado de `feat-008`: Motor Event-Sourced DAG Deprecation con `deprecated_files` y Purga Física de 5 Componentes Zombi)
+**Active Feature:** Ninguna (`WIP = 0`; las 8 tareas del backlog `feat-001` a `feat-008` están en `"done"`)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -20,42 +20,45 @@
 - [x] **`feat-005` — Telemetría Ubuntu Home Lab (`/api/telemetry`), Terminal Interactiva en Vivo y Canal de Contratación (`status: "done"`)**.
 - [x] **`feat-006` — Empaquetado Docker Multi-Stage para Ubuntu Home Lab, SEO dekolabs.org y Guía de Despliegue (`status: "done"`)**.
 - [x] **`feat-007` — Refinamiento Visual v2.2: Des-saturación de Vista Principal, Header Fijo con Logo Personal, Hero IA/ADK/RAG y Tarjeta Deco Vintage Platform (`status: "done"`)**.
-- [x] **Planificación y Declaración Formal de `feat-008` en el Arnés (`sesion-013`)**:
-  - Diseño de la solución de raíz `Event-Sourced Pass-State Gating` con propiedad `deprecated_files`, historial `done` 100% inmutable, doble Candado Anti-Trampa (prohibido auto-deprecarse y exigencia de linaje ancestral en el DAG) y Candado Anti-Zombi inverso (prohibido dejar en disco un archivo declarado como deprecado en una tarea `"done"`).
-  - Documentación en la Sección 6 de `docs/product-specs/dekolabs-portfolio-spec.md`.
-  - Declaración de `feat-008` en `feature_list.json` (`status: "not-started"`, `dependencies: ["feat-007"]`).
-  - Contrato detallado en `sprint-contract.md` para extender `scripts/feature-list.schema.json` y `scripts/lib/harness-utils.mjs`, purgar con `git rm` los 5 componentes zombi de `src/ui/components/` y crear `tests/harness-deprecation-dag.test.ts`.
+- [x] **`feat-008` — Evolución de Raíz del Arnés (`Event-Sourced DAG Deprecation` con `deprecated_files`) y Purga Física de Componentes Zombi (`status: "done"`)**:
+  - Extensión de `scripts/feature-list.schema.json` con la propiedad opcional `deprecated_files`.
+  - Implementación del motor `Event-Sourced Pass-State Gating` tanto en `scripts/lib/harness-utils.mjs` (Puerta 2) como en `scripts/check-architecture.sh` (Puerta 1): Candado Anti-Trampa #1 (prohibido auto-deprecarse), Candado Anti-Trampa #2 (trazabilidad ancestral obligatoria en el DAG), Resolución Temporal de existencia en disco e inspección inversa con el Candado Anti-Zombi.
+  - Declaración de `deprecated_files` en `feat-008` dentro de `feature_list.json` y eliminación física con `git rm` de los 5 componentes zombi (`BenchmarksStrip.tsx`, `AgenticOrchestrationSection.tsx`, `TechStackMatrix.tsx`, `LiveTerminalSection.tsx` y `ContactAdvisorySection.tsx`), manteniendo el historial de `feat-001` a `feat-007` 100% intacto.
+  - Creación de `tests/harness-deprecation-dag.test.ts` (4 tests verificando el estado real y los 3 candados `Fail-Closed`), alcanzando `28/28 PASS` en 7 suites.
 
 ### What's In Progress
-- Ninguna tarea en curso (`WIP = 0`; `feat-008` declarada en `"not-started"` lista para que la siguiente sesión limpia la active a `"in-progress"` y la ejecute).
+- Ninguna tarea en curso (`WIP = 0`).
 
 ### What's Next
-1. En la nueva sesión limpia de ejecución: cambiar `"status": "in-progress"` en `feat-008` dentro de `feature_list.json` y ejecutar los 4 puntos del alcance declarado en `sprint-contract.md` y la Sección 6 de `docs/product-specs/dekolabs-portfolio-spec.md`.
+1. Esperar indicaciones de Sebastián para agregar la segunda tarjeta de sistema en producción o implementar las vistas/secciones correspondientes a los enlaces del Header (`STACK TECNOLOGICO`, `MAS PROYECTOS DE IA`, `CONTRATAR / HABLEMOS`).
 
 ## Blockers / Risks
 - Ninguno activo.
 
 ## Decisions Made
-- **Motor `Event-Sourced Pass-State Gating` con `deprecated_files` e Historial Inmutable (`feat-008`)**:
-  - Context: Conservar archivos `.tsx` obsoletos en `src/ui/components/` para no romper el `Pass-State Gating` de tareas históricas dejaba código zombi en el repositorio, mientras que editar manualmente los `required_files` de tareas pasadas (`feat-001`..`feat-006`) rompía la inmutabilidad del historial y abría la puerta a que los agentes hicieran trampa en refactorizaciones grandes.
+- **Sincronización Simétrica de `Event-Sourced Pass-State Gating` en Puerta 1 y Puerta 2 (`feat-008`)**:
+  - Context: Además de `validateFeatureListObject` en `scripts/lib/harness-utils.mjs` (Puerta 2), el vigilante `scripts/check-architecture.sh` (Puerta 1) también verifica la existencia en disco de `required_files` para las tareas en `"done"`.
   - Alternatives considered:
-    1. *Editar retroactivamente `required_files` en `feat-002`, `feat-004` y `feat-005` cada vez que se borra un archivo*: Descartado porque destruye la trazabilidad histórica y enseña a los agentes a alterar contratos pasados.
-    2. *Implementar `deprecated_files` hacia adelante en el grafo DAG (`scripts/lib/harness-utils.mjs` y `scripts/feature-list.schema.json`) con trazabilidad ancestral obligatoria y Candado Anti-Zombi inverso*: Elegido porque preserva el historial 100% inmutable, impide trampas de auto-deprecación y exige mecánicamente que los archivos deprecados sean eliminados físicamente del disco.
+    1. *Actualizar solo `scripts/lib/harness-utils.mjs`*: Descartado porque `scripts/check-architecture.sh` fallaría en la Puerta 1 al no reconocer `deprecated_files` en el grafo DAG.
+    2. *Implementar las mismas reglas de linaje DAG, exención temporal y Candado Anti-Zombi tanto en `scripts/lib/harness-utils.mjs` como en `scripts/check-architecture.sh`*: Elegido porque garantiza coherencia total entre la Puerta 1 y la Puerta 2.
 
 ## Files Modified This Session
-- `docs/product-specs/dekolabs-portfolio-spec.md` - Adición de la Sección 6 con la especificación del motor `Event-Sourced DAG Deprecation` y purga de los 5 archivos zombi
-- `feature_list.json` - Registro de `feat-008` (`status: "not-started"`, `dependencies: ["feat-007"]`)
-- `sprint-contract.md` - Contrato formal de ejecución para `feat-008`
-- `progress.md` - Registro de la sesión de planificación `sesion-013`
-- `session-handoff.md` - Acta de entrega lista para la nueva sesión limpia
+- `scripts/feature-list.schema.json` - Propiedad opcional `deprecated_files`
+- `scripts/lib/harness-utils.mjs` - Motor `Event-Sourced Pass-State Gating` con `computeDagLineage` y 3 candados (`Fail-Closed`)
+- `scripts/check-architecture.sh` - Sincronización de `deprecated_files`, linaje DAG y Candado Anti-Zombi en Puerta 1
+- `tests/harness-deprecation-dag.test.ts` - Suite unitaria de 4 tests para el nuevo motor
+- `src/ui/components/BenchmarksStrip.tsx` - Eliminado físicamente (`git rm`)
+- `src/ui/components/AgenticOrchestrationSection.tsx` - Eliminado físicamente (`git rm`)
+- `src/ui/components/TechStackMatrix.tsx` - Eliminado físicamente (`git rm`)
+- `src/ui/components/LiveTerminalSection.tsx` - Eliminado físicamente (`git rm`)
+- `src/ui/components/ContactAdvisorySection.tsx` - Eliminado físicamente (`git rm`)
+- `feature_list.json` - Cierre de `feat-008` en `"done"` con `deprecated_files` y `evidence`
+- `sprint-contract.md`, `progress.md`, `session-handoff.md` - Sincronización de cierre en `CLEAN STATE`
 
 ## Verification Evidence
-- [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas, vitest 24/24 PASS en 6 suites, next build standalone OK y 0 CRLF)`
+- [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas, vitest 28/28 PASS en 7 suites, next build standalone OK y 0 CRLF)`
 - [x] Architecture & Red-Pen check: `bash scripts/check-architecture.sh` -> `OK: Límites arquitectónicos, invariantes de 6 capas, Auto-Memoria, Seguridad e higiene estructural verificados sin violaciones.`
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `command and output verified: Overall: 100/100 (25/25 checks PASS)`
 
 ## Notes for Next Session
-En la siguiente sesión limpia de ejecución:
-1. Ejecuta el Startup Workflow (`pwd`, lectura de `AGENTS.md`, `harness.config.json`, `progress.md`, `session-handoff.md`, `feature_list.json`, `sprint-contract.md` y Sección 6 de `docs/product-specs/dekolabs-portfolio-spec.md`, seguido de `bash ./init.sh`).
-2. Cambia `feat-008` a `"status": "in-progress"` en `feature_list.json` (`WIP = 1`).
-3. Implementa `feat-008` conforme a `sprint-contract.md`, verifica con `bash ./init.sh` y cierra `feat-008` en `"done"`.
+- Las 8 tareas (`feat-001` a `feat-008`) están en `"done"` (`WIP = 0`) y `src/ui/components/` contiene únicamente los 5 componentes activos reales (`AppShell.tsx`, `CodeInspectorTabs.tsx`, `HeroSection.tsx`, `ProductionSystemsSection.tsx` y `SystemDetailView.tsx`).

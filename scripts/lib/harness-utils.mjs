@@ -45,6 +45,7 @@ const ALLOWED_FEATURE_KEYS = new Set([
   'status',
   'dependencies',
   'required_files',
+  'deprecated_files',
   'verification',
   'evidence',
   'notes'
@@ -847,6 +848,43 @@ function isSafeRepoRelativePath(resolvedRoot, relPath) {
   return Boolean(rel) && rel !== '.' && rel !== '..' && !rel.startsWith('../') && !rel.startsWith('..\\') && !path.isAbsolute(rel);
 }
 
+function canonicalizeRepoRelPath(resolvedRoot, relPath) {
+  return path.relative(resolvedRoot, path.resolve(resolvedRoot, relPath)).replace(/\\/g, '/');
+}
+
+function computeDagLineage(features) {
+  const byId = new Map(features.map((f) => [f.id, f]));
+  const ancestorsById = new Map();
+  const descendantsById = new Map(features.map((f) => [f.id, new Set()]));
+
+  function getAncestors(id, visited = new Set()) {
+    if (ancestorsById.has(id)) return ancestorsById.get(id);
+    const anc = new Set();
+    const feat = byId.get(id);
+    if (feat && Array.isArray(feat.dependencies)) {
+      for (const depId of feat.dependencies) {
+        if (!byId.has(depId) || visited.has(depId)) continue;
+        visited.add(depId);
+        anc.add(depId);
+        for (const transId of getAncestors(depId, visited)) {
+          anc.add(transId);
+        }
+      }
+    }
+    ancestorsById.set(id, anc);
+    return anc;
+  }
+
+  for (const f of features) {
+    const ancs = getAncestors(f.id);
+    for (const ancId of ancs) {
+      descendantsById.get(ancId)?.add(f.id);
+    }
+  }
+
+  return { byId, ancestorsById, descendantsById };
+}
+
 export function validateFeatureListObject(parsed, root = process.cwd()) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return { valid: false, reason: 'feature_list.json root must be a JSON object' };
@@ -896,6 +934,23 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
       return { valid: false, reason: `feature '${feature.id}' is missing required fields, uses an invalid status, escapes repo root in required_files, or references an unknown dependency` };
     }
 
+    if (feature.deprecated_files !== undefined) {
+      if (
+        !Array.isArray(feature.deprecated_files)
+        || !feature.deprecated_files.every((relPath) => isSafeRepoRelativePath(resolvedRoot, relPath))
+      ) {
+        return { valid: false, reason: `feature '${feature.id}' deprecated_files must be an array of safe repo-relative file paths` };
+      }
+      const seenDep = new Set();
+      for (const relPath of feature.deprecated_files) {
+        const canon = canonicalizeRepoRelPath(resolvedRoot, relPath);
+        if (seenDep.has(canon)) {
+          return { valid: false, reason: `feature '${feature.id}' contains duplicate path '${relPath}' in deprecated_files` };
+        }
+        seenDep.add(canon);
+      }
+    }
+
     if (feature.area !== undefined && (typeof feature.area !== 'string' || feature.area.trim().length === 0)) {
       return { valid: false, reason: `feature '${feature.id}' area must be a non-empty string when provided` };
     }
@@ -918,23 +973,102 @@ export function validateFeatureListObject(parsed, root = process.cwd()) {
     if (!hasEvidenceIfDone) {
       return { valid: false, reason: `feature '${feature.id}' is marked done without executable verification evidence (min 10 chars)` };
     }
-
-    const hasPhysicalFilesIfDone = !isDone || feature.required_files.every((relPath) => {
-      const full = path.resolve(resolvedRoot, relPath);
-      try {
-        return existsSync(full) && statSync(full).isFile() && statSync(full).size > 0;
-      } catch {
-        return false;
-      }
-    });
-    if (!hasPhysicalFilesIfDone) {
-      return { valid: false, reason: `feature '${feature.id}' is marked done with missing, non-file, or empty required_files on disk` };
-    }
   }
 
   const cycle = findDependencyCycle(parsed.features);
   if (cycle) {
     return { valid: false, reason: `circular dependency detected in DAG: ${cycle.join(' -> ')}` };
+  }
+
+  const { byId, ancestorsById, descendantsById } = computeDagLineage(parsed.features);
+  const reqCanonById = new Map();
+  const depCanonById = new Map();
+  for (const feature of parsed.features) {
+    reqCanonById.set(
+      feature.id,
+      new Set(feature.required_files.map((relPath) => canonicalizeRepoRelPath(resolvedRoot, relPath)))
+    );
+    depCanonById.set(
+      feature.id,
+      new Set((feature.deprecated_files || []).map((relPath) => canonicalizeRepoRelPath(resolvedRoot, relPath)))
+    );
+  }
+
+  // Candados Anti-Trampa #1 y #2 para deprecated_files
+  for (const feature of parsed.features) {
+    if (!Array.isArray(feature.deprecated_files) || feature.deprecated_files.length === 0) continue;
+    const ownRequired = reqCanonById.get(feature.id);
+    const ancestors = ancestorsById.get(feature.id) || new Set();
+
+    for (const relPath of feature.deprecated_files) {
+      const canon = canonicalizeRepoRelPath(resolvedRoot, relPath);
+      if (ownRequired.has(canon)) {
+        return {
+          valid: false,
+          reason: `feature '${feature.id}' cannot list '${relPath}' in both required_files and deprecated_files (self-deprecation forbidden)`
+        };
+      }
+      const introducedByAncestor = [...ancestors].some((ancId) => reqCanonById.get(ancId)?.has(canon));
+      if (!introducedByAncestor) {
+        return {
+          valid: false,
+          reason: `feature '${feature.id}' cannot deprecate '${relPath}' because no ancestor in its dependency DAG declared it in required_files`
+        };
+      }
+    }
+  }
+
+  // Resolución Temporal de Existencia en Disco (Pass-State Gating Evolutivo) y Candado Anti-Zombi Inverso
+  for (const feature of parsed.features) {
+    if (feature.status !== 'done') continue;
+    const descendants = descendantsById.get(feature.id) || new Set();
+
+    for (const relPath of feature.required_files) {
+      const canon = canonicalizeRepoRelPath(resolvedRoot, relPath);
+      const deprecatedByActiveOrDoneDescendant = [...descendants].some((descId) => {
+        const desc = byId.get(descId);
+        if (!desc || (desc.status !== 'in-progress' && desc.status !== 'done')) return false;
+        if (!depCanonById.get(descId)?.has(canon)) return false;
+        const laterDescendants = descendantsById.get(descId) || new Set();
+        const reRequiredLater = [...laterDescendants].some((laterId) => {
+          const later = byId.get(laterId);
+          return later && (later.status === 'in-progress' || later.status === 'done') && reqCanonById.get(laterId)?.has(canon);
+        });
+        return !reRequiredLater;
+      });
+
+      if (deprecatedByActiveOrDoneDescendant) continue;
+
+      const full = path.resolve(resolvedRoot, relPath);
+      let fileOk = false;
+      try {
+        fileOk = existsSync(full) && statSync(full).isFile() && statSync(full).size > 0;
+      } catch {
+        fileOk = false;
+      }
+      if (!fileOk) {
+        return { valid: false, reason: `feature '${feature.id}' is marked done with missing, non-file, or empty required_files on disk (${relPath})` };
+      }
+    }
+
+    if (Array.isArray(feature.deprecated_files)) {
+      for (const relPath of feature.deprecated_files) {
+        const canon = canonicalizeRepoRelPath(resolvedRoot, relPath);
+        const reRequiredLater = [...descendants].some((laterId) => {
+          const later = byId.get(laterId);
+          return later && (later.status === 'in-progress' || later.status === 'done') && reqCanonById.get(laterId)?.has(canon);
+        });
+        if (reRequiredLater) continue;
+
+        const full = path.resolve(resolvedRoot, relPath);
+        if (existsSync(full)) {
+          return {
+            valid: false,
+            reason: `feature '${feature.id}' is marked done but deprecated file '${relPath}' still exists on disk (zombie file)`
+          };
+        }
+      }
+    }
   }
 
   return { valid: true, reason: null };

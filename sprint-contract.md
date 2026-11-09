@@ -4,10 +4,10 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
 
 ---
 
-## Estado Actual del Contrato (`WIP = 0` — `feat-008` Planificada y Lista para Ejecución en Sesión Limpia)
-- **Última tarea completada (`done`):** `feat-007` (*Refinamiento Visual v2.2: Des-saturación de Vista Principal, Header Fijo con Logo Personal, Hero IA/ADK/RAG y Tarjeta Deco Vintage Platform*).
-- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; las 7 tareas `feat-001`..`feat-007` están en `"done"` y `feat-008` está en `"not-started"` lista para que la siguiente sesión limpia la active a `"in-progress"`).
-- **Siguiente tarea secuencial lista para iniciar:** `feat-008` (*Evolución de Raíz del Arnés: Event-Sourced DAG Deprecation con `deprecated_files` y Purga Física de Componentes Zombi*).
+## Estado Actual del Contrato (`WIP = 0` — Todas las Tareas `feat-001` a `feat-008` Completadas en `"done"`)
+- **Última tarea completada (`done`):** `feat-008` (*Evolución de Raíz del Arnés: Event-Sourced DAG Deprecation con `deprecated_files` y Purga Física de Componentes Zombi*).
+- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; las 8 tareas `feat-001`..`feat-008` están en `"done"`).
+- **Siguiente tarea secuencial lista para iniciar:** Ninguna pendiente en el backlog actual; listo para conectar los enlaces del Header (`STACK TECNOLOGICO`, `MAS PROYECTOS DE IA`, `CONTRATAR / HABLEMOS`) o el siguiente sistema en producción cuando Sebastián lo indique.
 - **Especificación maestra de referencia:** `docs/product-specs/dekolabs-portfolio-spec.md` (Secciones 5 y 6), `docs/design-docs/homelab-deployment.md`, `docs/RELIABILITY.md`, `docs/SECURITY.md` y `ARCHITECTURE.md`.
 
 ## Justificación de Dependencias en `package.json` (Regla Dura #4 de `ARCHITECTURE.md`)

@@ -230,14 +230,22 @@
       "area": "harness-core-evolution",
       "user_visible_behavior": "El arnés soporta refactorizaciones y eliminaciones de archivos mediante 'deprecated_files' en el grafo DAG manteniendo el historial 'done' 100% inmutable, bloqueando archivos zombi en disco y dejando 'src/ui/components/' únicamente con los 5 componentes activos reales ('AppShell.tsx', 'HeroSection.tsx', 'ProductionSystemsSection.tsx', 'SystemDetailView.tsx', 'CodeInspectorTabs.tsx').",
       "priority": "P0",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-007"
       ],
       "required_files": [
         "scripts/feature-list.schema.json",
         "scripts/lib/harness-utils.mjs",
+        "scripts/check-architecture.sh",
         "tests/harness-deprecation-dag.test.ts"
+      ],
+      "deprecated_files": [
+        "src/ui/components/BenchmarksStrip.tsx",
+        "src/ui/components/AgenticOrchestrationSection.tsx",
+        "src/ui/components/TechStackMatrix.tsx",
+        "src/ui/components/LiveTerminalSection.tsx",
+        "src/ui/components/ContactAdvisorySection.tsx"
       ],
       "verification": [
         "bash ./init.sh",
@@ -247,6 +255,7 @@
         "npm test",
         "npm run build"
       ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas, Event-Sourced DAG Deprecation activo y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS con los 5 archivos zombi purgados físicamente y feat-001..feat-007 100% inmutables; Puerta 3 typecheck OK, lint OK, vitest 28/28 tests PASS en 7 suites incluyendo tests/harness-deprecation-dag.test.ts, next build standalone OK).",
       "notes": "Al iniciar la implementación de feat-008: una vez agregado 'deprecated_files' a ALLOWED_FEATURE_KEYS en scripts/lib/harness-utils.mjs y scripts/feature-list.schema.json, añadir la propiedad '\"deprecated_files\": [\"src/ui/components/BenchmarksStrip.tsx\", \"src/ui/components/AgenticOrchestrationSection.tsx\", \"src/ui/components/TechStackMatrix.tsx\", \"src/ui/components/LiveTerminalSection.tsx\", \"src/ui/components/ContactAdvisorySection.tsx\"]' a este bloque feat-008 en feature_list.json y eliminar físicamente esos 5 archivos con 'git rm' (nunca usar rm -rf ni Remove-Item -Recurse -Force). Prohibido modificar required_files de feat-001 a feat-007."
     }
   ]
