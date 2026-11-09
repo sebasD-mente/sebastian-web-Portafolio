@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-08 18:50
-**Session ID:** sesion-012 (Ejecución y Cierre de `feat-007`: Refinamiento Visual v2.2, Des-saturación de Vista Principal, Header Fijo con Logo Personal, Hero IA/ADK/RAG y Tarjeta Deco Vintage Platform)
-**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-007` en `"done"`)
+**Last Updated:** 2026-11-08 19:11
+**Session ID:** sesion-013 (Planificación y Declaración en el Arnés de `feat-008`: Evolución de Raíz Event-Sourced DAG Deprecation con `deprecated_files` y Purga Física de Componentes Zombi)
+**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-007` en `"done"` y `feat-008` estructurada en `"not-started"` lista para que una sesión limpia la ejecute)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -19,46 +19,35 @@
 - [x] **`feat-004` — Módulo de Orquestación de Agentes IA, Harness Engineering v2.1 y Matriz de Stack Comercial (`status: "done"`)**.
 - [x] **`feat-005` — Telemetría Ubuntu Home Lab (`/api/telemetry`), Terminal Interactiva en Vivo y Canal de Contratación (`status: "done"`)**.
 - [x] **`feat-006` — Empaquetado Docker Multi-Stage para Ubuntu Home Lab, SEO dekolabs.org y Guía de Despliegue (`status: "done"`)**.
-- [x] **`feat-007` — Refinamiento Visual v2.2: Des-saturación de Vista Principal, Header Fijo con Logo Personal, Hero IA/ADK/RAG y Tarjeta Deco Vintage Platform (`status: "done"`)**:
-  - Activos oficiales copiados desde `C:\Users\sebas\Documents\Antigravity Files\ARCHIVOS PORTAFOLIO` hacia `public/assets/logo-sebastian-j.png` y `public/assets/deco-vintage-preview.png`.
-  - Ajuste de tipografía en `src/app/layout.tsx` y `src/app/globals.css` (`Space Grotesk`, `Inter`, `JetBrains Mono`, `Share Tech Mono`, `Silkscreen`).
-  - Barra superior fija en `src/ui/components/AppShell.tsx` con el logo personal a la izquierda, los 3 enlaces exactos en 2 líneas centradas (`SISTEMAS EN PRODUCCIÓN`, `STACK TECNOLOGICO`, `MAS PROYECTOS DE IA`) y el botón negro `CONTRATAR / HABLEMOS` a la derecha.
-  - Hero des-saturado en `src/ui/components/HeroSection.tsx` con el titular exacto de IA implícita / Google ADK / RAG, subtítulo exacto y el monitor `KERNEL & HOME LAB TELEMETRY` enmarcado en blanco a la derecha.
-  - Des-saturación completa de `src/app/page.tsx` dejando únicamente Header, Hero y `SISTEMAS EN PRODUCCIÓN`.
-  - Tarjeta de Vista Preliminar de `DECO VINTAGE PLATFORM` (`PROJECT 01 // E-COMMERCE & CLOUD MEDIA ENGINE`, `v3.4.0 PRODUCTION`, captura real con ventana y punto verde, 6 pills de stack con `GOOGLE CLOUD STORAGE` destacado en azul, recuadro de `ARQUITECTURA` y `DISPONIBILIDAD`, y botones `PROBAR SISTEMA EN VIVO ↗` hacia `https://www.decovintage.online` y `{} ARQUITECTURA & REPO` hacia `/sistemas/deco-vintage-platform`).
-  - Sincronización de las 6 suites de pruebas en `tests/` (`24/24 PASS`).
+- [x] **`feat-007` — Refinamiento Visual v2.2: Des-saturación de Vista Principal, Header Fijo con Logo Personal, Hero IA/ADK/RAG y Tarjeta Deco Vintage Platform (`status: "done"`)**.
+- [x] **Planificación y Declaración Formal de `feat-008` en el Arnés (`sesion-013`)**:
+  - Diseño de la solución de raíz `Event-Sourced Pass-State Gating` con propiedad `deprecated_files`, historial `done` 100% inmutable, doble Candado Anti-Trampa (prohibido auto-deprecarse y exigencia de linaje ancestral en el DAG) y Candado Anti-Zombi inverso (prohibido dejar en disco un archivo declarado como deprecado en una tarea `"done"`).
+  - Documentación en la Sección 6 de `docs/product-specs/dekolabs-portfolio-spec.md`.
+  - Declaración de `feat-008` en `feature_list.json` (`status: "not-started"`, `dependencies: ["feat-007"]`).
+  - Contrato detallado en `sprint-contract.md` para extender `scripts/feature-list.schema.json` y `scripts/lib/harness-utils.mjs`, purgar con `git rm` los 5 componentes zombi de `src/ui/components/` y crear `tests/harness-deprecation-dag.test.ts`.
 
 ### What's In Progress
-- Ninguna tarea en curso (`WIP = 0`; las 7 tareas `feat-001` a `feat-007` están cerradas en `"done"`).
+- Ninguna tarea en curso (`WIP = 0`; `feat-008` declarada en `"not-started"` lista para que la siguiente sesión limpia la active a `"in-progress"` y la ejecute).
 
 ### What's Next
-1. El portafolio está listo para inspección visual (`npm run dev`) o para agregar el Proyecto 02 / conectar el monitor en tiempo real del Home Lab cuando Sebastián lo solicite.
+1. En la nueva sesión limpia de ejecución: cambiar `"status": "in-progress"` en `feat-008` dentro de `feature_list.json` y ejecutar los 4 puntos del alcance declarado en `sprint-contract.md` y la Sección 6 de `docs/product-specs/dekolabs-portfolio-spec.md`.
 
 ## Blockers / Risks
 - Ninguno activo.
 
 ## Decisions Made
-- **Priorización de Imagen LCP (`fetchPriority="high"`) y preservación de `Pass-State Gating`**:
-  - Context: En `feat-007`, la captura de `DECO VINTAGE PLATFORM` (`/assets/deco-vintage-preview.png`) es la imagen principal de mayor tamaño en la vista inicial, mientras que los módulos de prototipo (`BenchmarksStrip`, `AgenticOrchestrationSection`, etc.) debían dejar de saturar `src/app/page.tsx`.
+- **Motor `Event-Sourced Pass-State Gating` con `deprecated_files` e Historial Inmutable (`feat-008`)**:
+  - Context: Conservar archivos `.tsx` obsoletos en `src/ui/components/` para no romper el `Pass-State Gating` de tareas históricas dejaba código zombi en el repositorio, mientras que editar manualmente los `required_files` de tareas pasadas (`feat-001`..`feat-006`) rompía la inmutabilidad del historial y abría la puerta a que los agentes hicieran trampa en refactorizaciones grandes.
   - Alternatives considered:
-    1. *Usar `loading="lazy"` en la captura de `DECO VINTAGE PLATFORM` o borrar archivos históricos de `src/ui/components/`*: Descartado porque degradaría el LCP y rompería el `Pass-State Gating` de `feat-001`..`feat-006`.
-    2. *Aplicar `fetchPriority="high"` sin `loading="lazy"` en `/assets/deco-vintage-preview.png` y desmontar los componentes de prototipo en `src/app/page.tsx` conservando sus archivos en disco*: Elegido porque optimiza Core Web Vitals y mantiene `100/100` en las 3 puertas del arnés.
+    1. *Editar retroactivamente `required_files` en `feat-002`, `feat-004` y `feat-005` cada vez que se borra un archivo*: Descartado porque destruye la trazabilidad histórica y enseña a los agentes a alterar contratos pasados.
+    2. *Implementar `deprecated_files` hacia adelante en el grafo DAG (`scripts/lib/harness-utils.mjs` y `scripts/feature-list.schema.json`) con trazabilidad ancestral obligatoria y Candado Anti-Zombi inverso*: Elegido porque preserva el historial 100% inmutable, impide trampas de auto-deprecación y exige mecánicamente que los archivos deprecados sean eliminados físicamente del disco.
 
 ## Files Modified This Session
-- `public/assets/logo-sebastian-j.png` - Logo de firma personal (`Sebastian J — AI Developer & Agentic Builder`)
-- `public/assets/deco-vintage-preview.png` - Captura real del Proyecto 01 (`Deco Vintage Platform`)
-- `src/types/portfolio.ts` - Extensión de contratos `SiteIdentity` y `ProductionSystem`
-- `src/config/site.config.ts` - Textos exactos del Hero y los 3 enlaces de navegación + CTA
-- `src/repo/systems.repo.ts` - Proyecto 01 `DECO VINTAGE PLATFORM` (`deco-vintage-platform`) con todos los metadatos y blueprint técnico
-- `src/service/systems.service.ts` - Selector `getFeaturedHomeProductionSystems()` para exhibición curada en portada
-- `src/app/layout.tsx` - Carga de fuentes (`Space Grotesk`, `Inter`, `JetBrains Mono`, `Share Tech Mono`, `Silkscreen`)
-- `src/app/globals.css` - Clases tipográficas `.mono-pixel` y `.mono-nav`
-- `src/app/page.tsx` - Des-saturación de la vista principal dejando solo Header, Hero y `SISTEMAS EN PRODUCCIÓN`
-- `src/ui/components/AppShell.tsx` - Header fijo con logo personal, 3 enlaces centrados y botón negro `CONTRATAR / HABLEMOS`
-- `src/ui/components/HeroSection.tsx` - Hero limpio a la izquierda + monitor `KERNEL & HOME LAB TELEMETRY` enmarcado en blanco a la derecha
-- `src/ui/components/ProductionSystemsSection.tsx` - Sección `SISTEMAS EN PRODUCCIÓN` y tarjeta equilibrada de `DECO VINTAGE PLATFORM`
-- `tests/site.service.test.ts`, `tests/systems.service.test.ts`, `tests/system-detail.test.ts`, `tests/deployment-config.test.ts` - Sincronización de pruebas unitarias (`24/24 PASS`)
-- `feature_list.json`, `sprint-contract.md`, `progress.md`, `session-handoff.md` - Cierre formal de `feat-007`
+- `docs/product-specs/dekolabs-portfolio-spec.md` - Adición de la Sección 6 con la especificación del motor `Event-Sourced DAG Deprecation` y purga de los 5 archivos zombi
+- `feature_list.json` - Registro de `feat-008` (`status: "not-started"`, `dependencies: ["feat-007"]`)
+- `sprint-contract.md` - Contrato formal de ejecución para `feat-008`
+- `progress.md` - Registro de la sesión de planificación `sesion-013`
+- `session-handoff.md` - Acta de entrega lista para la nueva sesión limpia
 
 ## Verification Evidence
 - [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas, vitest 24/24 PASS en 6 suites, next build standalone OK y 0 CRLF)`
@@ -66,4 +55,7 @@
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `command and output verified: Overall: 100/100 (25/25 checks PASS)`
 
 ## Notes for Next Session
-Todas las tareas (`feat-001` a `feat-007`) están en `"done"` y verificadas al `100/100`.
+En la siguiente sesión limpia de ejecución:
+1. Ejecuta el Startup Workflow (`pwd`, lectura de `AGENTS.md`, `harness.config.json`, `progress.md`, `session-handoff.md`, `feature_list.json`, `sprint-contract.md` y Sección 6 de `docs/product-specs/dekolabs-portfolio-spec.md`, seguido de `bash ./init.sh`).
+2. Cambia `feat-008` a `"status": "in-progress"` en `feature_list.json` (`WIP = 1`).
+3. Implementa `feat-008` conforme a `sprint-contract.md`, verifica con `bash ./init.sh` y cierra `feat-008` en `"done"`.

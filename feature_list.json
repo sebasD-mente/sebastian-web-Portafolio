@@ -222,6 +222,32 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 24/24 tests PASS en 6 suites incluyendo Deco Vintage Platform y nuevos textos Hero/Header, next build standalone OK con ruta /sistemas/deco-vintage-platform).",
       "notes": "CRÍTICO: (1) No eliminar del disco ningún archivo listado en required_files de feat-001 a feat-006 (como BenchmarksStrip.tsx, AgenticOrchestrationSection.tsx, etc.) para no romper Pass-State Gating; simplemente dejar de renderizarlos en src/app/page.tsx. (2) Respetar las 6 capas (src/app/ y src/ui/ solo importan de src/service/, src/runtime/, src/ui/ y src/types/). (3) Sincronizar tests/systems.service.test.ts, tests/system-detail.test.ts, tests/site.service.test.ts y tests/deployment-config.test.ts con el nuevo slug 'deco-vintage-platform' y los textos actualizados."
+    },
+    {
+      "id": "feat-008",
+      "name": "Evolución de Raíz del Arnés (Event-Sourced DAG Deprecation con deprecated_files) y Purga Física de Componentes Zombi",
+      "description": "Implementar la solución arquitectónica de raíz para refactorizaciones con eliminación de archivos (Sección 6 de docs/product-specs/dekolabs-portfolio-spec.md): (1) Extender 'scripts/feature-list.schema.json' y 'ALLOWED_FEATURE_KEYS' en 'scripts/lib/harness-utils.mjs' para soportar la propiedad opcional 'deprecated_files' (arreglo de rutas relativas seguras); (2) Implementar en 'validateFeatureListObject' dentro de 'scripts/lib/harness-utils.mjs' el motor Event-Sourced Pass-State Gating con 3 candados: Candado Anti-Trampa #1 (ningún archivo en deprecated_files puede estar en required_files de la misma tarea), Candado Anti-Trampa #2 (todo archivo en deprecated_files debe pertenecer al required_files de una tarea ancestral alcanzable por dependencies en el DAG), Resolución Temporal (eximir de existir en disco a los required_files de tareas ancestrales 'done' cuando una tarea descendiente 'in-progress' o 'done' los declara en deprecated_files), y Candado Anti-Zombi Inverso (exigir que cuando una tarea está en 'done', los archivos de su deprecated_files NO existan físicamente en disco); (3) Declarar 'deprecated_files' en 'feat-008' dentro de 'feature_list.json' y eliminar físicamente del disco ('git rm') los 5 componentes visuales zombi de prototipo ('src/ui/components/BenchmarksStrip.tsx', 'src/ui/components/AgenticOrchestrationSection.tsx', 'src/ui/components/TechStackMatrix.tsx', 'src/ui/components/LiveTerminalSection.tsx', 'src/ui/components/ContactAdvisorySection.tsx') sin tocar el historial de 'feat-001'..'feat-007'; y (4) Crear la suite de pruebas 'tests/harness-deprecation-dag.test.ts' verificando todos los candados positivos y Fail-Closed del nuevo motor.",
+      "area": "harness-core-evolution",
+      "user_visible_behavior": "El arnés soporta refactorizaciones y eliminaciones de archivos mediante 'deprecated_files' en el grafo DAG manteniendo el historial 'done' 100% inmutable, bloqueando archivos zombi en disco y dejando 'src/ui/components/' únicamente con los 5 componentes activos reales ('AppShell.tsx', 'HeroSection.tsx', 'ProductionSystemsSection.tsx', 'SystemDetailView.tsx', 'CodeInspectorTabs.tsx').",
+      "priority": "P0",
+      "status": "not-started",
+      "dependencies": [
+        "feat-007"
+      ],
+      "required_files": [
+        "scripts/feature-list.schema.json",
+        "scripts/lib/harness-utils.mjs",
+        "tests/harness-deprecation-dag.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "notes": "Al iniciar la implementación de feat-008: una vez agregado 'deprecated_files' a ALLOWED_FEATURE_KEYS en scripts/lib/harness-utils.mjs y scripts/feature-list.schema.json, añadir la propiedad '\"deprecated_files\": [\"src/ui/components/BenchmarksStrip.tsx\", \"src/ui/components/AgenticOrchestrationSection.tsx\", \"src/ui/components/TechStackMatrix.tsx\", \"src/ui/components/LiveTerminalSection.tsx\", \"src/ui/components/ContactAdvisorySection.tsx\"]' a este bloque feat-008 en feature_list.json y eliminar físicamente esos 5 archivos con 'git rm' (nunca usar rm -rf ni Remove-Item -Recurse -Force). Prohibido modificar required_files de feat-001 a feat-007."
     }
   ]
 }

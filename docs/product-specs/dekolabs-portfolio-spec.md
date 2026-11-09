@@ -186,3 +186,31 @@ Para lograr la máxima similitud visual con la captura refinada por Sebastián:
     - **Botones**:
       - `PROBAR SISTEMA EN VIVO ↗` → `https://www.decovintage.online`
       - `{} ARQUITECTURA & REPO` → Abre el Blueprint detallado (`/sistemas/deco-vintage-platform`).
+
+---
+
+## 6. Evolución de Raíz del Arnés v2.2 (`feat-008`) — Historial Inmutable (`Event-Sourced DAG`), `deprecated_files` y Eliminación Física de Código Zombi
+
+Por decisión arquitectónica de Sebastián, se resuelve de raíz el problema de acumulación de archivos obsoletos tras refactorizaciones o cambios drásticos de interfaz, sin alterar jamás el historial de tareas cerradas (`feat-001`..`feat-007`) y sin abrir brechas para que un agente haga trampa.
+
+### 6.1 Reglas Mecánicas del Motor `Event-Sourced Pass-State Gating` (`scripts/lib/harness-utils.mjs` y `scripts/feature-list.schema.json`)
+1. **Historial Inmutable (`Append-Only`)**: Las tareas en estado `"done"` (`feat-001` a `feat-007`) conservan intactos sus arreglos `required_files` y su `evidence` como registro histórico auditable.
+2. **Propiedad Declarativa `deprecated_files` en `feature_list.json`**:
+   - Cada tarea en `features` puede declarar opcionalmente `"deprecated_files": ["ruta/relativa/archivo.tsx", ...]`.
+   - Todas las rutas en `deprecated_files` deben ser rutas relativas seguras dentro del repositorio (`isSafeRepoRelativePath`) y normalizarse para comparación canónica (`path.resolve(resolvedRoot, relPath)`).
+3. **Candado Anti-Trampa #1 (Prohibido Auto-Deprecarse)**:
+   - Ningún archivo listado en `feature.deprecated_files` puede figurar simultáneamente en `feature.required_files` de la misma tarea.
+4. **Candado Anti-Trampa #2 (Trazabilidad Ancestral en el DAG)**:
+   - Todo archivo listado en `feature.deprecated_files` debe haber sido introducido previamente en `required_files` por al menos una tarea **ancestral** (alcanzable transitivamente siguiendo `dependencies`) de `feature`. Un agente jamás puede deprecar archivos ajenos al linaje del DAG ni inventar rutas inexistentes en el historial.
+5. **Resolución Temporal de Existencia en Disco (`Pass-State Gating` Evolutivo)**:
+   - Para cualquier tarea `F` en `"done"`, cada archivo `P` en `F.required_files` debe existir físicamente en disco (`existsSync(P) && isFile() && size > 0`), **EXCEPTO** cuando exista una tarea descendiente `D` en el DAG (con `D.status === "in-progress"` o `D.status === "done"`) que declare `P` en `D.deprecated_files` (y ninguna tarea posterior a `D` haya vuelto a requerir `P` en `required_files`).
+6. **Candado Anti-Zombi (Verificación Inversa de Limpieza Real)**:
+   - Cuando una tarea `D` está en `"done"` y declara un archivo `P` en `D.deprecated_files` (sin que una tarea descendiente posterior a `D` lo haya re-creado en `required_files`), el validador exige que `P` **NO exista físicamente en disco** (`!existsSync(P)`). Si el archivo sigue en el disco, `validate-harness.mjs` falla reportando que `D` declaró deprecar `P` pero dejó un archivo zombi en el árbol fuente.
+
+### 6.2 Purga Física de los 5 Componentes Zombi de Prototipo en `feat-008`
+Al activar el nuevo motor en `feat-008`, se declaran en `"deprecated_files"` de `feat-008` y se eliminan físicamente del repositorio (`git rm`):
+1. `src/ui/components/BenchmarksStrip.tsx` (proveniente de `feat-002`)
+2. `src/ui/components/AgenticOrchestrationSection.tsx` (proveniente de `feat-004`)
+3. `src/ui/components/TechStackMatrix.tsx` (proveniente de `feat-004`)
+4. `src/ui/components/LiveTerminalSection.tsx` (proveniente de `feat-005`)
+5. `src/ui/components/ContactAdvisorySection.tsx` (proveniente de `feat-005`)
