@@ -80,188 +80,208 @@ export const PRODUCTION_SYSTEMS_CATALOG: ProductionSystem[] = [
   {
     id: "sys-01",
     order: "01",
-    slug: "nexus-distributed-inference-gateway",
-    title: "Nexus // Distributed AI Inference & Event Mesh",
-    subtitle: "Pasarela de inferencia multi-modelo, enrutamiento determinista y telemetría de baja latencia en producción.",
+    slug: "deco-vintage-platform",
+    title: "DECO VINTAGE PLATFORM",
+    subtitle:
+      "Plataforma e-commerce full-stack e infraestructura multimedia sin estado para comercialización y cotización dinámica de cuadros decorativos (+540 obras).",
     category: "distributed-systems",
-    categoryLabel: "DISTRIBUTED SYSTEMS & AI GATEWAY",
+    categoryLabel: "E-COMMERCE & CLOUD MEDIA ENGINE",
+    projectHeaderLabel: "PROJECT 01 // E-COMMERCE & CLOUD MEDIA ENGINE",
+    versionBadge: "v3.4.0 PRODUCTION",
+    previewImageSrc: "/assets/deco-vintage-preview.png",
+    previewImageAlt:
+      "Vista preliminar en vivo de Deco Vintage Platform — Catálogo de posters icónicos de autos, anime, cine y más",
+    highlightedStackTag: "GOOGLE CLOUD STORAGE",
+    featuredOnHome: true,
     layoutVariant: "primary-7-5",
     status: "PRODUCTION // ONLINE",
-    liveMetricPill: "P99: 11.4ms · 14.2k req/min · ZERO DROPS",
+    liveMetricPill: "v3.4.0 PRODUCTION · 99.9% SLA ACTIVO",
     summary:
-      "Plano de control e ingesta para orquestar llamadas a modelos fundacionales y microservicios internos con disyuntores automáticos, caché semántico, cuotas por tenant y trazabilidad completa por correlationId.",
+      "Plataforma e-commerce full-stack e infraestructura multimedia sin estado para comercialización y cotización dinámica de cuadros decorativos (+540 obras). Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips, persistencia relacional con paginación por cursores, motor autoritativo de cotizaciones a medida e inyección SSR dinámica para indexación social en tiempo real.",
     architecturalNarrative:
-      "Diseñado para eliminar cuellos de botella y fallos en cascada al integrar LLMs en flujos transaccionales reales. Implementa colas de prioridad, fallback determinista entre proveedores y auditoría estructurada JSON sin pérdida de paquetes.",
+      "Arquitectura Stateless Cloud-Native / Zero Split-Brain diseñada para operar sin almacenamiento local efímero: todo activo gráfico se procesa en memoria RAM controlada por semáforos libvips y se distribuye desde Google Cloud Storage CDN con validación estricta Zod + Zero-Trust.",
     stackTags: [
-      "TypeScript",
-      "Next.js 15",
-      "Node.js 22",
-      "Redis Streams",
-      "OpenTelemetry",
-      "Docker"
+      "NODE.JS + EXPRESS 5",
+      "REACT 18 + VITE",
+      "POSTGRESQL + PRISMA 6",
+      "SHARP (LIBVIPS RAM)",
+      "GOOGLE CLOUD STORAGE",
+      "ZOD + ZERO-TRUST"
     ],
     metrics: [
       {
-        label: "THROUGHPUT SOSTENIDO",
-        value: "14,200 req/min",
-        deltaOrTarget: "+38% vs arquitectura monolítica previa"
+        label: "CATÁLOGO MULTIMEDIA ACTIVO",
+        value: "+540 Obras",
+        deltaOrTarget: "Paginación por cursores O(1)"
       },
       {
-        label: "LATENCIA DE ENRUTAMIENTO P99",
-        value: "11.4 ms",
-        deltaOrTarget: "Objetivo SLO < 20ms"
+        label: "DISPONIBILIDAD EN PRODUCCIÓN",
+        value: "99.9% SLA",
+        deltaOrTarget: "VPS Docker + GCS CDN Activo"
       },
       {
-        label: "TASA DE ÉXITO CON DISYUNTOR",
-        value: "99.992%",
-        deltaOrTarget: "Failover automático < 45ms"
+        label: "PIPELINE DE IMÁGENES RAM",
+        value: "Zero OOM",
+        deltaOrTarget: "Semáforos de concurrencia libvips"
       },
       {
-        label: "HUELLA DE MEMORIA POR WORKER",
-        value: "94 MB",
-        deltaOrTarget: "Contenedor Alpine aislado"
+        label: "ARQUITECTURA DE ESTADO",
+        value: "Stateless",
+        deltaOrTarget: "Cloud-Native / Zero Split-Brain"
       }
     ],
     architectureSpecs: [
-      { label: "PATRÓN DE ARQUITECTURA", value: "Event-Driven Gateway + Hexagonal 6 Capas" },
-      { label: "PROTOCOLO DE TRANSPORTE", value: "HTTP/2 Streaming + Server-Sent Events (SSE)" },
-      { label: "RESILIENCIA", value: "Circuit Breaker de 3 estados + Backpressure adaptativo" },
-      { label: "OBSERVABILIDAD", value: "RuntimeLogEntry JSON + Redacción de secretos en vuelo" }
+      { label: "ARQUITECTURA", value: "Stateless Cloud-Native / Zero Split-Brain" },
+      { label: "DISPONIBILIDAD", value: "99.9% SLA Activo (VPS Docker + GCS CDN)" },
+      { label: "MOTOR MULTIMEDIA", value: "Sharp (libvips RAM) con semáforos de concurrencia" },
+      { label: "PERSISTENCIA & SEGURIDAD", value: "PostgreSQL + Prisma 6 (Cursores) + Zod Zero-Trust" }
     ],
     deploymentLedger: {
-      architecturePattern: "6-Layer Event Mesh Gateway",
-      commitSha: "46d6ad0",
-      hostEnvironment: "Ubuntu 24.04 LTS / Docker Engine",
-      verificationGate: "3/3 Gates PASS (100/100)"
+      architecturePattern: "Stateless Cloud-Native / Zero Split-Brain",
+      commitSha: "v3.4.0-prod",
+      hostEnvironment: "VPS Docker + Google Cloud Storage CDN",
+      verificationGate: "99.9% SLA Activo · Zero-Trust"
     },
     terminalPreviewLines: [
-      "[NEXUS-GW] 19:04:01.104Z INFO  dispatch.router correlationId=nx-9041 route=llm.primary latencyMs=11.2 status=200",
-      "[NEXUS-GW] 19:04:01.218Z INFO  cache.semantic  correlationId=nx-9042 hit=true similarity=0.984 savedTokens=1840",
-      "[NEXUS-GW] 19:04:01.409Z INFO  circuit.guard   state=CLOSED errorRate=0.001% activeWorkers=8/8"
+      "[DECO-VINTAGE] 18:14:02.110Z INFO  media.libvips   semaphore=2/4 format=webp bufferRamMb=14.2 upload=gs://decovintage-cdn/ok",
+      "[DECO-VINTAGE] 18:14:02.285Z INFO  catalog.cursor  prisma=v6 items=24 cursorId=obra_0542 latencyMs=8.4",
+      "[DECO-VINTAGE] 18:14:02.410Z INFO  ssr.opengraph   route=/obra/star-wars-vintage metaInjected=true status=200"
     ],
-    liveUrl: "https://dekolabs.org/sistemas/nexus-distributed-inference-gateway",
-    detailHref: "/sistemas/nexus-distributed-inference-gateway",
+    liveUrl: "https://www.decovintage.online",
+    detailHref: "/sistemas/deco-vintage-platform",
     pipelineStages: [
       {
         stageNumber: "ETAPA 01",
-        title: "Ingesta Autenticada, Normalización y Presupuesto de Contexto",
-        latencyOrSlo: "1.8 ms P99",
+        title: "Validación Zero-Trust (Zod) y Motor Autoritativo de Cotizaciones",
+        latencyOrSlo: "3.1 ms P99",
         description:
-          "Valida esquemas de entrada, aplica límites de tasa por clave de cliente y redacta tokens sensibles antes de tocar cualquier cola interna.",
+          "Valida dimensiones, molduras, acabados y reglas de negocio en servidor mediante esquemas Zod inmutables, evitando manipulación de precios desde el cliente.",
         invariants: [
-          "Rechazo inmediato (Fail-Closed) ante payloads fuera de esquema.",
-          "Inyección obligatoria de correlationId único de trazabilidad."
+          "Cero confianza en cálculos de precios provenientes del navegador.",
+          "Rechazo determinista de payloads fuera de contrato."
         ]
       },
       {
         stageNumber: "ETAPA 02",
-        title: "Resolución Semántica y Enrutamiento con Disyuntor (Circuit Breaker)",
-        latencyOrSlo: "6.4 ms P99",
+        title: "Procesamiento Multimedia en RAM con Semáforos de Concurrencia libvips",
+        latencyOrSlo: "Zero OOM / RAM Bounded",
         description:
-          "Evalúa caché determinista/semántico y selecciona el nodo de inferencia óptimo según salud en tiempo real, costo y presupuesto de latencia.",
+          "Transforma y optimiza obras de alta resolución directamente en buffers de memoria con Sharp (libvips), regulando la concurrencia mediante semáforos antes de transmitir a Google Cloud Storage.",
         invariants: [
-          "Conmutación automática en <45ms si un proveedor supera el umbral de error.",
-          "Aislamiento estricto entre colas interactivas y lotes en segundo plano."
+          "Prohibido escribir archivos temporales en el disco local del contenedor.",
+          "Control estricto de picos de memoria RSS bajo ráfagas de carga."
         ]
       },
       {
         stageNumber: "ETAPA 03",
-        title: "Streaming Verificado y Telemetría de Salida",
-        latencyOrSlo: "3.2 ms P99",
+        title: "Persistencia por Cursores (Prisma 6) e Inyección SSR Dinámica",
+        latencyOrSlo: "8.4 ms Query",
         description:
-          "Transmite bloques validados al cliente mientras consolida métricas de consumo, latencia por tramo y auditoría en formato JSONL.",
+          "Consulta el catálogo de +540 obras en PostgreSQL mediante cursores indexados e inyecta metadatos OpenGraph/SSR en tiempo real para indexación social instantánea.",
         invariants: [
-          "Cero exposición de credenciales o prompts internos en trazas de error.",
-          "Confirmación atómica de entrega en el ledger de telemetría."
+          "Consistencia total entre base de datos PostgreSQL y objetos en Google Cloud Storage.",
+          "Tiempo de respuesta constante sin degradación por offset profundo."
         ]
       }
     ],
     codeTabs: [
       {
-        id: "nexus-service",
-        filename: "src/service/inference-router.service.ts",
+        id: "decovintage-media-semaphore",
+        filename: "src/service/media-engine.service.ts",
         layer: "Service Layer",
         language: "typescript",
-        code: `export interface RouteDecision {
-  providerId: string;
-  fallbackChain: string[];
-  estimatedLatencyMs: number;
-  circuitState: "CLOSED" | "HALF_OPEN";
+        code: `export interface MediaProcessingTicket {
+  artworkId: string;
+  widthPx: number;
+  heightPx: number;
+  targetBucketUri: string;
 }
 
-export function selectOptimalInferenceRoute(
-  healthyNodes: readonly { id: string; p99Ms: number; errorRate: number }[],
-  maxLatencyBudgetMs: number
-): RouteDecision {
-  const candidates = healthyNodes
-    .filter((node) => node.errorRate < 0.02 && node.p99Ms <= maxLatencyBudgetMs)
-    .sort((a, b) => a.p99Ms - b.p99Ms);
-
-  const primary = candidates[0] ?? healthyNodes[0];
-  if (!primary) {
-    throw new Error("NO_HEALTHY_INFERENCE_NODES_AVAILABLE");
-  }
+export function createConcurrencySemaphore(maxConcurrentSlots: number) {
+  let activeSlots = 0;
+  const waitQueue: Array<() => void> = [];
 
   return {
-    providerId: primary.id,
-    fallbackChain: candidates.slice(1).map((n) => n.id),
-    estimatedLatencyMs: primary.p99Ms,
-    circuitState: primary.errorRate < 0.005 ? "CLOSED" : "HALF_OPEN"
+    async acquire(): Promise<() => void> {
+      if (activeSlots < maxConcurrentSlots) {
+        activeSlots += 1;
+        return () => {
+          activeSlots -= 1;
+          const next = waitQueue.shift();
+          if (next) next();
+        };
+      }
+      return new Promise<() => void>((resolve) => {
+        waitQueue.push(() => {
+          activeSlots += 1;
+          resolve(() => {
+            activeSlots -= 1;
+            const next = waitQueue.shift();
+            if (next) next();
+          });
+        });
+      });
+    }
   };
 }`
       },
       {
-        id: "nexus-runtime",
-        filename: "src/runtime/stream-guard.ts",
-        layer: "Runtime Layer",
+        id: "decovintage-quote-engine",
+        filename: "src/service/quote-engine.service.ts",
+        layer: "Service Layer",
         language: "typescript",
-        code: `import { buildRuntimeLogEntry } from "./logger";
+        code: `export interface CustomFrameQuoteInput {
+  widthCm: number;
+  heightCm: number;
+  finishType: "standard-matte" | "acrylic-hd" | "vintage-wood";
+  quantity: number;
+}
 
-export function recordGatewayDispatch(params: {
-  correlationId: string;
-  providerId: string;
-  durationMs: number;
-  tokensUsed: number;
-}) {
-  return buildRuntimeLogEntry({
-    level: "info",
-    component: "nexus.gateway.dispatch",
-    action: "route_inference_stream",
-    durationMs: params.durationMs,
-    correlationId: params.correlationId,
-    input: { providerId: params.providerId },
-    output: { tokensUsed: params.tokensUsed, status: "DELIVERED" }
-  });
+export function calculateAuthoritativeQuote(input: CustomFrameQuoteInput) {
+  const areaSqMeters = (input.widthCm * input.heightCm) / 10000;
+  const finishMultiplier =
+    input.finishType === "acrylic-hd"
+      ? 1.45
+      : input.finishType === "vintage-wood"
+        ? 1.3
+        : 1.0;
+
+  const unitPrice = Math.round(areaSqMeters * 420 * finishMultiplier);
+  return {
+    unitPrice,
+    totalPrice: unitPrice * Math.max(1, input.quantity),
+    architectureMode: "STATELESS_AUTHORITATIVE"
+  };
 }`
       }
     ],
     solvedChallenges: [
       {
         number: "01",
-        title: "Eliminación de Tail Latency en Picos de Tráfico Concurrente",
+        title: "Eliminación de Desbordamientos de Memoria (OOM) en Procesamiento de Imágenes",
         problem:
-          "Las ráfagas de solicitudes hacia modelos externos degradaban el percentil 99 por encima de 450ms debido a bloqueos de cola compartida.",
+          "El procesamiento simultáneo de múltiples pósters en alta resolución con libvips podía disparar picos de memoria RAM en contenedores VPS.",
         solution:
-          "Particionado de colas por prioridad con presupuesto estricto de espera y conmutación preventiva hacia réplicas calientes.",
-        impactMetric: "Reducción de latencia de enrutamiento P99 a 11.4ms sostenidos."
+          "Implementación de un semáforo de concurrencia en memoria que regula los buffers activos de Sharp y transmite streams directos hacia Google Cloud Storage.",
+        impactMetric: "Estabilidad del 99.9% SLA Activo con huella de RAM acotada."
       },
       {
         number: "02",
-        title: "Prevención de Fuga de Secretos en Logs de Observabilidad",
+        title: "Erradicación de Estado Dividido (Zero Split-Brain) en Despliegues Docker",
         problem:
-          "Los payloads de depuración en sistemas tradicionales solían registrar cabeceras de autorización o llaves API en texto plano.",
+          "Almacenar imágenes subidas en el sistema de archivos local del servidor impedía escalar o recrear contenedores sin perder activos.",
         solution:
-          "Integración de un sanitizador recursivo en la capa Runtime que redacta automáticamente patrones sensibles antes de serializar cada RuntimeLogEntry.",
-        impactMetric: "0 incidentes de exposición de credenciales en auditorías adversariales."
+          "Diseño Stateless Cloud-Native acoplando PostgreSQL (Prisma 6) con Google Cloud Storage CDN como única fuente de verdad multimedia.",
+        impactMetric: "Re-despliegues de contenedor en segundos con 0 pérdida de activos."
       },
       {
         number: "03",
-        title: "Continuidad Operativa ante Caídas Parciales de Proveedor",
+        title: "Indexación Social y Previsualización Dinámica en una SPA React 18 + Vite",
         problem:
-          "La indisponibilidad temporal de un endpoint de IA interrumpía flujos críticos de cara al usuario final.",
+          "Los crawlers sociales no ejecutaban JavaScript para leer el título e imagen de cada obra individual (+540 cuadros) al compartir enlaces.",
         solution:
-          "Disyuntor determinista con detección temprana de anomalías y reintento transparente sobre proveedor secundario compatible.",
-        impactMetric: "Disponibilidad efectiva de 99.992% en producción."
+          "Inyección SSR dinámica en Express 5 que resuelve metadatos de la obra en tiempo real antes de servir el documento HTML.",
+        impactMetric: "100% de enlaces de catálogo con previsualización OpenGraph instantánea."
       }
     ]
   },
@@ -273,6 +293,7 @@ export function recordGatewayDispatch(params: {
     subtitle: "Motor de ingesta transaccional, auditoría criptográfica y observabilidad en tiempo real para cargas críticas.",
     category: "data-pipelines",
     categoryLabel: "REAL-TIME DATA & OBSERVABILITY",
+    featuredOnHome: false,
     layoutVariant: "primary-5-7",
     status: "PRODUCTION // VERIFIED",
     liveMetricPill: "SLO: 99.99% · 0 DATA LOSS · SHA-256 AUDIT",

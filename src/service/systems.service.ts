@@ -141,6 +141,14 @@ export function getSystemsCatalogSnapshot(
   };
 }
 
+export function getFeaturedHomeProductionSystems(
+  repo: ProductionSystemsProvider = defaultProductionSystemsRepository
+): ProductionSystem[] {
+  const systems = getProductionSystems(repo);
+  const featured = systems.filter((system) => system.featuredOnHome === true);
+  return featured.length > 0 ? featured : systems.slice(0, 1);
+}
+
 export function buildSparklineSvgGeometry(
   points: readonly HeroTelemetrySeriesPoint[],
   width = 320,

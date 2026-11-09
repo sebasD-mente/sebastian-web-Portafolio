@@ -190,7 +190,7 @@
       "area": "visual-refinement-and-curation",
       "user_visible_behavior": "El visitante de dekolabs.org visualiza una interfaz limpia y libre de saturación fiel a la captura de Sebastián: barra superior fija con su logo de firma y 4 botones exactos, Hero con el titular de IA implícita/Google ADK/RAG y el monitor de telemetría a la derecha, y la sección SISTEMAS EN PRODUCCIÓN exhibiendo la tarjeta equilibrada de DECO VINTAGE PLATFORM con su captura real, pills de stack (GOOGLE CLOUD STORAGE destacado en azul), métricas de arquitectura/SLA y enlaces a https://www.decovintage.online y al blueprint técnico.",
       "priority": "P0",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-006"
       ],
@@ -220,6 +220,7 @@
         "npm test",
         "npm run build"
       ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 24/24 tests PASS en 6 suites incluyendo Deco Vintage Platform y nuevos textos Hero/Header, next build standalone OK con ruta /sistemas/deco-vintage-platform).",
       "notes": "CRÍTICO: (1) No eliminar del disco ningún archivo listado en required_files de feat-001 a feat-006 (como BenchmarksStrip.tsx, AgenticOrchestrationSection.tsx, etc.) para no romper Pass-State Gating; simplemente dejar de renderizarlos en src/app/page.tsx. (2) Respetar las 6 capas (src/app/ y src/ui/ solo importan de src/service/, src/runtime/, src/ui/ y src/types/). (3) Sincronizar tests/systems.service.test.ts, tests/system-detail.test.ts, tests/site.service.test.ts y tests/deployment-config.test.ts con el nuevo slug 'deco-vintage-platform' y los textos actualizados."
     }
   ]

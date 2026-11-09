@@ -4,10 +4,10 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
 
 ---
 
-## Estado Actual del Contrato (`WIP = 0` — `feat-007` Planificada y Lista para Ejecución en Sesión Limpia)
-- **Última tarea completada (`done`):** `feat-006` (*Empaquetado Docker Multi-Stage para Ubuntu Home Lab, SEO dekolabs.org y Guía de Despliegue*).
-- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; `feat-001` a `feat-006` en `"done"` y `feat-007` registrada en `"not-started"` lista para que la siguiente sesión limpia la pase a `"in-progress"`).
-- **Siguiente tarea secuencial lista para iniciar:** `feat-007` (*Refinamiento Visual v2.2: Des-saturación de Vista Principal, Header Fijo con Logo Personal, Hero IA/ADK/RAG y Tarjeta Deco Vintage Platform*).
+## Estado Actual del Contrato (`WIP = 0` — `feat-001` a `feat-007` Completadas y Verificadas en `done`)
+- **Última tarea completada (`done`):** `feat-007` (*Refinamiento Visual v2.2: Des-saturación de Vista Principal, Header Fijo con Logo Personal, Hero IA/ADK/RAG y Tarjeta Deco Vintage Platform*).
+- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; las 7 tareas `feat-001`..`feat-007` están en `"done"`).
+- **Siguiente tarea secuencial lista para iniciar:** Ninguna pendiente en `feature_list.json` (lista para agregar el Proyecto 02 o conectar el monitor en tiempo real cuando Sebastián lo indique).
 - **Especificación maestra de referencia:** `docs/product-specs/dekolabs-portfolio-spec.md` (Sección 5), `docs/design-docs/homelab-deployment.md`, `docs/RELIABILITY.md`, `docs/SECURITY.md` y `ARCHITECTURE.md`.
 - **Captura de referencia visual aprobada por Sebastián:** `C:\Users\sebas\Pictures\Screenshots\Captura de pantalla 2026-11-08 181423.png`.
 

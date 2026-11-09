@@ -67,7 +67,7 @@ export default function RootLayout({
         />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Share+Tech+Mono&family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@500;600;700&display=swap"
         />
       </head>
       <body className="min-h-screen bg-[var(--background)] text-[var(--primary)] antialiased">

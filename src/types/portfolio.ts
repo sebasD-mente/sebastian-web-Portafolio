@@ -35,6 +35,8 @@ export interface AmbientTelemetryStatus {
 
 export interface SiteIdentity {
   monogram: string;
+  logoSrc: string;
+  logoAlt: string;
   name: string;
   roleTitle: string;
   headlineTitle: string;
@@ -167,6 +169,12 @@ export interface ProductionSystem {
   subtitle: string;
   category: ProductionSystemCategory;
   categoryLabel: string;
+  projectHeaderLabel?: string;
+  versionBadge?: string;
+  previewImageSrc?: string;
+  previewImageAlt?: string;
+  highlightedStackTag?: string;
+  featuredOnHome?: boolean;
   layoutVariant: ProductionSystemLayoutVariant;
   status: "PRODUCTION // ONLINE" | "PRODUCTION // VERIFIED" | "ACTIVE // EDGE NODE";
   liveMetricPill: string;

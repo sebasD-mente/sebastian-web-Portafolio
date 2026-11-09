@@ -33,11 +33,19 @@ describe("feat-001: Site Foundation Service & Atelier Monolith Tokens", () => {
     expect(darkPalette.secondary).toBe("#7BD0FF");
   });
 
-  it("exposes SEO metadata summary for dekolabs.org without skipping layers", () => {
+  it("exposes SEO metadata summary and navigation for dekolabs.org without skipping layers", () => {
     const meta = getSiteMetadataSummary();
+    const snapshot = getSiteFoundationSnapshot();
     expect(meta.canonicalUrl).toBe("https://dekolabs.org");
     expect(meta.headlineTitle).toContain("Sebastián");
-    expect(meta.roleTitle).toContain("Principal Software & AI Architect");
+    expect(meta.roleTitle).toContain("AI Developer & Agentic Builder");
+    expect(snapshot.identity.logoSrc).toBe("/assets/logo-sebastian-j.png");
+    expect(snapshot.identity.tagline).toContain("Google ADK y sistemas RAG");
+    expect(snapshot.navigation.map((n) => n.label)).toEqual([
+      "SISTEMAS EN PRODUCCIÓN",
+      "STACK TECNOLOGICO",
+      "MAS PROYECTOS DE IA"
+    ]);
   });
 });
 

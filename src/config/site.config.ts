@@ -11,19 +11,21 @@ export const DEFAULT_THEME_MODE: ThemeMode = "light";
 
 export const SITE_IDENTITY: SiteIdentity = {
   monogram: "SB // DL",
+  logoSrc: "/assets/logo-sebastian-j.png",
+  logoAlt: "Sebastian J — AI Developer & Agentic Builder",
   name: "Sebastián",
-  roleTitle: "Principal Software & AI Architect",
-  headlineTitle: "Sebastián — Principal Software & AI Architect | dekolabs.org",
+  roleTitle: "AI Developer & Agentic Builder",
+  headlineTitle: "Sebastián J — AI Developer & Agentic Builder | dekolabs.org",
   domain: "dekolabs.org",
   canonicalUrl: "https://dekolabs.org",
   availabilityBadge: "AVAILABLE FOR FREELANCE & IMPLEMENTATION CONTRACTS",
   tagline:
-    "Sistemas en producción de alta resiliencia, orquestación de agentes autónomos e infraestructura moderna auto-alojada.",
+    "Construyo aplicaciones con IA implícita, agentes autónomos con Google ADK y sistemas RAG listos para producción.",
   summary:
-    "Ingeniería de software de precisión bajo el sistema de diseño Atelier Monolith y gobernanza determinista de 6 capas (Universal Chameleon Harness v2.1) ejecutándose en Ubuntu Linux Home Lab.",
-  primaryCtaLabel: "Explorar Sistemas en Producción",
+    "Construyo software apoyado en un entorno profesional de agentes de código gobernados por un arnés de ingeniería de alto estándar. Combino desarrollo de agentes inteligentes, pruebas de modelos locales en aplicaciones no exploradas y administración de mi propio Home Lab",
+  primaryCtaLabel: "SISTEMAS EN PRODUCCIÓN",
   primaryCtaHref: "#proyectos-destacados",
-  secondaryCtaLabel: "Contratar / Hablemos",
+  secondaryCtaLabel: "CONTRATAR / HABLEMOS",
   secondaryCtaHref: "#contacto",
   footerNote:
     "Desplegado como contenedor Next.js 15 Standalone (node:22-alpine) en Ubuntu Linux Home Lab detrás de Reverse Proxy."
@@ -33,26 +35,20 @@ export const SITE_NAVIGATION: NavigationItem[] = [
   {
     id: "sistemas",
     code: "01",
-    label: "Sistemas en Producción",
+    label: "SISTEMAS EN PRODUCCIÓN",
     href: "#proyectos-destacados"
   },
   {
-    id: "orquestacion",
+    id: "stack",
     code: "02",
-    label: "Orquestación Agéntica & Stack",
-    href: "#orquestacion-agentica"
+    label: "STACK TECNOLOGICO",
+    href: "#stack-tecnologico"
   },
   {
-    id: "telemetria",
+    id: "mas-proyectos",
     code: "03",
-    label: "Telemetría Home Lab",
-    href: "#telemetria-homelab"
-  },
-  {
-    id: "contacto",
-    code: "04",
-    label: "Contacto",
-    href: "#contacto"
+    label: "MAS PROYECTOS DE IA",
+    href: "#mas-proyectos-ia"
   }
 ];
 

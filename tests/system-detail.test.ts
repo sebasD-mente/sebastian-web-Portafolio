@@ -8,7 +8,7 @@ describe("System Deep-Dive Service & Code Inspector Contracts (feat-003)", () =>
   it("generates static params for all 4 production systems in order", () => {
     const slugs = getAllProductionSystemSlugs();
     expect(slugs).toEqual([
-      { slug: "nexus-distributed-inference-gateway" },
+      { slug: "deco-vintage-platform" },
       { slug: "aegis-autonomous-data-fabric" },
       { slug: "chameleon-agentic-harness" },
       { slug: "monolith-homelab-cloud-edge" }
@@ -81,7 +81,7 @@ describe("System Deep-Dive Service & Code Inspector Contracts (feat-003)", () =>
 
   it("computes cyclic previous and next system navigation across the 4-system catalog", () => {
     const first = getProductionSystemDeepDiveBySlug(
-      "nexus-distributed-inference-gateway"
+      "deco-vintage-platform"
     );
     expect(first).not.toBeNull();
     expect(first?.previousSystem.order).toBe("04");
@@ -96,7 +96,7 @@ describe("System Deep-Dive Service & Code Inspector Contracts (feat-003)", () =>
     expect(last?.previousSystem.order).toBe("03");
     expect(last?.previousSystem.slug).toBe("chameleon-agentic-harness");
     expect(last?.nextSystem.order).toBe("01");
-    expect(last?.nextSystem.slug).toBe("nexus-distributed-inference-gateway");
+    expect(last?.nextSystem.slug).toBe("deco-vintage-platform");
   });
 
   it("returns null for non-existent or empty slugs", () => {

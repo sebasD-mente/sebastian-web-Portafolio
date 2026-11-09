@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSparklineSvgGeometry,
   filterProductionSystemsByCategory,
+  getFeaturedHomeProductionSystems,
   getHeroTelemetryCardData,
   getIndustrialBenchmarks,
   getProductionSystemBySlug,
@@ -9,9 +10,10 @@ import {
   getSystemsCatalogSnapshot
 } from "@/service/systems.service";
 
-describe("feat-002: Production Systems Catalog, Hero Telemetry & Benchmarks Service", () => {
-  it("returns the complete catalog snapshot with 4 ordered systems, 2 primary (7/5 & 5/7) and 2 secondary split", () => {
+describe("feat-002 & feat-007: Production Systems Catalog, Hero Telemetry & Deco Vintage Platform", () => {
+  it("returns the catalog snapshot with Deco Vintage Platform as featured Project 01", () => {
     const snapshot = getSystemsCatalogSnapshot();
+    const featured = getFeaturedHomeProductionSystems();
 
     expect(snapshot.heroTelemetry.cardTitle).toBe("KERNEL & HOME LAB TELEMETRY");
     expect(snapshot.heroTelemetry.nodeStatus).toBe("ONLINE");
@@ -28,6 +30,17 @@ describe("feat-002: Production Systems Catalog, Hero Telemetry & Benchmarks Serv
     expect(snapshot.systems).toHaveLength(4);
     expect(snapshot.systems.map((s) => s.order)).toEqual(["01", "02", "03", "04"]);
 
+    expect(featured).toHaveLength(1);
+    expect(featured[0]?.slug).toBe("deco-vintage-platform");
+    expect(featured[0]?.title).toBe("DECO VINTAGE PLATFORM");
+    expect(featured[0]?.projectHeaderLabel).toBe(
+      "PROJECT 01 // E-COMMERCE & CLOUD MEDIA ENGINE"
+    );
+    expect(featured[0]?.versionBadge).toBe("v3.4.0 PRODUCTION");
+    expect(featured[0]?.highlightedStackTag).toBe("GOOGLE CLOUD STORAGE");
+    expect(featured[0]?.liveUrl).toBe("https://www.decovintage.online");
+    expect(featured[0]?.previewImageSrc).toBe("/assets/deco-vintage-preview.png");
+
     expect(snapshot.primarySystems).toHaveLength(2);
     expect(snapshot.primarySystems[0]?.layoutVariant).toBe("primary-7-5");
     expect(snapshot.primarySystems[1]?.layoutVariant).toBe("primary-5-7");
@@ -39,11 +52,19 @@ describe("feat-002: Production Systems Catalog, Hero Telemetry & Benchmarks Serv
   });
 
   it("resolves systems by slug and returns null for unknown or empty slugs", () => {
-    const nexus = getProductionSystemBySlug("nexus-distributed-inference-gateway");
-    expect(nexus).not.toBeNull();
-    expect(nexus?.order).toBe("01");
-    expect(nexus?.pipelineStages).toHaveLength(3);
-    expect(nexus?.solvedChallenges).toHaveLength(3);
+    const decoVintage = getProductionSystemBySlug("deco-vintage-platform");
+    expect(decoVintage).not.toBeNull();
+    expect(decoVintage?.order).toBe("01");
+    expect(decoVintage?.pipelineStages).toHaveLength(3);
+    expect(decoVintage?.solvedChallenges).toHaveLength(3);
+    expect(decoVintage?.stackTags).toEqual([
+      "NODE.JS + EXPRESS 5",
+      "REACT 18 + VITE",
+      "POSTGRESQL + PRISMA 6",
+      "SHARP (LIBVIPS RAM)",
+      "GOOGLE CLOUD STORAGE",
+      "ZOD + ZERO-TRUST"
+    ]);
 
     const chameleon = getProductionSystemBySlug("  CHAMELEON-AGENTIC-HARNESS ");
     expect(chameleon).not.toBeNull();

@@ -37,7 +37,8 @@
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-mono: "JetBrains Mono", "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-pixel: "Share Tech Mono", "Silkscreen", "JetBrains Mono", ui-monospace, monospace;
 
   /* Fallback for browsers without light-dark() when OS prefers dark and no explicit light override is active */
   @media (prefers-color-scheme: dark) {
@@ -142,6 +143,24 @@ body {
   letter-spacing: 0.06em;
   font-weight: 500;
   font-feature-settings: "tnum";
+}
+
+.mono-pixel {
+  font-family: var(--font-pixel);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-feature-settings: "tnum";
+}
+
+.mono-nav {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
 }
 
 .mono-code {

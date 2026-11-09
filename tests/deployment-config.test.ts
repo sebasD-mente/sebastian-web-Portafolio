@@ -39,7 +39,7 @@ describe("feat-006: Empaquetado Docker Multi-Stage, SEO dekolabs.org y Guía de 
 
     const systemUrls = entries.slice(1).map((item) => item.url);
     expect(systemUrls).toEqual([
-      "https://dekolabs.org/sistemas/nexus-distributed-inference-gateway",
+      "https://dekolabs.org/sistemas/deco-vintage-platform",
       "https://dekolabs.org/sistemas/aegis-autonomous-data-fabric",
       "https://dekolabs.org/sistemas/chameleon-agentic-harness",
       "https://dekolabs.org/sistemas/monolith-homelab-cloud-edge"
