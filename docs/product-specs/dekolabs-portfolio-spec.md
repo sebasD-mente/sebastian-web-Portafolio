@@ -113,3 +113,76 @@ Para cumplir al 100% con `scripts/check-architecture.sh` (cero saltos de capa `U
 4. **`src/service/` (`Service`)**: Casos de uso y lógica de dominio pura (`getProductionSystems`, `getSystemBySlug`, `getAgenticCapabilities`, `buildHomeLabTelemetryReport`, `validateContactInquiry`).
 5. **`src/runtime/` (`Runtime`)**: Controladores de rutas API (`/api/health`, `/api/telemetry`, `/api/contact`) y adaptador de logging estructurado `RuntimeLogEntry` con `correlationId`.
 6. **`src/ui/` y `src/app/` (`UI`)**: Componentes visuales *Atelier Monolith* (`src/ui/components/`) y rutas del App Router de Next.js (`src/app/page.tsx`, `src/app/sistemas/[slug]/page.tsx`, `src/app/api/...`), consumiendo exclusivamente `src/service/`, `src/runtime/` y `src/types/`.
+
+---
+
+## 5. Refinamiento Visual v2.2 (`feat-007`) — Des-saturación Editorial, Header Fijo con Logo Personal y Proyecto 01 `DECO VINTAGE PLATFORM`
+
+Por decisión de diseño de Sebastián, la vista principal (`src/app/page.tsx`) se depura radicalmente para eliminar la saturación de información de prototipo y concentrarse exclusivamente en los elementos gráficos y textuales aprobados en la captura de referencia (`C:\Users\sebas\Pictures\Screenshots\Captura de pantalla 2026-11-08 181423.png`).
+
+### 5.1 Activos Gráficos Oficiales (Origen -> Destino en `public/assets/`)
+- **Logo de Firma Personal**:
+  - Origen: `C:\Users\sebas\Documents\Antigravity Files\ARCHIVOS PORTAFOLIO\lOGO SEBASTIAN J.png`
+  - Destino en repositorio: `public/assets/logo-sebastian-j.png` (`Sebastian J — AI Developer & Agentic Builder`).
+- **Captura del Proyecto 01 (Deco Vintage Platform)**:
+  - Origen: `C:\Users\sebas\Documents\Antigravity Files\ARCHIVOS PORTAFOLIO\TARJETA PRO 1.png`
+  - Destino en repositorio: `public/assets/deco-vintage-preview.png`.
+
+### 5.2 Emparejamiento Tipográfico Fiel a la Captura
+Para lograr la máxima similitud visual con la captura refinada por Sebastián:
+1. **Titular Hero (`h1`)**: `Space Grotesk` / `Inter` (`font-weight: 700`, `tracking: -0.03em`, `line-height: 1.08`), sin etiquetas superiores ni adornos.
+2. **Títulos Industriales en Mayúsculas (`SISTEMAS EN PRODUCCIÓN`, `DECO VINTAGE PLATFORM`)**: `Space Grotesk` (`font-weight: 700/800`, `uppercase`, `tracking: -0.02em`).
+3. **Cuerpo Editorial (Subtítulo del Hero y Descripción de Tarjeta)**: `Inter` (`font-weight: 400`, lectura limpia y balanceada en `#374151` / `#4B5563`).
+4. **Botones de Navegación Superior (`SISTEMAS EN PRODUCCIÓN`, `STACK TECNOLOGICO`, `MAS PROYECTOS DE IA`)**: Fuente monoespaciada técnica (`JetBrains Mono` / `Space Mono`, `uppercase`, `letter-spacing: 0.05em`, centrada en 2 líneas).
+5. **Etiquetas de Telemetría y Encabezados de Tarjeta (`KERNEL & HOME LAB TELEMETRY`, `NODE ID`, `PROJECT 01 // ...`, `v3.4.0 PRODUCTION`)**: Fuente técnica pixel/monoespaciada (`Silkscreen` / `Share Tech Mono` + `JetBrains Mono`) que replica la estética de instrumentación de la captura.
+
+### 5.3 Barra Superior Fija (`AppShell.tsx`)
+- **Eliminación de Ruido**: Se elimina de la vista la barra superior `Ambient Telemetry Strip`, el monograma `SB // DL`, el badge `AVAILABLE FOR FREELANCE` y el botón `THEME // LIGHT`.
+- **Comportamiento**: Fija en la parte superior al hacer scroll (`sticky top-0 z-50 w-full bg-[#F8F9FA]/95 backdrop-blur-md border-b border-[#E5E7EB]`).
+- **Estructura Exacta (Izquierda a Derecha)**:
+  1. **Logo**: Imagen `/assets/logo-sebastian-j.png` a la izquierda.
+  2. **Enlaces de Navegación (Textos Exactos)**:
+     - `SISTEMAS EN PRODUCCIÓN` (`href="#proyectos-destacados"`)
+     - `STACK TECNOLOGICO` (`href="#stack-tecnologico"`)
+     - `MAS PROYECTOS DE IA` (`href="#mas-proyectos-ia"`)
+  3. **Botón Primario Derecho**: Botón sólido negro (`#0A0A0A`) con texto blanco en mayúsculas y esquinas biseladas/redondeadas:
+     - `CONTRATAR / HABLEMOS` (`href="#contacto"`)
+- **Franjas Separadoras**: Franja horizontal gris claro (`bg-[#EAECEF]`) entre el Header y el Hero, y entre el Hero y `SISTEMAS EN PRODUCCIÓN`.
+
+### 5.4 Sección Hero Des-saturada (`HeroSection.tsx`)
+- **Columna Izquierda (8 cols — Sin badges superiores, sin cajas `INVARIANT // VERIFIED` y sin botones CTA inferiores)**:
+  - **Título Principal (`h1`) — Texto Exacto**:
+    > `Construyo aplicaciones con IA implícita, agentes autónomos con Google ADK y sistemas RAG listos para producción.`
+  - **Párrafo Descriptivo (`p`) — Texto Exacto**:
+    > `Construyo software apoyado en un entorno profesional de agentes de código gobernados por un arnés de ingeniería de alto estándar. Combino desarrollo de agentes inteligentes, pruebas de modelos locales en aplicaciones no exploradas y administración de mi propio Home Lab`
+- **Columna Derecha (4 cols — Monitor `KERNEL & HOME LAB TELEMETRY`)**:
+  - Único componente que conserva mocks de prueba mientras se conecta el monitor en tiempo real definitivo.
+  - Enmarcado en un contenedor exterior blanco con borde fino (`1px solid`) y panel interior gris claro (`#F3F4F6`) con las métricas (`NODE ID`, `HOST OS`, `ACTIVE CONTAINERS`, `P99 LATENCY`, `HARNESS SCORE`, `MEMORY RSS`, `DEFAULT THEME`) y el gráfico sparkline SVG (`00:00 UTC` · `SLO 99.98%` · `NOW // LIVE`).
+
+### 5.5 Limpieza de la Vista Principal (`src/app/page.tsx`)
+- Se dejan de renderizar en `src/app/page.tsx` todos los bloques de prototipo que saturaban la vista (`BenchmarksStrip`, los 3 sistemas de prototipo adicionales en el Home, `AgenticOrchestrationSection`, `TechStackMatrix`, `LiveTerminalSection` y `ContactAdvisorySection`).
+- **Nota de Gobernanza del Arnés**: Los archivos físicos de esos componentes se conservan en `src/ui/components/` para respetar el `Pass-State Gating` de `required_files` en `feat-001`..`feat-006`, pero `src/app/page.tsx` solo monta `AppShell`, `HeroSection` y `ProductionSystemsSection`.
+
+### 5.6 Sección `SISTEMAS EN PRODUCCIÓN` y Tarjeta de Vista Preliminar (`DECO VINTAGE PLATFORM`)
+- **Título de Sección**: Únicamente `SISTEMAS EN PRODUCCIÓN` en mayúsculas bold, sin pre-título `01 // CATÁLOGO...`, sin párrafo secundario y sin barra de filtros.
+- **Tarjeta `PROJECT 01` (Layout 12 columnas: 7 cols Vista Previa / 5 cols Especificación Técnica Equilibrada)**:
+  - **Columna Izquierda (7 cols)**: Marco de ventana blanco con borde `1px solid`, barra superior con punto verde (`#22C55E`) a la izquierda e imagen `/assets/deco-vintage-preview.png` (`TARJETA PRO 1.png`).
+  - **Columna Derecha (5 cols, fondo `#EAECEF` / `#F3F4F6`, tipografía y espaciado impecablemente equilibrados)**:
+    - **Header izquierdo (Categoría)**: `PROJECT 01 // E-COMMERCE & CLOUD MEDIA ENGINE` (en azul técnico `#2563EB`)
+    - **Badge derecho (Versión)**: `v3.4.0 PRODUCTION` (en píldora rectangular gris `#D5D9DF`)
+    - **Título**: `DECO VINTAGE PLATFORM`
+    - **Descripción (Resumen de stack y servicios)**:
+      `Plataforma e-commerce full-stack e infraestructura multimedia sin estado para comercialización y cotización dinámica de cuadros decorativos (+540 obras). Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips, persistencia relacional con paginación por cursores, motor autoritativo de cotizaciones a medida e inyección SSR dinámica para indexación social en tiempo real.`
+    - **Tags de Stack Tecnológico (Pills)**:
+      - `NODE.JS + EXPRESS 5`
+      - `REACT 18 + VITE`
+      - `POSTGRESQL + PRISMA 6`
+      - `SHARP (LIBVIPS RAM)`
+      - `GOOGLE CLOUD STORAGE` *(Pill destacado en azul)*
+      - `ZOD + ZERO-TRUST`
+    - **Recuadro de Métricas / Arquitectura**:
+      - `ARQUITECTURA: Stateless Cloud-Native / Zero Split-Brain`
+      - `DISPONIBILIDAD: 99.9% SLA Activo (VPS Docker + GCS CDN)`
+    - **Botones**:
+      - `PROBAR SISTEMA EN VIVO ↗` → `https://www.decovintage.online`
+      - `{} ARQUITECTURA & REPO` → Abre el Blueprint detallado (`/sistemas/deco-vintage-platform`).
