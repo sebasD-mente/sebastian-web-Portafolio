@@ -4,13 +4,13 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
 
 ---
 
-## Estado Actual del Contrato (`WIP = 0` — `feat-010` Completada en `done`; Siguiente en Cola: `feat-011`)
-- **Última tarea completada (`done`):** `feat-010` (*Motor Backend del Administrador: APIs CRUD de Proyectos y Subida/Servidor de Imágenes en `/app/data/uploads` (`/api/admin/systems`, `/api/admin/upload`, `/api/assets/[filename]`)*).
-- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; lista para iniciar `feat-011`).
-- **Siguientes tareas secuenciales listas para iniciar en orden DAG:**
-  1. **`feat-009`**: *Cimiento PostgreSQL (`pgvector` Ready), Volumen Docker `/app/data/uploads` (`read_only`-safe) y Vistas Públicas (2 Categorías en Home + Galería de 3 Imágenes en Detalle)*.
-  2. **`feat-010`**: *Motor Backend del Administrador: APIs CRUD de Proyectos y Subida/Servidor de Imágenes en `/app/data/uploads` (`/api/admin/systems`, `/api/admin/upload`, `/api/assets/[filename]`)*.
-  3. **`feat-011`**: *Panel Visual del Administrador de Proyectos (`/admin/proyectos`) con Subida de 4 Imágenes, Selector de Categoría y Guía de Despliegue Home Lab*.
+## Estado Actual del Contrato (`WIP = 0` — `feat-001` a `feat-011` Completadas en `done`)
+- **Última tarea completada (`done`):** `feat-011` (*Panel Visual del Administrador de Proyectos (`/admin/proyectos`) con Subida de 4 Imágenes, Selector de Categoría y Guía de Despliegue Home Lab*).
+- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; las 11 tareas del proyecto están en `"done"` y verificadas al `100/100`).
+- **Historial secuencial del catálogo administrable (`feat-009`..`feat-011`):**
+  1. **`feat-009`** (`done`): *Cimiento PostgreSQL (`pgvector` Ready), Volumen Docker `/app/data/uploads` (`read_only`-safe) y Vistas Públicas (2 Categorías en Home + Galería de 3 Imágenes en Detalle)*.
+  2. **`feat-010`** (`done`): *Motor Backend del Administrador: APIs CRUD de Proyectos y Subida/Servidor de Imágenes en `/app/data/uploads` (`/api/admin/systems`, `/api/admin/upload`, `/api/assets/[filename]`)*.
+  3. **`feat-011`** (`done`): *Panel Visual del Administrador de Proyectos (`/admin/proyectos`) con Subida de 4 Imágenes, Selector de Categoría y Guía de Despliegue Home Lab*.
 - **Especificación maestra de referencia:** `docs/product-specs/dekolabs-portfolio-spec.md` (Sección 7), `docs/design-docs/homelab-deployment.md`, `docs/RELIABILITY.md`, `docs/SECURITY.md` y `ARCHITECTURE.md`.
 
 ## Justificación de Dependencias en `package.json` (Regla Dura #4 de `ARCHITECTURE.md`)

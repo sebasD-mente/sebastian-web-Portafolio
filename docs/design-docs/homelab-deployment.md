@@ -120,3 +120,25 @@ docker compose logs -f --tail=50 dekolabs-portfolio
 - **Sistema de archivos de solo lectura (`read_only: true` + `tmpfs: /tmp`):** Impide escrituras persistentes no autorizadas dentro de la capa del contenedor.
 - **Bloqueo de escalación de privilegios (`security_opt: ["no-new-privileges:true"]`):** Protege el kernel del host Ubuntu ante binarios setuid/setgid.
 - **Cuotas de memoria y CPU (`mem_limit: 256m`, `cpus: 1.0`):** Garantiza aislamiento de recursos frente al resto de servicios del Home Lab (`cloudflared`, `postgres`, `redis`, etc.).
+
+---
+
+## 5. Persistencia PostgreSQL (`dekolabs-db`), Volumen `/app/data/uploads` y Uso de `/admin/proyectos`
+
+### 5.1 Base de Datos `dekolabs-db` (`pgvector/pgvector:pg17`)
+El archivo `docker-compose.yml` incluye el contenedor dedicado `dekolabs-db` basado en `pgvector/pgvector:pg17` con volumen persistente `dekolabs_pgdata:/var/lib/postgresql/data` y `healthcheck` (`pg_isready`).
+- Al arrancar `dekolabs-portfolio`, la capa `Repo` (`src/repo/postgres-catalog.repo.ts`) crea de forma idempotente las tablas `portfolio_systems` (con `catalog_section` y `rag_knowledge_document` preparada para la futura fase de Agente RAG) y `portfolio_system_gallery` (`slot: 1 | 2 | 3`), sembrando automáticamente el Proyecto 01 (`DECO VINTAGE PLATFORM`).
+
+### 5.2 Volumen de Imágenes `/app/data/uploads` Compatible con `read_only: true`
+Dado que `dekolabs-portfolio` se ejecuta con `read_only: true` y usuario sin privilegios `nextjs:nodejs` (`1001:1001`), las imágenes subidas desde el navegador nunca se escriben en `/app/public/`:
+- En el `Dockerfile` (etapa `runner`, antes de `USER nextjs`), se pre-crean `/app/data/uploads` y `/app/.next/cache` con `chown -R nextjs:nodejs`.
+- En `docker-compose.yml`, el volumen nombrado `dekolabs_uploads:/app/data/uploads` monta esa ruta con permisos de escritura para el usuario `1001:1001`.
+- El endpoint `POST /api/admin/upload` guarda los archivos (`PNG`, `JPG`, `WEBP` hasta `10 MB`) en `/app/data/uploads` y `GET /api/assets/[filename]` los sirve dinámicamente con `Cache-Control: public, max-age=31536000, immutable`.
+
+### 5.3 Gestión de Proyectos e Imágenes desde `/admin/proyectos`
+1. Configura tu clave secreta `ADMIN_ACCESS_KEY` en el archivo `.env` del nodo Ubuntu Home Lab antes de ejecutar `docker compose up -d --build`.
+2. Abre en tu navegador `https://dekolabs.org/admin/proyectos` e introduce tu `ADMIN_ACCESS_KEY`.
+3. Desde el panel puedes:
+   - **Editar `DECO VINTAGE PLATFORM`** (o cualquier proyecto existente) para subir desde tu PC sus **3 imágenes exclusivas de la vista de detalle (`VIEW 01`, `VIEW 02`, `VIEW 03`)** o actualizar la imagen de portada de la tarjeta.
+   - **Crear nuevos proyectos** eligiendo en el **Bloque A** si se publican en **`SISTEMAS EN PRODUCCIÓN`** (`#proyectos-destacados`) o en **`MÁS PROYECTOS DE IA`** (`#mas-proyectos-ia`), o usar el botón **"Cargar Molde Base (Deco Vintage)"** para pre-llenar toda la estructura técnica.
+   - Hacer clic en **"Guardar Cambios y Publicar Proyecto"** para persistir transaccionalmente en PostgreSQL e invalidar al instante la caché de `/` y `/sistemas/[slug]`.

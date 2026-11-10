@@ -332,7 +332,7 @@
       "area": "catalog-admin-studio-ui",
       "user_visible_behavior": "Sebastián puede ingresar desde el navegador en producción a '/admin/proyectos', elegir si un proyecto va en 'SISTEMAS EN PRODUCCIÓN' o en 'MÁS PROYECTOS DE IA', subir desde su PC la imagen de la tarjeta de inicio y las 3 imágenes exclusivas de la vista de detalle, completar o editar todos los datos técnicos sin tocar código y publicar los cambios en tiempo real.",
       "priority": "P0",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-010"
       ],
@@ -350,7 +350,7 @@
         "npm test",
         "npm run build"
       ],
-      "evidence": "",
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 39/39 tests PASS en 10 suites incluyendo tests/catalog-admin-ui.test.ts, next build standalone OK con ruta /admin/proyectos).",
       "notes": "REGLAS CRÍTICAS DE FEAT-011: (1) 'src/app/admin/proyectos/page.tsx' y 'src/ui/components/CatalogAdminView.tsx' están en la capa UI y solo pueden importar de 'src/service/', 'src/runtime/', 'src/ui/' y 'src/types/' (prohibido importar de 'src/config/' o 'src/repo/'). (2) Garantizar que el formulario permita tanto editar 'DECO VINTAGE PLATFORM' (para que Sebastián le suba sus 3 imágenes de detalle en producción) como crear nuevos proyectos en 'SISTEMAS EN PRODUCCIÓN' o en 'MÁS PROYECTOS DE IA'. (3) Mantener estética suiza limpia Atelier Monolith, sin saturación visual y con feedback claro de subida de cada una de las 4 imágenes (1 de tarjeta + 3 de detalle)."
     }
   ]
