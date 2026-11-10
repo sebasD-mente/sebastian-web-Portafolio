@@ -360,7 +360,7 @@
       "area": "admin-security-and-auth",
       "user_visible_behavior": "Al intentar ingresar a '/admin/proyectos' sin haber iniciado sesión, el sistema redirige automáticamente a una pantalla profesional de login en '/admin/login' con Usuario y Contraseña protegida contra fuerza bruta; tras autenticarse con cookie segura HttpOnly, Sebastián accede al administrador sin campos de clave expuestos y cuenta con botón 'Cerrar Sesión'.",
       "priority": "P0",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-011"
       ],
@@ -391,7 +391,7 @@
         "npm test",
         "npm run build"
       ],
-      "evidence": "",
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 43/43 tests PASS en 11 suites incluyendo tests/admin-auth-session.test.ts, next build standalone OK con rutas /admin/login, /api/admin/auth/login y /api/admin/auth/logout).",
       "notes": "REGLAS CRÍTICAS DE FEAT-012: (1) Cero paquetes externos nuevos en package.json: usar exclusivamente 'node:crypto' nativo de Node 22. (2) Respetar las 6 capas: 'src/app/admin/*' y 'src/ui/components/*' NUNCA deben importar de 'src/config/' ni 'src/repo/'; los route.ts delegan a 'src/runtime/admin-auth.handler.ts'. (3) Mantener compatibilidad en 'isAdminRequestAuthorized' ('src/runtime/admin-catalog.handler.ts') aceptando la cookie firmada 'dekolabs_admin_session' O la cabecera 'x-admin-key'/'Bearer' para que 'tests/admin-api-and-uploads.test.ts' siga pasando intacto al 100%. (4) Añadir 'AdminLoginView.tsx' al listado 'activeComponents' en 'tests/harness-deprecation-dag.test.ts'. (5) Manejar 'cookies()' de 'next/headers' en 'src/app/admin/proyectos/page.tsx' de forma segura tanto en Server Components reales (redirect('/admin/login') sin sesión) como al invocarse en pruebas unitarias Vitest."
     },
     {

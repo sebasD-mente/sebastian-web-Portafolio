@@ -533,3 +533,58 @@ export interface ContactSubmissionReceipt {
   estimatedResponseWindow: string;
   summaryMessage: string;
 }
+
+export interface AdminAuthConfig {
+  configured: boolean;
+  username: string;
+  password: string;
+  sessionSecret: string;
+  cookieName: string;
+  sessionTtlSeconds: number;
+  secureCookie: boolean;
+  maxLoginAttempts: number;
+  rateLimitWindowMs: number;
+  lockoutDurationMs: number;
+}
+
+export interface AdminAuthConfigOverrides {
+  username?: string;
+  password?: string;
+  sessionSecret?: string;
+  nodeEnv?: string;
+  sessionTtlSeconds?: number;
+  maxLoginAttempts?: number;
+  rateLimitWindowMs?: number;
+  lockoutDurationMs?: number;
+}
+
+export interface AdminSessionClaims {
+  sub: string;
+  iat: number;
+  exp: number;
+}
+
+export type AdminSessionVerificationReason =
+  | "missing-token"
+  | "unconfigured"
+  | "malformed-token"
+  | "invalid-signature"
+  | "expired-token"
+  | "subject-mismatch";
+
+export interface AdminSessionVerificationResult {
+  valid: boolean;
+  claims: AdminSessionClaims | null;
+  reason?: AdminSessionVerificationReason;
+}
+
+export interface AdminLoginInput {
+  username: string;
+  password: string;
+}
+
+export interface AdminRateLimitStatus {
+  allowed: boolean;
+  remainingAttempts: number;
+  retryAfterSeconds: number;
+}

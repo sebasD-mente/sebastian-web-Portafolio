@@ -7,6 +7,11 @@ import {
   createCorrelationId
 } from "@/runtime/logger";
 import {
+  getAdminAccessKeyPlaceholder,
+  parseCookieValueFromHeader,
+  verifyAdminSessionToken
+} from "@/service/admin-auth.service";
+import {
   deleteCatalogSystemBySlugAsync,
   getCatalogSectionsConfig,
   getCatalogSystemBySlugAsync,
@@ -17,6 +22,7 @@ import {
   validateCatalogSystemUpsertPayload
 } from "@/service/systems.service";
 import type {
+  AdminAuthConfigOverrides,
   AsyncCatalogRepository,
   CatalogSectionDescriptor,
   CatalogSectionId,
@@ -39,6 +45,7 @@ const SAFE_ASSET_FILENAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,120}\.(?:png|jpg|jp
 
 export interface AdminCatalogHandlerOptions {
   adminAccessKey?: string;
+  authConfig?: AdminAuthConfigOverrides;
   uploadsDir?: string;
   repo?: AsyncCatalogRepository;
 }
@@ -94,6 +101,12 @@ function resolveExpectedAdminKey(options?: AdminCatalogHandlerOptions): string {
   }
   const envKey = process.env.ADMIN_ACCESS_KEY?.trim();
   if (envKey && envKey.length > 0) {
+    if (
+      process.env.NODE_ENV === "production" &&
+      envKey === getAdminAccessKeyPlaceholder()
+    ) {
+      return "";
+    }
     return envKey;
   }
   if (process.env.NODE_ENV !== "production") {
@@ -118,6 +131,19 @@ export function isAdminRequestAuthorized(
   request: Request,
   options?: AdminCatalogHandlerOptions
 ): boolean {
+  const sessionToken = parseCookieValueFromHeader(
+    request.headers.get("cookie")
+  );
+  if (sessionToken) {
+    const verification = verifyAdminSessionToken(
+      sessionToken,
+      options?.authConfig
+    );
+    if (verification.valid) {
+      return true;
+    }
+  }
+
   const expected = resolveExpectedAdminKey(options);
   const provided = extractIncomingAdminKey(request);
   if (!expected || !provided) {
@@ -142,19 +168,21 @@ function buildUnauthorizedResponse(
     component: "runtime.admin-catalog.handler",
     action: `${action} (unauthorized)`,
     durationMs,
-    input: { authHeaderPresent: false },
+    input: { authenticated: false },
     output: null,
     error: {
-      message: "Acceso denegado: clave ADMIN_ACCESS_KEY ausente o inválida.",
+      message:
+        "Acceso denegado: sesión de administrador ausente, expirada o inválida.",
       why: "Los endpoints de administración del catálogo operan bajo política Fail-Closed.",
-      fix: "Proporciona la cabecera 'x-admin-key' o 'Authorization: Bearer <ADMIN_ACCESS_KEY>'."
+      fix: "Inicia sesión en '/admin/login' (cookie firmada HttpOnly) o envía una cabecera 'x-admin-key' válida."
     },
     correlationId
   });
 
   const payload: AdminCatalogErrorPayload = {
     ok: false,
-    message: "No autorizado. Verifica tu clave de acceso de administrador (ADMIN_ACCESS_KEY).",
+    message:
+      "Sesión no autorizada o expirada. Inicia sesión nuevamente en /admin/login.",
     correlationId,
     runtimeLog
   };

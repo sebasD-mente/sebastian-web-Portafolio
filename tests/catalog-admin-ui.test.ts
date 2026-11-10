@@ -88,9 +88,12 @@ describe("feat-011: Panel Visual del Administrador de Proyectos (/admin/proyecto
       })
     );
 
-    // Header & Auth
+    // Header & Active Session Bar (sin ADMIN_ACCESS_KEY expuesto en pantalla)
     expect(html).toContain("/admin/proyectos");
-    expect(html).toContain("ADMIN_ACCESS_KEY");
+    expect(html).not.toContain("ADMIN_ACCESS_KEY");
+    expect(html).not.toContain('name="adminAccessKey"');
+    expect(html).toContain("SESIÓN ACTIVA · HTTPONLY");
+    expect(html).toContain("Cerrar Sesión");
     expect(html).toContain("Cargar Molde Base (Deco Vintage)");
 
     // Both Categories

@@ -135,10 +135,14 @@ Dado que `dekolabs-portfolio` se ejecuta con `read_only: true` y usuario sin pri
 - En `docker-compose.yml`, el volumen nombrado `dekolabs_uploads:/app/data/uploads` monta esa ruta con permisos de escritura para el usuario `1001:1001`.
 - El endpoint `POST /api/admin/upload` guarda los archivos (`PNG`, `JPG`, `WEBP` hasta `10 MB`) en `/app/data/uploads` y `GET /api/assets/[filename]` los sirve dinámicamente con `Cache-Control: public, max-age=31536000, immutable`.
 
-### 5.3 Gestión de Proyectos e Imágenes desde `/admin/proyectos`
-1. Configura tu clave secreta `ADMIN_ACCESS_KEY` en el archivo `.env` del nodo Ubuntu Home Lab antes de ejecutar `docker compose up -d --build`.
-2. Abre en tu navegador `https://dekolabs.org/admin/proyectos` e introduce tu `ADMIN_ACCESS_KEY`.
-3. Desde el panel puedes:
+### 5.3 Autenticación Segura (`/admin/login`) y Gestión desde `/admin/proyectos`
+1. Configura tus credenciales privadas de administrador único en el archivo `.env` del nodo Ubuntu Home Lab antes de ejecutar `docker compose up -d --build`:
+   - `ADMIN_USERNAME`: Tu usuario o correo privado (ej. `admin@dekolabs.org`).
+   - `ADMIN_PASSWORD`: Contraseña privada fuerte (`>= 8` caracteres; verificada en tiempo constante con `scryptSync` y `timingSafeEqual` bajo política `Fail-Closed` en producción).
+   - `ADMIN_SESSION_SECRET`: Secreto criptográfico de alta entropía (`>= 32` caracteres) usado para firmar tokens HMAC-SHA256 sin estado en la cookie `dekolabs_admin_session` (`HttpOnly; SameSite=Strict; Path=/; Max-Age=43200; Secure`).
+   - `ADMIN_ACCESS_KEY`: Clave opcional para scripts automatizados de API (`x-admin-key` / `Bearer`).
+2. Si intentas ingresar a `https://dekolabs.org/admin/proyectos` sin sesión activa, el servidor redirige automáticamente a `https://dekolabs.org/admin/login` (protegido contra ataques de fuerza bruta por IP con respuestas `429 Too Many Requests`).
+3. Tras iniciar sesión en `/admin/login`, accedes a `/admin/proyectos` con cookie segura `HttpOnly` (sin exponer campos de clave en pantalla y con botón **`Cerrar Sesión`**), desde donde puedes:
    - **Editar `DECO VINTAGE PLATFORM`** (o cualquier proyecto existente) para subir desde tu PC sus **3 imágenes exclusivas de la vista de detalle (`VIEW 01`, `VIEW 02`, `VIEW 03`)** o actualizar la imagen de portada de la tarjeta.
    - **Crear nuevos proyectos** eligiendo en el **Bloque A** si se publican en **`SISTEMAS EN PRODUCCIÓN`** (`#proyectos-destacados`) o en **`MÁS PROYECTOS DE IA`** (`#mas-proyectos-ia`), o usar el botón **"Cargar Molde Base (Deco Vintage)"** para pre-llenar toda la estructura técnica.
    - Hacer clic en **"Guardar Cambios y Publicar Proyecto"** para persistir transaccionalmente en PostgreSQL e invalidar al instante la caché de `/` y `/sistemas/[slug]`.

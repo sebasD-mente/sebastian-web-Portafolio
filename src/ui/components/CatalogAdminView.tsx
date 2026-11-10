@@ -20,6 +20,7 @@ export interface CatalogAdminViewProps {
   initialSystems: ProductionSystem[];
   sections: Record<CatalogSectionId, CatalogSectionDescriptor>;
   defaultTemplate: ProductionSystemUpsertInput;
+  authenticatedUsername?: string;
 }
 
 export interface UploadSlotStatus {
@@ -364,13 +365,13 @@ export function buildDecoTemplateDraft(
 export function CatalogAdminView({
   initialSystems,
   sections,
-  defaultTemplate
+  defaultTemplate,
+  authenticatedUsername = "admin@dekolabs.org"
 }: CatalogAdminViewProps) {
   const [systems, setSystems] = useState<ProductionSystem[]>(() =>
     [...initialSystems].sort((a, b) => a.order.localeCompare(b.order))
   );
-  const [adminKey, setAdminKey] = useState<string>("");
-  const [showAdminKey, setShowAdminKey] = useState<boolean>(false);
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [isEditingExisting, setIsEditingExisting] = useState<boolean>(() =>
     initialSystems.some((s) => s.slug === "deco-vintage-platform")
   );
@@ -487,80 +488,38 @@ export function CatalogAdminView({
     });
   }
 
-  async function handleSyncCatalogFromServer(): Promise<void> {
-    if (!adminKey.trim()) {
-      setStatusBanner({
-        type: "error",
-        message:
-          "Ingresa primero tu clave ADMIN_ACCESS_KEY para sincronizar con el servidor."
-      });
-      return;
-    }
-
+  async function handleLogout(): Promise<void> {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
     setStatusBanner({
       type: "loading",
-      message: "Sincronizando catálogo con /api/admin/systems..."
+      message: "Cerrando sesión segura de administrador..."
     });
 
     try {
-      const response = await fetch("/api/admin/systems", {
-        method: "GET",
-        headers: {
-          "x-admin-key": adminKey.trim()
-        }
-      });
-      const body = (await response.json()) as {
-        ok: boolean;
-        systems?: ProductionSystem[];
-        message?: string;
-      };
-
-      if (!response.ok || !body.ok || !Array.isArray(body.systems)) {
-        setStatusBanner({
-          type: "error",
-          message:
-            body.message ||
-            "No fue posible autenticar o sincronizar el catálogo."
-        });
-        return;
-      }
-
-      const sorted = [...body.systems].sort((a, b) =>
-        a.order.localeCompare(b.order)
-      );
-      setSystems(sorted);
-      setStatusBanner({
-        type: "success",
-        message: `Catálogo sincronizado correctamente (${sorted.length} proyectos cargados).`
+      await fetch("/api/admin/auth/logout", {
+        method: "POST",
+        credentials: "same-origin"
       });
     } catch {
-      setStatusBanner({
-        type: "error",
-        message: "Error de red al conectar con /api/admin/systems."
-      });
+      // Continuar con redirección incluso si falla la red
+    }
+
+    if (typeof window !== "undefined") {
+      window.location.assign("/admin/login");
     }
   }
 
   async function uploadImageFileToServer(
     file: File
   ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-    if (!adminKey.trim()) {
-      return {
-        ok: false,
-        error:
-          "Ingresa tu clave ADMIN_ACCESS_KEY arriba antes de subir imágenes desde tu PC."
-      };
-    }
-
     const formData = new FormData();
     formData.append("file", file);
 
     try {
       const response = await fetch("/api/admin/upload", {
         method: "POST",
-        headers: {
-          "x-admin-key": adminKey.trim()
-        },
+        credentials: "same-origin",
         body: formData
       });
 
@@ -569,6 +528,18 @@ export function CatalogAdminView({
         asset?: { url: string; filename: string };
         message?: string;
       };
+
+      if (response.status === 401) {
+        if (typeof window !== "undefined") {
+          window.location.assign("/admin/login");
+        }
+        return {
+          ok: false,
+          error:
+            payload.message ||
+            "Tu sesión de administrador expiró. Inicia sesión nuevamente en /admin/login."
+        };
+      }
 
       if (!response.ok || !payload.ok || !payload.asset?.url) {
         return {
@@ -845,15 +816,6 @@ export function CatalogAdminView({
   ): Promise<void> {
     event.preventDefault();
 
-    if (!adminKey.trim()) {
-      setStatusBanner({
-        type: "error",
-        message:
-          "Debes ingresar tu clave de administrador (ADMIN_ACCESS_KEY) antes de guardar cambios."
-      });
-      return;
-    }
-
     setStatusBanner({
       type: "loading",
       message: "Guardando proyecto en el catálogo y revalidando vistas públicas..."
@@ -864,9 +826,9 @@ export function CatalogAdminView({
     try {
       const response = await fetch("/api/admin/systems", {
         method,
+        credentials: "same-origin",
         headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey.trim()
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(formState)
       });
@@ -877,6 +839,19 @@ export function CatalogAdminView({
         message?: string;
         errors?: Record<string, string>;
       };
+
+      if (response.status === 401) {
+        setStatusBanner({
+          type: "error",
+          message:
+            payload.message ||
+            "Sesión expirada. Redirigiendo a /admin/login..."
+        });
+        if (typeof window !== "undefined") {
+          window.location.assign("/admin/login");
+        }
+        return;
+      }
 
       if (!response.ok || !payload.ok || !payload.system) {
         if (payload.errors) {
@@ -916,15 +891,6 @@ export function CatalogAdminView({
   }
 
   async function handleDeleteProject(slugToDelete: string): Promise<void> {
-    if (!adminKey.trim()) {
-      setStatusBanner({
-        type: "error",
-        message:
-          "Ingresa tu clave ADMIN_ACCESS_KEY antes de eliminar un proyecto."
-      });
-      return;
-    }
-
     setStatusBanner({
       type: "loading",
       message: `Eliminando proyecto '${slugToDelete}'...`
@@ -935,9 +901,7 @@ export function CatalogAdminView({
         `/api/admin/systems?slug=${encodeURIComponent(slugToDelete)}`,
         {
           method: "DELETE",
-          headers: {
-            "x-admin-key": adminKey.trim()
-          }
+          credentials: "same-origin"
         }
       );
 
@@ -946,6 +910,19 @@ export function CatalogAdminView({
         deletedSlug?: string;
         message?: string;
       };
+
+      if (response.status === 401) {
+        setStatusBanner({
+          type: "error",
+          message:
+            payload.message ||
+            "Sesión expirada. Redirigiendo a /admin/login..."
+        });
+        if (typeof window !== "undefined") {
+          window.location.assign("/admin/login");
+        }
+        return;
+      }
 
       if (!response.ok || !payload.ok) {
         setStatusBanner({
@@ -1030,58 +1007,28 @@ export function CatalogAdminView({
             </div>
           </div>
 
-          {/* Authentication Bar */}
-          <div className="mt-6 p-4 rounded-[10px] bg-[#F8F9FA] border border-[#E5E7EB] flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div className="flex-1 max-w-xl">
-              <label
-                htmlFor="admin-access-key-input"
-                className="block font-mono text-xs font-semibold uppercase tracking-wider text-[#111827] mb-1.5"
-              >
-                Clave de Acceso Administrador (ADMIN_ACCESS_KEY) *
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="admin-access-key-input"
-                  name="adminAccessKey"
-                  type={showAdminKey ? "text" : "password"}
-                  value={adminKey}
-                  onChange={(e) => setAdminKey(e.target.value)}
-                  autoComplete="current-password"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  placeholder="Ingresa tu ADMIN_ACCESS_KEY configurada en el Ubuntu Home Lab"
-                  aria-describedby="admin-key-help"
-                  className="w-full min-h-[44px] px-3.5 py-2 bg-white border border-[#D1D5DB] rounded-[6px] text-sm font-mono text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+          {/* Active Session & Live Status Bar */}
+          <div className="mt-6 p-4 rounded-[10px] bg-[#F8F9FA] border border-[#E5E7EB] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[6px] bg-[#ECFDF5] border border-[#6EE7B7] font-mono text-xs font-semibold text-[#065F46]">
+                <span
+                  aria-hidden="true"
+                  className="w-2 h-2 rounded-full bg-[#10B981]"
                 />
-                <button
-                  type="button"
-                  aria-pressed={showAdminKey}
-                  aria-label={
-                    showAdminKey
-                      ? "Ocultar clave de administrador"
-                      : "Mostrar clave de administrador"
-                  }
-                  onClick={() => setShowAdminKey((prev) => !prev)}
-                  className="min-h-[44px] px-3 py-2 bg-white hover:bg-[#F3F4F6] border border-[#D1D5DB] rounded-[6px] font-mono text-xs text-[#374151] cursor-pointer"
-                >
-                  {showAdminKey ? "OCULTAR" : "MOSTRAR"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSyncCatalogFromServer}
-                  className="min-h-[44px] px-4 py-2 bg-[#111827] hover:bg-[#1F2937] text-white rounded-[6px] font-mono text-xs font-semibold uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                >
-                  Sincronizar Catálogo
-                </button>
-              </div>
-              <p
-                id="admin-key-help"
-                className="mt-1.5 text-xs text-[#4B5563] font-mono"
+                SESIÓN ACTIVA · HTTPONLY
+              </span>
+              <span className="font-mono text-xs text-[#374151]">
+                Administrador:{" "}
+                <strong className="text-[#111827]">{authenticatedUsername}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="min-h-[40px] px-3.5 py-1.5 bg-white hover:bg-[#FEF2F2] text-[#991B1B] border border-[#FCA5A5] rounded-[6px] font-mono text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-60"
               >
-                Requerida en cada operación de escritura o subida de archivos hacia{" "}
-                <code>/api/admin/systems</code> y <code>/api/admin/upload</code>.
-              </p>
+                {isLoggingOut ? "Cerrando Sesión..." : "Cerrar Sesión"}
+              </button>
             </div>
 
             {/* Live Status Banner */}

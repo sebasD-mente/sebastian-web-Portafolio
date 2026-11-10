@@ -32,6 +32,7 @@ describe('Event-Sourced Pass-State Gating & DAG Deprecation (feat-008)', () => {
       .filter((name) => name.endsWith('.tsx'))
       .sort();
     expect(activeComponents).toEqual([
+      'AdminLoginView.tsx',
       'AppShell.tsx',
       'CatalogAdminView.tsx',
       'CodeInspectorTabs.tsx',

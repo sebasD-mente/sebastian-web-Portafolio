@@ -1,4 +1,6 @@
 import type {
+  AdminAuthConfig,
+  AdminAuthConfigOverrides,
   AmbientTelemetryStatus,
   ArchitectureLayerSummary,
   CatalogSectionDescriptor,
@@ -12,6 +14,147 @@ import type {
 export const DEFAULT_THEME_MODE: ThemeMode = "light";
 
 export const DEFAULT_CATALOG_UPLOADS_DIR = "/app/data/uploads";
+
+export const ADMIN_SESSION_COOKIE_NAME = "dekolabs_admin_session";
+export const ADMIN_SESSION_TTL_SECONDS = 43200; // 12 horas
+export const ADMIN_LOGIN_MAX_ATTEMPTS = 5;
+export const ADMIN_LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+export const ADMIN_LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutos
+
+export const ADMIN_PASSWORD_PLACEHOLDER =
+  "change_this_admin_password_in_production";
+export const ADMIN_SESSION_SECRET_PLACEHOLDER =
+  "change_this_admin_session_secret_min_32_chars_in_production";
+export const ADMIN_ACCESS_KEY_PLACEHOLDER =
+  "change_this_admin_access_key_in_production";
+
+export function getAdminAuthConfig(
+  overrides?: AdminAuthConfigOverrides
+): AdminAuthConfig {
+  const effectiveEnv = (
+    overrides?.nodeEnv ??
+    process.env.NODE_ENV ??
+    "development"
+  )
+    .trim()
+    .toLowerCase();
+  const isProduction = effectiveEnv === "production";
+
+  const rawUsername = (
+    overrides?.username !== undefined
+      ? overrides.username
+      : process.env.ADMIN_USERNAME
+  )?.trim() ?? "";
+
+  const rawPassword = (
+    overrides?.password !== undefined
+      ? overrides.password
+      : process.env.ADMIN_PASSWORD
+  )?.trim() ?? "";
+
+  const rawSessionSecret = (
+    overrides?.sessionSecret !== undefined
+      ? overrides.sessionSecret
+      : process.env.ADMIN_SESSION_SECRET
+  )?.trim() ?? "";
+
+  const sessionTtlSeconds =
+    typeof overrides?.sessionTtlSeconds === "number" &&
+    overrides.sessionTtlSeconds > 0
+      ? Math.floor(overrides.sessionTtlSeconds)
+      : ADMIN_SESSION_TTL_SECONDS;
+
+  const maxLoginAttempts =
+    typeof overrides?.maxLoginAttempts === "number" &&
+    overrides.maxLoginAttempts >= 1
+      ? Math.floor(overrides.maxLoginAttempts)
+      : ADMIN_LOGIN_MAX_ATTEMPTS;
+
+  const rateLimitWindowMs =
+    typeof overrides?.rateLimitWindowMs === "number" &&
+    overrides.rateLimitWindowMs >= 1000
+      ? Math.floor(overrides.rateLimitWindowMs)
+      : ADMIN_LOGIN_WINDOW_MS;
+
+  const lockoutDurationMs =
+    typeof overrides?.lockoutDurationMs === "number" &&
+    overrides.lockoutDurationMs >= 1000
+      ? Math.floor(overrides.lockoutDurationMs)
+      : ADMIN_LOGIN_LOCKOUT_MS;
+
+  if (isProduction) {
+    const hasValidUser = rawUsername.length > 0;
+    const hasValidPass =
+      rawPassword.length >= 8 && rawPassword !== ADMIN_PASSWORD_PLACEHOLDER;
+    const hasValidSecret =
+      rawSessionSecret.length >= 16 &&
+      rawSessionSecret !== ADMIN_SESSION_SECRET_PLACEHOLDER;
+    const configured = hasValidUser && hasValidPass && hasValidSecret;
+
+    return {
+      configured,
+      username: configured ? rawUsername : "",
+      password: configured ? rawPassword : "",
+      sessionSecret: configured ? rawSessionSecret : "",
+      cookieName: ADMIN_SESSION_COOKIE_NAME,
+      sessionTtlSeconds,
+      secureCookie: true,
+      maxLoginAttempts,
+      rateLimitWindowMs,
+      lockoutDurationMs
+    };
+  }
+
+  // En desarrollo y pruebas automatizadas: si se pasó un override explícito vacío se respeta Fail-Closed;
+  // si las variables de entorno no están definidas o conservan el placeholder, se usa respaldo local seguro.
+  const explicitEmptyOverride =
+    (overrides?.username !== undefined && rawUsername.length === 0) ||
+    (overrides?.password !== undefined && rawPassword.length === 0) ||
+    (overrides?.sessionSecret !== undefined && rawSessionSecret.length < 16);
+
+  if (explicitEmptyOverride) {
+    return {
+      configured: false,
+      username: "",
+      password: "",
+      sessionSecret: "",
+      cookieName: ADMIN_SESSION_COOKIE_NAME,
+      sessionTtlSeconds,
+      secureCookie: false,
+      maxLoginAttempts,
+      rateLimitWindowMs,
+      lockoutDurationMs
+    };
+  }
+
+  const resolvedUsername = rawUsername || "admin@dekolabs.org";
+  const resolvedPassword =
+    !rawPassword || rawPassword === ADMIN_PASSWORD_PLACEHOLDER
+      ? "dekolabs-admin-dev-password"
+      : rawPassword;
+  const resolvedSecret =
+    !rawSessionSecret || rawSessionSecret === ADMIN_SESSION_SECRET_PLACEHOLDER
+      ? "dekolabs-admin-dev-session-secret-2026-local-only"
+      : rawSessionSecret;
+
+  const configured =
+    resolvedUsername.length > 0 &&
+    resolvedPassword.length > 0 &&
+    resolvedSecret.length >= 16;
+
+  return {
+    configured,
+    username: configured ? resolvedUsername : "",
+    password: configured ? resolvedPassword : "",
+    sessionSecret: configured ? resolvedSecret : "",
+    cookieName: ADMIN_SESSION_COOKIE_NAME,
+    sessionTtlSeconds,
+    secureCookie: false,
+    maxLoginAttempts,
+    rateLimitWindowMs,
+    lockoutDurationMs
+  };
+}
 
 export const CATALOG_SECTIONS_CONFIG: Record<
   CatalogSectionId,
