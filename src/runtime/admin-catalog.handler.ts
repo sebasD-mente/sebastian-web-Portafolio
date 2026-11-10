@@ -196,9 +196,16 @@ function buildUnauthorizedResponse(
   });
 }
 
+export const CATALOG_REVALIDATION_PATHS = [
+  "/",
+  "/proyectos-ia",
+  "/admin/proyectos"
+] as const;
+
 function safeRevalidateCatalogPaths(slug?: string): void {
   try {
     revalidatePath("/");
+    revalidatePath("/proyectos-ia");
     revalidatePath("/admin/proyectos");
     if (slug) {
       revalidatePath(`/sistemas/${slug}`);

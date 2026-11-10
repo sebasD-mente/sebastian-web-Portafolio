@@ -428,7 +428,7 @@
       "area": "public-catalog-curation",
       "user_visible_behavior": "En la página inicial ('/') de dekolabs.org aparecen únicamente el Hero y 'SISTEMAS EN PRODUCCIÓN' sin la sección de IA inferior; al hacer clic en 'MAS PROYECTOS DE IA' en la barra superior, el visitante accede a la página dedicada '/proyectos-ia', y cuando un proyecto evoluciona a Producción pasa automáticamente de '/proyectos-ia' a la página de inicio ('/').",
       "priority": "P0",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-013"
       ],
@@ -453,7 +453,7 @@
         "npm test",
         "npm run build"
       ],
-      "evidence": "",
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 49/49 tests PASS en 12 suites incluyendo tests/ai-projects-page.test.ts con / exclusiva para SISTEMAS EN PRODUCCIÓN sin #mas-proyectos-ia, nueva ruta /proyectos-ia force-dynamic y revalidatePath('/proyectos-ia'), next build standalone OK en 4.2s).",
       "notes": "REGLAS CRÍTICAS DE FEAT-014: (1) Verificar en 'tests/ai-projects-page.test.ts' y 'tests/postgres-catalog-and-gallery.test.ts' que 'ProductionSystemsSection.tsx' y el render de '/' NO contengan 'id=\"mas-proyectos-ia\"' ni 'MÁS PROYECTOS DE IA', y que '/proyectos-ia' los renderice correctamente. (2) Conservar intactos los textos de 'label' en 'SITE_NAVIGATION' ('SISTEMAS EN PRODUCCIÓN', 'STACK TECNOLOGICO', 'MAS PROYECTOS DE IA') para mantener compatibilidad con 'tests/site.service.test.ts', cambiando únicamente sus 'href'. (3) Registrar 'AiProjectsCatalogView.tsx' en 'activeComponents' dentro de 'tests/harness-deprecation-dag.test.ts'. (4) No alterar 'src/app/robots.ts' ni 'src/app/sitemap.ts' salvo que se actualice explícitamente 'tests/deployment-config.test.ts'."
     },
     {

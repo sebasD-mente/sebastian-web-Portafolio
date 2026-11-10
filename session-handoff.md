@@ -1,43 +1,49 @@
 # Session Handoff
 
 ## Current Objective
-- **Goal:** Implementar y verificar al `100/100` la tarea **`feat-013`** (*Reestructuración del Administrador (`/admin/proyectos`) en 2 Vistas Separadas, Selector `<select>` de Sección y Evolución de IA a Producción*), dejando el repositorio en `clean-state` (`WIP = 0`) listo para `feat-014`.
-- **Current status:** `clean-state` (`feat-001` a `feat-013` en `"done"`, `feat-014` a `feat-015` en `"not-started"`, `WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `44/44` tests unitarios en 11 suites PASS y build `standalone` OK)
-- **Branch / commit:** `main` (`feat-013` implementada y verificada)
+- **Goal:** Implementar y verificar al `100/100` la tarea **`feat-014`** (*Página de Inicio (`/`) Exclusiva para Sistemas en Producción y Nueva Página Pública Dedicada `/proyectos-ia`*), dejando el repositorio en `clean-state` (`WIP = 0`) listo para `feat-015`.
+- **Current status:** `clean-state` (`feat-001` a `feat-014` en `"done"`, `feat-015` en `"not-started"`, `WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `49/49` tests unitarios en 12 suites PASS y build `standalone` OK)
+- **Branch / commit:** `main` (`feat-014` implementada y verificada)
 
 ## Completed This Session
-- [x] **División de `/admin/proyectos` en 2 Vistas Independientes (`src/ui/components/CatalogAdminView.tsx`)**:
-  - **Vista 1 (`viewMode = "list"`, predeterminada)**: Muestra únicamente las tarjetas agrupadas en `PROYECTOS EN PRODUCCIÓN` y `MÁS PROYECTOS DE IA`, con un **único botón primario `+ Crear Nuevo Proyecto`** en la cabecera (retirando `+ Nuevo en Producción`, `+ Nuevo Proyecto de IA`, `+ Añadir` y `+ Añadir IA`, y evitando abrir el formulario automáticamente).
-  - **Vista 2 (`viewMode = "form"`, bajo demanda)**: Se abre solo al pulsar `+ Crear Nuevo Proyecto` o `Editar`, incluye `← Volver a Proyectos Creados` y `Cargar Molde Base (Deco Vintage)` (en creación), transfiere el foco al encabezado activo y vuelve al listado tras guardar.
-- [x] **Selector `<select name="catalogSection">` y Eliminación de Cajas Radio**:
-  - Eliminadas al `100%` las antiguas cajas grandes de radio `UBICACIÓN DEL PROYECTO EN LA PÁGINA DE INICIO (CATALOGSECTION) *`.
-  - Incorporado `<select id="project-catalog-section-select" name="catalogSection">` con opciones `Proyectos en Producción` (`"production-systems"`) y `Más Proyectos de IA` (`"ai-projects"`), `aria-describedby` y bordes de alto contraste (`>= 3:1`).
-- [x] **Ciclo de Evolución de Proyectos (`Más Proyectos de IA` → `Proyectos en Producción`)**:
-  - Funciones `upgradeVersionBadgeForProduction`, `buildPromotedToProductionInput` y `promoteCatalogSystemToProductionAsync` en `src/service/systems.service.ts`.
-  - Botón directo **`Evolucionar a Producción ↗`** en cada tarjeta de `MÁS PROYECTOS DE IA` que ejecuta `PUT /api/admin/systems` con `catalogSection: "production-systems"` y actualiza la badge de versión.
-- [x] **Pruebas Automatizadas (`44/44 PASS`)**:
-  - Actualizada `tests/catalog-admin-ui.test.ts` verificando Vista 1 (`list`), Vista 2 (`form`), `<select name="catalogSection">`, ausencia total de radios antiguos y evolución de IA a Producción en servicio y API.
+- [x] **Curaduría Exclusiva de la Página de Inicio (`/` — `src/app/page.tsx` y `src/ui/components/ProductionSystemsSection.tsx`)**:
+  - Retirada por completo la sección `MÁS PROYECTOS DE IA` (`#mas-proyectos-ia`) de `/` y `ProductionSystemsSection.tsx`, dejando en la portada únicamente `HeroSection` y `SISTEMAS EN PRODUCCIÓN` (`#proyectos-destacados`).
+- [x] **Nueva Ruta Pública Dedicada `/proyectos-ia` (`src/app/proyectos-ia/page.tsx` y `src/ui/components/AiProjectsCatalogView.tsx`)**:
+  - Creada ruta `force-dynamic` con metadatos canónicos, barra de retorno a `/#proyectos-destacados`, encabezado `<h1>MÁS PROYECTOS DE IA</h1>`, tarjetas *Atelier Monolith* (`<h2>`) reutilizando `ProjectPreviewCard` y estado vacío sobrio cuando no hay proyectos publicados en incubación.
+- [x] **Navegación Global y Revalidación Instantánea (`src/types/portfolio.ts`, `src/config/site.config.ts`, `src/ui/components/AppShell.tsx`, `src/runtime/admin-catalog.handler.ts`)**:
+  - `SITE_NAVIGATION` dirige `MAS PROYECTOS DE IA` a `/proyectos-ia` y los enlaces de sección a `/#proyectos-destacados`, `/#stack-tecnologico` y `/#contacto` (conservando intactos sus `label` e indicando `aria-current="page"` en `/proyectos-ia`).
+  - `safeRevalidateCatalogPaths` incluye `revalidatePath("/proyectos-ia")` para reflejar de inmediato altas, ediciones, bajas y evoluciones de IA a Producción tanto en `/proyectos-ia` como en `/`.
+- [x] **Pruebas Automatizadas (`49/49 PASS`)**:
+  - Creada `tests/ai-projects-page.test.ts` y actualizadas `tests/postgres-catalog-and-gallery.test.ts` y `tests/harness-deprecation-dag.test.ts`.
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 | :--- | :--- | :--- | :--- |
 | Vigilante Arquitectónico y Higiene (Puerta 1) | `bash scripts/check-architecture.sh` | `PASS (Exit code 0)` | 6 capas en `src/` sin violaciones direccionales, `0 CRLF`, `0 BOM` |
-| Validación de los 5 Subsistemas (Puerta 2) | `node scripts/validate-harness.mjs --min-score 100` | `PASS (100/100)` | `25/25` checks PASS (`feat-001`..`feat-013` en `done`, `WIP = 0`) |
-| Build, Lint, Typecheck y Tests (Puerta 3) | `bash ./init.sh` | `PASS (Exit code 0)` | `tsc --noEmit` OK, `vitest run` (`44/44 PASS` en 11 suites) y `next build` (`standalone` OK) |
+| Validación de los 5 Subsistemas (Puerta 2) | `node scripts/validate-harness.mjs --min-score 100` | `PASS (100/100)` | `25/25` checks PASS (`feat-001`..`feat-014` en `done`, `WIP = 0`) |
+| Build, Lint, Typecheck y Tests (Puerta 3) | `bash ./init.sh` | `PASS (Exit code 0)` | `tsc --noEmit` OK, `vitest run` (`49/49 PASS` en 12 suites) y `next build` (`standalone` OK con `/proyectos-ia`) |
 
 ## Files Changed
-- `src/service/systems.service.ts`
-- `src/ui/components/CatalogAdminView.tsx`
-- `tests/catalog-admin-ui.test.ts`
+- `src/types/portfolio.ts`
+- `src/config/site.config.ts`
+- `src/runtime/admin-catalog.handler.ts`
+- `src/app/page.tsx`
+- `src/app/proyectos-ia/page.tsx`
+- `src/ui/components/AppShell.tsx`
+- `src/ui/components/ProductionSystemsSection.tsx`
+- `src/ui/components/AiProjectsCatalogView.tsx`
+- `tests/ai-projects-page.test.ts`
+- `tests/postgres-catalog-and-gallery.test.ts`
+- `tests/harness-deprecation-dag.test.ts`
 - `feature_list.json`
 - `sprint-contract.md`
 - `progress.md`
 - `session-handoff.md`
 
 ## Decisions Made
-- Mantener `CatalogAdminView.tsx` (`"use client"`) importando exclusivamente contratos puros de `@/types/portfolio` para no arrastrar `pg` al bundle del navegador, exponiendo las operaciones de promoción tanto en `src/service/systems.service.ts` (servidor) como en `buildPromoteToProductionPayload` (cliente hacia `PUT /api/admin/systems`).
-- Renderizado condicional exclusivo entre `list` y `form` con gestión programática de foco en el encabezado de cada vista.
+- Reutilizar `ProjectPreviewCard` entre `ProductionSystemsSection.tsx` y `AiProjectsCatalogView.tsx` con `headingTag` configurable (`"h3"` en `/` bajo `<h2>` y `"h2"` en `/proyectos-ia` bajo `<h1>`) para evitar saltos de jerarquía de encabezados y mantener fidelidad visual *Atelier Monolith*.
+- Ampliar `CatalogSectionDescriptor` con `routeHref` conservando `anchorId` para compatibilidad total con las suites existentes.
 
 ## Blockers / Risks
 - Ninguno activo.
@@ -48,4 +54,4 @@
 3. Ejecutar `bash ./init.sh` para verificar que la línea base está en verde (`100/100`).
 
 ## Recommended Next Step
-- Seleccionar únicamente **`feat-014`** en `feature_list.json`, pasarla a `"status": "in-progress"` (`WIP = 1`) y separar las vistas públicas dejando `/` exclusivamente para `SISTEMAS EN PRODUCCIÓN` y creando la nueva ruta pública `/proyectos-ia`.
+- Seleccionar únicamente **`feat-015`** en `feature_list.json`, pasarla a `"status": "in-progress"` (`WIP = 1`) e implementar `OfficialFooter.tsx` integrado globalmente en `AppShell.tsx` con los 4 enlaces sociales (LinkedIn, Facebook, Instagram, WhatsApp) y el copyright `"Creado por Sebastian Jimenez 2026"`.

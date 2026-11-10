@@ -163,6 +163,7 @@ export const CATALOG_SECTIONS_CONFIG: Record<
   "production-systems": {
     id: "production-systems",
     anchorId: "proyectos-destacados",
+    routeHref: "/#proyectos-destacados",
     heading: "SISTEMAS EN PRODUCCIÓN",
     subtitle:
       "Plataformas e infraestructuras distribuidas operando en entornos reales con SLA verificado.",
@@ -172,6 +173,7 @@ export const CATALOG_SECTIONS_CONFIG: Record<
   "ai-projects": {
     id: "ai-projects",
     anchorId: "mas-proyectos-ia",
+    routeHref: "/proyectos-ia",
     heading: "MÁS PROYECTOS DE IA",
     subtitle:
       "Agentes autónomos con Google ADK, pipelines RAG sobre pgvector y sistemas de IA en construcción.",
@@ -195,9 +197,9 @@ export const SITE_IDENTITY: SiteIdentity = {
   summary:
     "Construyo software apoyado en un entorno profesional de agentes de código gobernados por un arnés de ingeniería de alto estándar. Combino desarrollo de agentes inteligentes, pruebas de modelos locales en aplicaciones no exploradas y administración de mi propio Home Lab",
   primaryCtaLabel: "SISTEMAS EN PRODUCCIÓN",
-  primaryCtaHref: "#proyectos-destacados",
+  primaryCtaHref: "/#proyectos-destacados",
   secondaryCtaLabel: "CONTRATAR / HABLEMOS",
-  secondaryCtaHref: "#contacto",
+  secondaryCtaHref: "/#contacto",
   footerNote:
     "Desplegado como contenedor Next.js 15 Standalone (node:22-alpine) en Ubuntu Linux Home Lab detrás de Reverse Proxy."
 };
@@ -207,19 +209,19 @@ export const SITE_NAVIGATION: NavigationItem[] = [
     id: "sistemas",
     code: "01",
     label: "SISTEMAS EN PRODUCCIÓN",
-    href: "#proyectos-destacados"
+    href: "/#proyectos-destacados"
   },
   {
     id: "stack",
     code: "02",
     label: "STACK TECNOLOGICO",
-    href: "#stack-tecnologico"
+    href: "/#stack-tecnologico"
   },
   {
     id: "mas-proyectos",
     code: "03",
     label: "MAS PROYECTOS DE IA",
-    href: "#mas-proyectos-ia"
+    href: "/proyectos-ia"
   }
 ];
 

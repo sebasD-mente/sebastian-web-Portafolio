@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type {
   AmbientTelemetryStatus,
   NavigationItem,
@@ -14,6 +15,7 @@ export interface AppShellProps {
   navigation: NavigationItem[];
   ambientTelemetry: AmbientTelemetryStatus;
   defaultTheme: ThemeMode;
+  currentPath?: string;
   children: React.ReactNode;
 }
 
@@ -61,22 +63,34 @@ export function AppShell({
   identity,
   navigation,
   defaultTheme,
+  currentPath,
   children
 }: AppShellProps) {
+  const pathnameFromHook = usePathname();
+  const activePath = currentPath ?? pathnameFromHook ?? "";
+
   useEffect(() => {
     applyDocumentTheme(defaultTheme);
   }, [defaultTheme]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA] text-[#0A0A0A]">
+      {/* Skip Link for Keyboard Users */}
+      <a
+        href="#contenido-principal"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:px-4 focus:py-2 focus:bg-[#0A0A0A] focus:text-white focus:rounded-[2px] mono-label text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+      >
+        Saltar al contenido principal
+      </a>
+
       {/* Fixed Top Navigation Header */}
       <header className="sticky top-0 z-50 w-full border-b border-[#E5E7EB] bg-[#F8F9FA]/95 backdrop-blur-md">
-        <div className="swiss-container py-3.5 sm:py-4 flex flex-wrap items-center justify-between gap-6">
+        <div className="swiss-container py-3.5 sm:py-4 flex flex-wrap items-center justify-between gap-4 sm:gap-6">
           {/* Brand Signature Logo */}
           <Link
             href="/"
             aria-label={identity.logoAlt}
-            className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] rounded-[2px]"
+            className="flex items-center rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
           >
             <img
               src={identity.logoSrc}
@@ -87,27 +101,38 @@ export function AppShell({
             />
           </Link>
 
-          {/* Center Navigation Links (3 Exact Buttons) */}
+          {/* Center Navigation Links (Single Semantic Navigation Tree across viewports) */}
           <nav
-            aria-label="Navegación principal del portafolio"
-            className="hidden md:flex items-center gap-10 lg:gap-16 xl:gap-20"
+            aria-label="Principal"
+            className="order-3 md:order-none w-full md:w-auto pt-2.5 md:pt-0 border-t md:border-t-0 border-[#E5E7EB]"
           >
-            {navigation.map((item) => (
-              <a
-                key={item.id}
-                href={item.href}
-                className="mono-nav text-[#111827] hover:text-[#2563EB] text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] rounded-[2px]"
-              >
-                {renderTwoLineNavLabel(item.label)}
-              </a>
-            ))}
+            <ul className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-10 lg:gap-16 xl:gap-20">
+              {navigation.map((item) => {
+                const isDedicatedPageLink =
+                  item.href.startsWith("/") && !item.href.includes("#");
+                const isCurrentPage =
+                  isDedicatedPageLink && activePath === item.href;
+
+                return (
+                  <li key={item.id}>
+                    <Link
+                      href={item.href}
+                      aria-current={isCurrentPage ? "page" : undefined}
+                      className="inline-block mono-nav text-[#111827] hover:text-[#2563EB] text-center transition-colors rounded-[2px] px-1 py-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB] [&[aria-current=page]]:text-[#1D4ED8] [&[aria-current=page]]:underline [&[aria-current=page]]:decoration-2 [&[aria-current=page]]:underline-offset-4 [&[aria-current=page]]:decoration-[#1D4ED8]"
+                    >
+                      {renderTwoLineNavLabel(item.label)}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </nav>
 
           {/* Primary Black CTA Button */}
           <div className="flex items-center">
-            <a
+            <Link
               href={identity.secondaryCtaHref}
-              className="inline-flex flex-col items-center justify-center px-5 py-2.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white rounded-[12px] mono-nav text-xs font-semibold leading-[1.15] tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#2563EB]"
+              className="inline-flex flex-col items-center justify-center px-5 py-2.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white rounded-[12px] mono-nav text-xs font-semibold leading-[1.15] tracking-wider transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
             >
               {identity.secondaryCtaLabel === "CONTRATAR / HABLEMOS" ? (
                 <>
@@ -117,7 +142,7 @@ export function AppShell({
               ) : (
                 identity.secondaryCtaLabel
               )}
-            </a>
+            </Link>
           </div>
         </div>
       </header>

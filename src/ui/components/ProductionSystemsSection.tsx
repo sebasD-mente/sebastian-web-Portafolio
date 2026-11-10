@@ -4,16 +4,19 @@ import type { ProductionSystem } from "@/types/portfolio";
 
 export interface ProductionSystemsSectionProps {
   systems: ProductionSystem[];
-  aiProjects?: ProductionSystem[];
 }
 
-function ProjectPreviewCard({
-  system,
-  isFirstCard
-}: {
+export interface ProjectPreviewCardProps {
   system: ProductionSystem;
   isFirstCard: boolean;
-}) {
+  headingTag?: "h2" | "h3";
+}
+
+export function ProjectPreviewCard({
+  system,
+  isFirstCard,
+  headingTag = "h3"
+}: ProjectPreviewCardProps) {
   const headerCategory =
     system.projectHeaderLabel ??
     `PROJECT ${system.order} // ${system.categoryLabel}`;
@@ -26,13 +29,14 @@ function ProjectPreviewCard({
     system.highlightedStackTag ?? "GOOGLE CLOUD STORAGE";
 
   const displaySpecs = system.architectureSpecs.slice(0, 2);
+  const HeadingTag = headingTag;
 
   return (
     <article
       aria-label={`Proyecto ${system.order}: ${system.title}`}
       className="grid grid-cols-1 lg:grid-cols-12 border border-[#9CA3AF] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
     >
-      {/* Left Column (7 cols): Browser Window Frame + Real Production Screenshot */}
+      {/* Left Column (7 cols): Browser Window Frame + Real Screenshot */}
       <div className="lg:col-span-7 flex flex-col justify-between bg-white">
         {/* Window Top Bar with Green Live Status Dot */}
         <div className="px-3.5 py-2.5 bg-white border-b border-[#E5E7EB] flex items-center justify-between">
@@ -45,7 +49,7 @@ function ProjectPreviewCard({
           </span>
         </div>
 
-        {/* Production Screenshot Container */}
+        {/* Screenshot Container */}
         <div className="bg-[#0B0D13] flex-1 flex items-center justify-center overflow-hidden">
           {isFirstCard ? (
             <img
@@ -89,9 +93,9 @@ function ProjectPreviewCard({
           </div>
 
           {/* System Title */}
-          <h3 className="font-display text-2xl sm:text-3xl xl:text-[2.1rem] font-extrabold uppercase tracking-[-0.02em] text-[#0A0A0A] leading-[1.06]">
+          <HeadingTag className="font-display text-2xl sm:text-3xl xl:text-[2.1rem] font-extrabold uppercase tracking-[-0.02em] text-[#0A0A0A] leading-[1.06]">
             {system.title}
-          </h3>
+          </HeadingTag>
 
           {/* Summary of Stack & Services */}
           <p className="text-xs sm:text-[13.5px] text-[#374151] leading-[1.6] font-normal">
@@ -163,8 +167,7 @@ function ProjectPreviewCard({
 }
 
 export function ProductionSystemsSection({
-  systems,
-  aiProjects
+  systems
 }: ProductionSystemsSectionProps) {
   const productionCandidates = systems.filter(
     (sys) => (sys.catalogSection ?? "production-systems") === "production-systems"
@@ -174,87 +177,39 @@ export function ProductionSystemsSection({
       ? productionCandidates.filter((sys) => sys.featuredOnHome === true)
       : productionCandidates.slice(0, 1);
 
-  const resolvedAiProjects =
-    aiProjects ??
-    systems.filter(
-      (sys) =>
-        sys.catalogSection === "ai-projects" && sys.featuredOnHome === true
-    );
-
   return (
-    <>
-      {/* SECCIÓN 01: SISTEMAS EN PRODUCCIÓN */}
-      <section
-        id="proyectos-destacados"
-        aria-labelledby="production-systems-heading"
-        className="py-10 sm:py-14 lg:py-16 bg-[#F8F9FA]"
-      >
-        <div className="swiss-container space-y-7 sm:space-y-8">
-          <h2
-            id="production-systems-heading"
-            className="font-display text-3xl sm:text-4xl lg:text-[2.65rem] font-extrabold uppercase tracking-[-0.02em] text-[#0A0A0A]"
-          >
-            SISTEMAS EN PRODUCCIÓN
-          </h2>
+    <section
+      id="proyectos-destacados"
+      aria-labelledby="production-systems-heading"
+      className="py-10 sm:py-14 lg:py-16 bg-[#F8F9FA]"
+    >
+      <div className="swiss-container space-y-7 sm:space-y-8">
+        <h2
+          id="production-systems-heading"
+          className="font-display text-3xl sm:text-4xl lg:text-[2.65rem] font-extrabold uppercase tracking-[-0.02em] text-[#0A0A0A]"
+        >
+          SISTEMAS EN PRODUCCIÓN
+        </h2>
 
+        {featuredProduction.length > 0 ? (
           <div className="space-y-10">
             {featuredProduction.map((system, idx) => (
               <ProjectPreviewCard
                 key={system.id}
                 system={system}
                 isFirstCard={idx === 0}
+                headingTag="h3"
               />
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* SECCIÓN 02: MÁS PROYECTOS DE IA (Conectada al botón MAS PROYECTOS DE IA del Header) */}
-      <section
-        id="mas-proyectos-ia"
-        aria-labelledby="ai-projects-heading"
-        className="py-10 sm:py-14 lg:py-16 bg-white border-t border-[#E5E7EB]"
-      >
-        <div className="swiss-container space-y-7 sm:space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-            <h2
-              id="ai-projects-heading"
-              className="font-display text-3xl sm:text-4xl lg:text-[2.65rem] font-extrabold uppercase tracking-[-0.02em] text-[#0A0A0A]"
-            >
-              MÁS PROYECTOS DE IA
-            </h2>
-            <span className="mono-pixel text-[10px] sm:text-[11px] text-[#2563EB] font-semibold tracking-wider">
-              GOOGLE ADK · AGENTIC WORKFLOWS · PGVECTOR RAG
-            </span>
+        ) : (
+          <div className="border border-[#CBD5E1] bg-white p-6 sm:p-8 rounded-[2px]">
+            <p className="text-xs sm:text-sm text-[#374151] leading-relaxed">
+              No hay sistemas publicados aún en la categoría SISTEMAS EN PRODUCCIÓN.
+            </p>
           </div>
-
-          {resolvedAiProjects.length > 0 ? (
-            <div className="space-y-10">
-              {resolvedAiProjects.map((project) => (
-                <ProjectPreviewCard
-                  key={project.id}
-                  system={project}
-                  isFirstCard={false}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="border border-[#CBD5E1] bg-[#F8FAFC] p-6 sm:p-8 rounded-[2px] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1.5">
-                <p className="mono-pixel text-[10px] sm:text-[11px] text-[#2563EB] font-semibold">
-                  PIPELINE DE EXPERIMENTACIÓN &amp; DESARROLLO DE IA ACTIVO
-                </p>
-                <p className="text-xs sm:text-sm text-[#374151] leading-relaxed max-w-3xl">
-                  Nuevos agentes autónomos con Google ADK, motores RAG sobre PostgreSQL + pgvector y pruebas de modelos locales en construcción. Esta sección se actualiza dinámicamente desde el catálogo de proyectos.
-                </p>
-              </div>
-              <span className="mono-pixel text-[10px] px-3 py-1.5 bg-[#EAECEF] border border-[#CBD5E1] text-[#111827] rounded-[2px] shrink-0">
-                CATÁLOGO EN CONSTRUCCIÓN
-              </span>
-            </div>
-          )}
-        </div>
-      </section>
-    </>
+        )}
+      </div>
+    </section>
   );
 }

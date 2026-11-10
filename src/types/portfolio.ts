@@ -119,6 +119,7 @@ export type CatalogSectionId = "production-systems" | "ai-projects";
 export interface CatalogSectionDescriptor {
   id: CatalogSectionId;
   anchorId: "proyectos-destacados" | "mas-proyectos-ia";
+  routeHref: "/#proyectos-destacados" | "/proyectos-ia";
   heading: "SISTEMAS EN PRODUCCIÓN" | "MÁS PROYECTOS DE IA";
   subtitle: string;
   emptyStateMessage: string;

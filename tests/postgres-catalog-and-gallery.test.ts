@@ -64,8 +64,10 @@ describe("feat-009: Cimiento PostgreSQL (pgvector), Volumen /app/data/uploads, 2
     const sectionsConfig = getCatalogSectionsConfig();
     expect(sectionsConfig["production-systems"].heading).toBe("SISTEMAS EN PRODUCCIÓN");
     expect(sectionsConfig["production-systems"].anchorId).toBe("proyectos-destacados");
+    expect(sectionsConfig["production-systems"].routeHref).toBe("/#proyectos-destacados");
     expect(sectionsConfig["ai-projects"].heading).toBe("MÁS PROYECTOS DE IA");
     expect(sectionsConfig["ai-projects"].anchorId).toBe("mas-proyectos-ia");
+    expect(sectionsConfig["ai-projects"].routeHref).toBe("/proyectos-ia");
 
     const isolatedFallback = createProductionSystemsRepository();
     const isolatedAsyncRepo = createPostgresCatalogRepository({
@@ -234,8 +236,12 @@ describe("feat-009: Cimiento PostgreSQL (pgvector), Volumen /app/data/uploads, 2
     const homeSectionCode = readRepoFile("src/ui/components/ProductionSystemsSection.tsx");
     expect(homeSectionCode).toContain('id="proyectos-destacados"');
     expect(homeSectionCode).toContain("SISTEMAS EN PRODUCCIÓN");
-    expect(homeSectionCode).toContain('id="mas-proyectos-ia"');
-    expect(homeSectionCode).toContain("MÁS PROYECTOS DE IA");
+    expect(homeSectionCode).not.toContain('id="mas-proyectos-ia"');
+    expect(homeSectionCode).not.toContain("MÁS PROYECTOS DE IA");
+
+    const aiProjectsViewCode = readRepoFile("src/ui/components/AiProjectsCatalogView.tsx");
+    expect(aiProjectsViewCode).toContain("mas-proyectos-ia");
+    expect(aiProjectsViewCode).toContain("MÁS PROYECTOS DE IA");
 
     const detailViewCode = readRepoFile("src/ui/components/SystemDetailView.tsx");
     expect(detailViewCode).toContain("01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA");

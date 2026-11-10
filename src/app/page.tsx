@@ -15,7 +15,7 @@ export default async function HomePage() {
   const siteSnapshot = getSiteFoundationSnapshot();
   const catalogSnapshot = getSystemsCatalogSnapshot();
   const allCatalogSystems = await listCatalogSystemsAsync();
-  const { productionSystems, aiProjects } =
+  const { productionSystems } =
     splitSystemsByHomeCatalogSection(allCatalogSystems);
 
   const {
@@ -33,6 +33,7 @@ export default async function HomePage() {
       navigation={navigation}
       ambientTelemetry={ambientTelemetry}
       defaultTheme={defaultTheme}
+      currentPath="/"
     >
       {/* 1. Hero Editorial Des-saturado (8 cols) + KERNEL & HOME LAB TELEMETRY Card (4 cols) */}
       <HeroSection
@@ -41,11 +42,8 @@ export default async function HomePage() {
         defaultTheme={defaultTheme}
       />
 
-      {/* 2. Las 2 Categorías del Catálogo: SISTEMAS EN PRODUCCIÓN (#proyectos-destacados) y MÁS PROYECTOS DE IA (#mas-proyectos-ia) */}
-      <ProductionSystemsSection
-        systems={productionSystems}
-        aiProjects={aiProjects}
-      />
+      {/* 2. Catálogo Exclusivo de Sistemas en Producción (#proyectos-destacados) */}
+      <ProductionSystemsSection systems={productionSystems} />
     </AppShell>
   );
 }
