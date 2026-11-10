@@ -257,6 +257,49 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas, Event-Sourced DAG Deprecation activo y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS con los 5 archivos zombi purgados físicamente y feat-001..feat-007 100% inmutables; Puerta 3 typecheck OK, lint OK, vitest 28/28 tests PASS en 7 suites incluyendo tests/harness-deprecation-dag.test.ts, next build standalone OK).",
       "notes": "Al iniciar la implementación de feat-008: una vez agregado 'deprecated_files' a ALLOWED_FEATURE_KEYS en scripts/lib/harness-utils.mjs y scripts/feature-list.schema.json, añadir la propiedad '\"deprecated_files\": [\"src/ui/components/BenchmarksStrip.tsx\", \"src/ui/components/AgenticOrchestrationSection.tsx\", \"src/ui/components/TechStackMatrix.tsx\", \"src/ui/components/LiveTerminalSection.tsx\", \"src/ui/components/ContactAdvisorySection.tsx\"]' a este bloque feat-008 en feature_list.json y eliminar físicamente esos 5 archivos con 'git rm' (nunca usar rm -rf ni Remove-Item -Recurse -Force). Prohibido modificar required_files de feat-001 a feat-007."
+    },
+    {
+      "id": "feat-009",
+      "name": "Sistema Administrable de Catálogo sobre PostgreSQL (RAG-Ready), Clasificación Dual (Sistemas en Producción / Más Proyectos de IA) y Galería de 3 Imágenes en Detalle",
+      "description": "Implementar el sistema profesional de administración del catálogo de proyectos (Sección 7 de docs/product-specs/dekolabs-portfolio-spec.md) respetando estrictamente las 6 capas (Types -> Config -> Repo -> Service -> Runtime -> UI): (1) Añadir el driver oficial 'pg' y '@types/pg' en 'package.json' y configurar el contenedor 'dekolabs-db' ('pgvector/pgvector:pg17') con volumen persistente 'dekolabs_pgdata' y el volumen 'dekolabs_uploads' en 'docker-compose.yml' y '.env.example' ('DATABASE_URL', 'ADMIN_ACCESS_KEY', 'CATALOG_UPLOADS_DIR') para el despliegue en el Ubuntu Linux Home Lab; (2) Extender 'src/types/portfolio.ts' con 'CatalogSectionId' ('production-systems' para SISTEMAS EN PRODUCCIÓN y 'ai-projects' para MÁS PROYECTOS DE IA), 'SystemGalleryImage' (3 espacios de imagen 'slot: 1 | 2 | 3' independientes de la portada) y 'ProductionSystemMutationInput'; (3) Implementar en 'src/repo/postgres-catalog.repo.ts' y 'src/repo/systems.repo.ts' el proveedor PostgreSQL con auto-migración idempotente ('portfolio_systems' con columna 'rag_knowledge_document' lista para la futura fase RAG + tabla relacional 'portfolio_system_gallery' para las 3 imágenes de detalle) y auto-seed del Proyecto 01 ('DECO VINTAGE PLATFORM'), manteniendo el Capability Seam con fallback determinista cuando 'DATABASE_URL' no esté activa en pruebas locales/CI; (4) Actualizar 'src/ui/components/SystemDetailView.tsx' para retirar por completo las dos secciones señaladas por Sebastián (la franja de 4 recuadros KPI M-01..M-04 y la sección '01 // CONSOLA DE MANDO Y DIAGNÓSTICO EN TIEMPO REAL — Trazabilidad Operativa y Telemetría de Ejecución') y colocar en su lugar la sección '01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA' con los 3 espacios de imágenes de detalle ('galleryImages' slots 1, 2 y 3) diferentes a la foto de la tarjeta de inicio; (5) Actualizar 'src/app/page.tsx' y 'src/ui/components/ProductionSystemsSection.tsx' para renderizar las 2 secciones del catálogo en el Home: 'SISTEMAS EN PRODUCCIÓN' (#proyectos-destacados, para sistemas ya en producción) y 'MÁS PROYECTOS DE IA' (#mas-proyectos-ia, para proyectos de IA en construcción, conectada al botón 'MAS PROYECTOS DE IA' del Header); y (6) Construir el panel de administración '/admin/proyectos' ('src/app/admin/proyectos/page.tsx' y 'src/ui/components/CatalogAdminView.tsx') y sus endpoints en 'src/runtime/admin-catalog.handler.ts' ('/api/admin/systems', '/api/admin/upload' y '/api/assets/[filename]') permitiendo crear, editar y eliminar proyectos desde la web (eligiendo si van en SISTEMAS EN PRODUCCIÓN o en MÁS PROYECTOS DE IA, subiendo la foto de portada y las 3 fotos de detalle desde el navegador), más la suite 'tests/admin-catalog.test.ts'.",
+      "area": "catalog-cms-and-postgres",
+      "user_visible_behavior": "En la página de inicio se exhiben las secciones 'SISTEMAS EN PRODUCCIÓN' (#proyectos-destacados) y 'MÁS PROYECTOS DE IA' (#mas-proyectos-ia); en la vista completa de cada proyecto (/sistemas/[slug]) ya no aparecen los 4 KPIs ni la consola de diagnóstico, mostrándose en su lugar la galería de 3 imágenes de detalle distintas a la portada; y desde '/admin/proyectos' Sebastián puede crear, editar o eliminar proyectos y subir la imagen de tarjeta y las 3 imágenes de detalle directamente en producción sobre PostgreSQL sin tocar código.",
+      "priority": "P0",
+      "status": "not-started",
+      "dependencies": [
+        "feat-008"
+      ],
+      "required_files": [
+        "package.json",
+        "docker-compose.yml",
+        ".env.example",
+        "src/types/portfolio.ts",
+        "src/config/site.config.ts",
+        "src/repo/systems.repo.ts",
+        "src/repo/postgres-catalog.repo.ts",
+        "src/service/systems.service.ts",
+        "src/runtime/admin-catalog.handler.ts",
+        "src/app/api/admin/systems/route.ts",
+        "src/app/api/admin/upload/route.ts",
+        "src/app/api/assets/[filename]/route.ts",
+        "src/app/admin/proyectos/page.tsx",
+        "src/app/page.tsx",
+        "src/app/sistemas/[slug]/page.tsx",
+        "src/ui/components/ProductionSystemsSection.tsx",
+        "src/ui/components/SystemDetailView.tsx",
+        "src/ui/components/CatalogAdminView.tsx",
+        "tests/admin-catalog.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "REGLAS CRÍTICAS DE IMPLEMENTACIÓN: (1) NO precargar imágenes falsas de galería; las 3 imágenes de detalle de cada proyecto las subirá Sebastián desde '/admin/proyectos' cuando esté desplegado en producción (mientras un slot 1..3 no tenga imagen subida, renderizar su marco técnico limpio 'VIEW 01..03' listo para recibir imagen). (2) En SystemDetailView.tsx retirar únicamente las 2 secciones de la captura (el grid de 4 KPIs M-01..M-04 y la sección '01 // CONSOLA DE MANDO Y DIAGNÓSTICO EN TIEMPO REAL') y poner en ese lugar la sección de las 3 imágenes de detalle; conservar intactos el Hero + Ledger, las 3 Etapas del Pipeline, la Tabla Técnica + Inspector de Código y los 3 Desafíos Resueltos. (3) En el Home (src/app/page.tsx) mantener las dos secciones de categoría: 'SISTEMAS EN PRODUCCIÓN' (#proyectos-destacados) y 'MÁS PROYECTOS DE IA' (#mas-proyectos-ia). (4) Respetar las 6 capas: los archivos route.ts y páginas en src/app/ y componentes en src/ui/ NUNCA deben importar de src/config/ ni src/repo/, solo de src/service/, src/runtime/, src/ui/ y src/types/. (5) Garantizar que cuando DATABASE_URL esté definida use el pool PostgreSQL real (pg) con auto-migración y auto-seed, y cuando no esté definida en el entorno local de pruebas opere con el almacén persistente local bajo el mismo Capability Seam para que 'bash ./init.sh' pase al 100/100."
     }
   ]
 }

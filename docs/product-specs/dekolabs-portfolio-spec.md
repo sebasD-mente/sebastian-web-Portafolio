@@ -214,3 +214,38 @@ Al activar el nuevo motor en `feat-008`, se declaran en `"deprecated_files"` de 
 3. `src/ui/components/TechStackMatrix.tsx` (proveniente de `feat-004`)
 4. `src/ui/components/LiveTerminalSection.tsx` (proveniente de `feat-005`)
 5. `src/ui/components/ContactAdvisorySection.tsx` (proveniente de `feat-005`)
+
+---
+
+## 7. Sistema Administrable del Catálogo sobre PostgreSQL + `pgvector` y Galería de 3 Vistas en Detalle (`feat-009`)
+
+Por decisión de arquitectura y flujo de trabajo de Sebastián, el catálogo de proyectos pasa a ser **100% administrable desde interfaz web (`/admin/proyectos`)** respaldado por **PostgreSQL 17 (`pgvector/pgvector:pg17`)** en el `docker-compose.yml` del Ubuntu Linux Home Lab, de modo que una vez desplegado en producción, Sebastián pueda crear y actualizar proyectos y subir sus imágenes directamente desde el navegador sin tocar código fuente.
+
+### 7.1 Clasificación Dual de Proyectos en la Página de Inicio (`catalogSection`)
+Todo proyecto del catálogo pertenece a una de dos secciones visibles en la página principal (`/`):
+1. **`SISTEMAS EN PRODUCCIÓN` (`catalogSection: "production-systems"`, ancla `#proyectos-destacados`)**:
+   - Destinada a los sistemas que ya están operando en producción (como el Proyecto 01 `DECO VINTAGE PLATFORM`).
+2. **`MÁS PROYECTOS DE IA` (`catalogSection: "ai-projects"`, ancla `#mas-proyectos-ia`)**:
+   - Destinada a los proyectos de IA, agentes autónomos y desarrollos experimentales que están siendo construidos.
+   - Conectada directamente al botón `MAS PROYECTOS DE IA` de la barra de navegación superior fija y renderizada con el mismo diseño equilibrado de tarjetas de vista preliminar.
+
+### 7.2 Retiro de KPIs/Consola en `/sistemas/[slug]` y Nueva Galería de 3 Imágenes Exclusivas (`galleryImages`)
+Dentro de la vista de información completa de cada proyecto (`src/ui/components/SystemDetailView.tsx`):
+- **Se eliminan por completo**:
+  1. La franja de **4 recuadros de métricas KPI (`M-01` a `M-04`)**.
+  2. La sección **`01 // CONSOLA DE MANDO Y DIAGNÓSTICO EN TIEMPO REAL — Trazabilidad Operativa y Telemetría de Ejecución`** (`TTY // ...`).
+- **Se coloca en su lugar la sección `01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA` (`system.galleryImages`)**:
+  - Exhibe **3 espacios de imagen independientes de la imagen de la tarjeta de inicio** (`slot: 1`, `slot: 2`, `slot: 3`), cada uno con su marco técnico *Atelier Monolith* (`VIEW 01`, `VIEW 02`, `VIEW 03`), título (`label`), imagen de alta resolución (con opción de ampliación/lightbox) y pie de foto (`caption`).
+  - Si un proyecto aún no tiene cargadas sus 3 imágenes de detalle (ya que se subirán directamente desde el administrador en producción), muestra los 3 marcos técnicos estructurados listos para recibir las capturas desde `/admin/proyectos`.
+
+### 7.3 Panel de Administración (`/admin/proyectos`) y Subida de Imágenes en Producción
+- **Ruta `/admin/proyectos` protegida por `ADMIN_ACCESS_KEY`**:
+  - Permite **crear** un proyecto nuevo (con opción de pre-cargar la plantilla estructural de `DECO VINTAGE PLATFORM`), **editar** cualquier proyecto existente (incluyendo subir o cambiar las 3 imágenes de detalle de `DECO VINTAGE PLATFORM`) y **eliminar** proyectos.
+  - Incluye todos los campos del modelo: selector de categoría (`SISTEMAS EN PRODUCCIÓN` vs `MÁS PROYECTOS DE IA`), orden (`01`, `02`...), header izquierdo, badge de versión, título, slug, descripción de tarjeta, tags de stack + selector de tag destacado en azul, especificaciones de arquitectura/disponibilidad, URL en vivo, cargador de imagen de portada (tarjeta Home), **3 cargadores independientes para las 3 imágenes de la vista de detalle**, Ledger de despliegue, 3 etapas de pipeline, pestañas de código y 3 desafíos resueltos.
+- **Servidor de Activos Subidos (`/api/assets/[filename]`)**:
+  - Las imágenes subidas desde el administrador se almacenan en el volumen persistente `CATALOG_UPLOADS_DIR` (`/app/data/uploads` en el contenedor Ubuntu) y se sirven dinámicamente vía `/api/assets/[filename]` para que se visualicen al instante en Next.js `standalone` sin reconstruir la imagen Docker.
+
+### 7.4 Persistencia PostgreSQL (`pgvector/pgvector:pg17`) en Ubuntu Home Lab + `Capability Seam`
+- En `docker-compose.yml`, el servicio `dekolabs-db` ejecuta `pgvector/pgvector:pg17` con volumen persistente `dekolabs_pgdata` y red interna hacia `dekolabs-portfolio`.
+- El repositorio en `src/repo/` implementa el contrato sobre PostgreSQL (`pg.Pool`) creando de forma idempotente las tablas `portfolio_systems` (incluyendo la columna `rag_knowledge_document` preparada para la futura fase de Agente RAG en vivo) y `portfolio_system_gallery` (las 3 imágenes de detalle por proyecto), sembrando automáticamente el Proyecto 01 (`DECO VINTAGE PLATFORM`).
+- Mediante el `Capability Seam` de la Capa 3 (`Repo`), cuando se ejecutan pruebas locales o `bash ./init.sh` en entornos sin contenedor PostgreSQL local activo, el proveedor opera limpiamente contra el respaldo local determinista sin bloquear las 3 puertas ni requerir parches.

@@ -1,50 +1,46 @@
 # Session Handoff
 
 ## Current Objective
-- **Goal:** `feat-008` (*Evolución de Raíz del Arnés: Event-Sourced DAG Deprecation con `deprecated_files` y Purga Física de Componentes Zombi*) completada y verificada al `100/100`.
-- **Current status:** `clean-state` (`feat-001` a `feat-008` en `"done"`, `WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `28/28` tests unitarios en 7 suites en verde y build `standalone` de Next.js 15 exitoso)
-- **Branch / commit:** `main` (`feat-008` completada)
+- **Goal:** `feat-009` (*Sistema Administrable de Catálogo sobre PostgreSQL (RAG-Ready), Clasificación Dual (Sistemas en Producción / Más Proyectos de IA) y Galería de 3 Imágenes en Detalle*) planificada y declarada en el arnés, lista para ejecución en sesión limpia.
+- **Current status:** `clean-state` (`feat-001` a `feat-008` en `"done"`, `feat-009` en `"not-started"`, `WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `28/28` tests unitarios en 7 suites en verde y build `standalone` de Next.js 15 exitoso)
+- **Branch / commit:** `main` (`feat-009` declarada)
 
 ## Completed This Session
-- [x] Extensión de `scripts/feature-list.schema.json` con la propiedad opcional `deprecated_files`.
-- [x] Implementación del motor `Event-Sourced Pass-State Gating` en `scripts/lib/harness-utils.mjs` y `scripts/check-architecture.sh` con Candado Anti-Trampa #1 (prohibido auto-deprecarse), Candado Anti-Trampa #2 (linaje ancestral obligatorio en el DAG), Resolución Temporal y Candado Anti-Zombi inverso.
-- [x] Purga física con `git rm` de los 5 componentes visuales zombi (`BenchmarksStrip.tsx`, `AgenticOrchestrationSection.tsx`, `TechStackMatrix.tsx`, `LiveTerminalSection.tsx` y `ContactAdvisorySection.tsx`) manteniendo `feat-001`..`feat-007` 100% inmutables en `feature_list.json`.
-- [x] Creación y validación de `tests/harness-deprecation-dag.test.ts` (`28/28` tests en 7 suites).
-- [x] Verificación completa en las 3 puertas con `bash ./init.sh` (`Exit code 0`, `Overall: 100/100`).
+- [x] Sincronización del motor `Event-Sourced Pass-State Gating` (`deprecated_files`) hacia `Plantilla-Maestra-Arnes` mediante subagente verificador (`100/100`).
+- [x] Diseño arquitectónico y especificación en Sección 7 de `docs/product-specs/dekolabs-portfolio-spec.md` para `feat-009`:
+  - Persistencia en PostgreSQL 17 (`pgvector/pgvector:pg17`) en `docker-compose.yml` para el Ubuntu Home Lab + `Capability Seam` en `src/repo/`.
+  - Clasificación dual en el Home (`SISTEMAS EN PRODUCCIÓN` `#proyectos-destacados` vs `MÁS PROYECTOS DE IA` `#mas-proyectos-ia`).
+  - Retiro en `/sistemas/[slug]` de los 4 KPIs (`M-01..M-04`) y de la consola (`01 // CONSOLA DE MANDO Y DIAGNÓSTICO EN TIEMPO REAL`), reemplazándolos por la galería de **3 imágenes de detalle (`galleryImages`)** distintas a la imagen de portada.
+  - Panel de administración `/admin/proyectos` para crear, editar y eliminar proyectos y subir las imágenes directamente en producción sin tocar código.
+- [x] Declaración formal de `feat-009` en `feature_list.json`, `sprint-contract.md` y `ARCHITECTURE.md`.
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 | :--- | :--- | :--- | :--- |
-| Vigilante Arquitectónico y Higiene (Puerta 1) | `bash scripts/check-architecture.sh` | `PASS (Exit code 0)` | 6 capas en `src/` sin violaciones direccionales, `deprecated_files` verificado en el DAG, `0 CRLF`, `0 BOM` |
-| Validación de los 5 Subsistemas (Puerta 2) | `node scripts/validate-harness.mjs --min-score 100` | `PASS (100/100)` | `25/25` checks PASS (`feat-001` a `feat-008` en `done` con `WIP = 0`) |
+| Vigilante Arquitectónico y Higiene (Puerta 1) | `bash scripts/check-architecture.sh` | `PASS (Exit code 0)` | 6 capas en `src/` sin violaciones direccionales, `0 CRLF`, `0 BOM` |
+| Validación de los 5 Subsistemas (Puerta 2) | `node scripts/validate-harness.mjs --min-score 100` | `PASS (100/100)` | `25/25` checks PASS (`feat-001`..`feat-008` en `done`, `feat-009` en `not-started`, `WIP = 0`) |
 | Build, Lint, Typecheck y Tests (Puerta 3) | `bash ./init.sh` | `PASS (Exit code 0)` | `tsc --noEmit` OK, `vitest run` (`28/28 PASS` en 7 suites) y `next build` (`standalone` OK) |
 
 ## Files Changed
-- `scripts/feature-list.schema.json`
-- `scripts/lib/harness-utils.mjs`
-- `scripts/check-architecture.sh`
-- `tests/harness-deprecation-dag.test.ts`
-- `src/ui/components/BenchmarksStrip.tsx` (deleted via `git rm`)
-- `src/ui/components/AgenticOrchestrationSection.tsx` (deleted via `git rm`)
-- `src/ui/components/TechStackMatrix.tsx` (deleted via `git rm`)
-- `src/ui/components/LiveTerminalSection.tsx` (deleted via `git rm`)
-- `src/ui/components/ContactAdvisorySection.tsx` (deleted via `git rm`)
+- `docs/product-specs/dekolabs-portfolio-spec.md`
+- `ARCHITECTURE.md`
 - `feature_list.json`
 - `sprint-contract.md`
 - `progress.md`
 - `session-handoff.md`
 
 ## Decisions Made
-- Sincronizar el motor `Event-Sourced Pass-State Gating` tanto en `scripts/lib/harness-utils.mjs` (Puerta 2) como en `scripts/check-architecture.sh` (Puerta 1) para garantizar que ambas puertas validen el linaje DAG y bloqueen archivos zombi cuando una tarea con `deprecated_files` está en `"done"`.
+- Respaldar el catálogo administrable con **PostgreSQL 17 (`pgvector/pgvector:pg17`)** en `docker-compose.yml` para el Ubuntu Home Lab (incluyendo columna `rag_knowledge_document` lista para la futura fase de Agente RAG en vivo) bajo un `Capability Seam` en `src/repo/` que garantiza ejecución limpia en pruebas locales y `init.sh`.
+- No precargar imágenes falsas en los 3 espacios de detalle de `DECO VINTAGE PLATFORM`: Sebastián las subirá directamente desde `/admin/proyectos` una vez desplegado en producción.
 
 ## Blockers / Risks
 - Ninguno activo.
 
 ## Next Session Startup
 1. Confirmar `pwd` en `sebastian web Portafolio`.
-2. Leer `AGENTS.md`, `harness.config.json`, `progress.md`, `session-handoff.md`, `feature_list.json` y `sprint-contract.md`.
+2. Leer `AGENTS.md`, `harness.config.json`, `progress.md`, `session-handoff.md`, `feature_list.json`, `sprint-contract.md` y la Sección 7 de `docs/product-specs/dekolabs-portfolio-spec.md`.
 3. Ejecutar `bash ./init.sh` antes de editar cualquier entregable del proyecto.
 
 ## Recommended Next Step
-- Solicitar a Sebastián las especificaciones del siguiente bloque visual (segunda tarjeta de sistema en producción o las secciones de `STACK TECNOLOGICO`, `MAS PROYECTOS DE IA` y `CONTRATAR / HABLEMOS`), registrarlo como `feat-009` en `feature_list.json` y ejecutarlo bajo `WIP = 1`.
+- Cambiar `feat-009` a `"status": "in-progress"` en `feature_list.json` (`WIP = 1`) y ejecutar de principio a fin la implementación de `feat-009` según `sprint-contract.md`.
