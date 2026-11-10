@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-09 20:33
-**Session ID:** sesion-015 (Planificación Arquitectónica y Declaración de `feat-009`: Sistema Administrable de Catálogo sobre PostgreSQL + `pgvector`, Clasificación Dual y Galería de 3 Imágenes en Detalle)
-**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-008` en `"done"`, `feat-009` declarada en `"not-started"` lista para ejecución limpia)
+**Last Updated:** 2026-11-09 20:51
+**Session ID:** sesion-015 (Planificación Arquitectónica y Declaración Secuencial de `feat-009 -> feat-010 -> feat-011`: Catálogo Administrable sobre PostgreSQL + `pgvector`, Volumen `/app/data/uploads` compatible con `read_only: true`, 2 Categorías en Home, Galería de 3 Imágenes en Detalle y Administrador `/admin/proyectos`)
+**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-008` en `"done"`, `feat-009`, `feat-010` y `feat-011` declaradas en `"not-started"` listas para ejecución secuencial limpia)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -13,38 +13,38 @@
 ### What's Done
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y cierre adversarial Día 1 (`12/12 DEFENDED`, `27/27 PASS`).
 - [x] Evolución y certificación de **Universal Chameleon Harness v2.0** y **v2.1** (`9/9` escenarios E2E PASS, `12/12` vectores adversariales DEFENDED, `Overall: 100/100`, `0 CRLF`, `0 UTF-8 BOM`).
-- [x] **`feat-001` — Cimiento Next.js 15 Standalone, Sistema Visual Atelier Monolith y Esqueleto de 6 Capas (`status: "done"`)**.
-- [x] **`feat-002` — Hero Editorial, Tarjeta de Telemetría en Vivo y Catálogo de 4 Sistemas en Producción (`status: "done"`)**.
-- [x] **`feat-003` — Vista de Detalle Técnico Profundo por Sistema (`/sistemas/[slug]`) e Inspector de Código (`status: "done"`)**.
-- [x] **`feat-004` — Módulo de Orquestación de Agentes IA, Harness Engineering v2.1 y Matriz de Stack Comercial (`status: "done"`)**.
-- [x] **`feat-005` — Telemetría Ubuntu Home Lab (`/api/telemetry`), Terminal Interactiva en Vivo y Canal de Contratación (`status: "done"`)**.
-- [x] **`feat-006` — Empaquetado Docker Multi-Stage para Ubuntu Home Lab, SEO dekolabs.org y Guía de Despliegue (`status: "done"`)**.
-- [x] **`feat-007` — Refinamiento Visual v2.2: Des-saturación de Vista Principal, Header Fijo con Logo Personal, Hero IA/ADK/RAG y Tarjeta Deco Vintage Platform (`status: "done"`)**.
-- [x] **`feat-008` — Evolución de Raíz del Arnés (`Event-Sourced DAG Deprecation` con `deprecated_files`) y Purga Física de Componentes Zombi (`status: "done"`)** + Sincronización con `Plantilla-Maestra-Arnes`.
-- [x] **Planificación y Declaración Formal de `feat-009` en el Arnés (`status: "not-started"`, `WIP = 0`)**:
-  - Especificación completa en Sección 7 de `docs/product-specs/dekolabs-portfolio-spec.md`, `ARCHITECTURE.md`, `feature_list.json` y `sprint-contract.md`.
+- [x] **`feat-001` a `feat-008` completadas y cerradas en `"done"`** + Sincronización con `Plantilla-Maestra-Arnes`.
+- [x] **Planificación y Declaración Atómica en 3 Tareas Secuenciales (`feat-009 -> feat-010 -> feat-011`, `WIP = 0`)**:
+  - **`feat-009`**: Cimiento PostgreSQL (`pgvector/pgvector:pg17`), volumen Docker `/app/data/uploads` compatible con `read_only: true` y `USER nextjs` (`1001:1001`), las 2 categorías en el Home (`SISTEMAS EN PRODUCCIÓN` y `MÁS PROYECTOS DE IA`) y reemplazo de los 4 KPIs + consola en `/sistemas/[slug]` por la galería de 3 imágenes de detalle.
+  - **`feat-010`**: Motor Backend del Administrador (`/api/admin/systems`, `/api/admin/upload`, `/api/assets/[filename]`) escribiendo imágenes en `/app/data/uploads` y sirviéndolas por API con protección `ADMIN_ACCESS_KEY`.
+  - **`feat-011`**: Panel Visual del Administrador de Proyectos (`/admin/proyectos` — `CatalogAdminView.tsx`) y guía operativa actualizada en `docs/design-docs/homelab-deployment.md`.
 
 ### What's In Progress
 - Ninguna tarea en curso (`WIP = 0`).
 
 ### What's Next
-1. En una nueva sesión limpia, cambiar `feat-009` a `"status": "in-progress"` (`WIP = 1`) y ejecutar la implementación completa siguiendo `sprint-contract.md` y la Sección 7 de `docs/product-specs/dekolabs-portfolio-spec.md`.
+1. En una nueva sesión limpia, ejecutar en orden estricto DAG (`WIP = 1`): primero **`feat-009`**, luego **`feat-010`** y finalmente **`feat-011`**, siguiendo `sprint-contract.md` y la Sección 7 de `docs/product-specs/dekolabs-portfolio-spec.md`.
 
 ## Blockers / Risks
 - Ninguno activo.
 
 ## Decisions Made
-- **Persistencia en PostgreSQL 17 (`pgvector/pgvector:pg17`) en el Ubuntu Home Lab con `Capability Seam` (`feat-009`)**:
-  - Context: Sebastián requiere un sistema de administración (`/admin/proyectos`) para agregar y editar proyectos (en **SISTEMAS EN PRODUCCIÓN** o **MÁS PROYECTOS DE IA**) y subir sus imágenes directamente desde producción en su Ubuntu Home Lab sin tocar código, dejando además la base de datos preparada para una futura fase de Agente RAG en vivo.
+- **División Atómica en 3 Tareas (`feat-009 -> feat-010 -> feat-011`)**:
+  - Context: Unir la base de datos PostgreSQL, la reforma de vistas públicas, las APIs de subida y el formulario completo del administrador en una sola tarea de 19 archivos aumentaba el riesgo de fatiga de contexto en la sesión ejecutora.
   - Alternatives considered:
-    1. *Almacenamiento únicamente en archivo JSON plano sin base de datos*: Descartado por carecer de transacciones ACID, integridad relacional para las imágenes de galería y preparación para búsqueda vectorial RAG con `pgvector`.
-    2. *PostgreSQL 17 (`pgvector/pgvector:pg17`) en `docker-compose.yml` + `Capability Seam` en `src/repo/`*: Elegido porque en el Ubuntu Home Lab levanta automáticamente el contenedor `dekolabs-db` con tablas relacionales (`portfolio_systems` con `rag_knowledge_document` y `portfolio_system_gallery` para las 3 imágenes de detalle), mientras que durante pruebas locales o `bash ./init.sh` en entornos sin Postgres local activo el `Capability Seam` opera limpiamente contra el respaldo local determinista sin bloquear las 3 puertas.
+    1. *Una sola tarea monolítica (`feat-009` con 19 archivos)*: Descartado para evitar que el agente apure la calidad visual del administrador al final de la tarea.
+    2. *Tres tareas atómicas secuenciales en el DAG (`feat-009` Datos/Vistas -> `feat-010` Backend/Uploads -> `feat-011` UI Administrador `/admin/proyectos`)*: Elegido porque garantiza enfoque del 100% y verificación `init.sh` en cada etapa bajo `WIP = 1`.
+- **Volumen Dedicado `/app/data/uploads` Servido por `/api/assets/[filename]` en Contenedor `read_only: true`**:
+  - Context: En `docker-compose.yml`, `dekolabs-portfolio` corre en modo `standalone` con `read_only: true` y usuario no-root `nextjs` (`1001:1001`).
+  - Alternatives considered:
+    1. *Escribir imágenes subidas en `/app/public/`*: Descartado porque fallaría con `EROFS: read-only file system` en producción y se perdería al recrear el contenedor.
+    2. *Pre-crear `/app/data/uploads` y `/app/.next/cache` con `chown nextjs:nodejs` en `Dockerfile`, montar el volumen `dekolabs_uploads:/app/data/uploads` en `docker-compose.yml` y servir las imágenes por `/api/assets/[filename]`*: Elegido porque funciona en tiempo real con `read_only: true` y persiste todas las imágenes subidas por Sebastián al actualizar el contenedor.
 
 ## Files Modified This Session
-- `docs/product-specs/dekolabs-portfolio-spec.md` - Sección 7 con la especificación completa de `feat-009`
-- `ARCHITECTURE.md` - Actualización del dominio `portfolio-catalog` con PostgreSQL (`pgvector/pgvector:pg17`) y `/admin/proyectos`
-- `feature_list.json` - Declaración de `feat-009` en `"status": "not-started"`
-- `sprint-contract.md` - Contrato formal de `feat-009` y justificación de `pg` / `@types/pg`
+- `docs/product-specs/dekolabs-portfolio-spec.md` - Sección 7 con especificación de `feat-009`, `feat-010` y `feat-011` + volumen `/app/data/uploads`
+- `ARCHITECTURE.md` - Dominio `portfolio-catalog` actualizado
+- `feature_list.json` - Declaración secuencial de `feat-009`, `feat-010` y `feat-011` en `"status": "not-started"`
+- `sprint-contract.md` - Contrato detallado por fase (`feat-009`, `feat-010`, `feat-011`)
 - `progress.md`, `session-handoff.md` - Acta de entrega para la sesión ejecutora limpia
 
 ## Verification Evidence
@@ -53,4 +53,4 @@
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `command and output verified: Overall: 100/100 (25/25 checks PASS)`
 
 ## Notes for Next Session
-- Iniciar el Startup Workflow leyendo `AGENTS.md`, `sprint-contract.md`, `feature_list.json` y la Sección 7 de `docs/product-specs/dekolabs-portfolio-spec.md`, pasar `feat-009` a `"status": "in-progress"` y ejecutar la implementación completa.
+- Iniciar el Startup Workflow y ejecutar en orden secuencial `feat-009`, `feat-010` y `feat-011` respetando `WIP = 1` en cada paso.
