@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { getSiteFoundationSnapshot } from "@/service/site.service";
 import {
   getAllProductionSystemSlugs,
-  getProductionSystemDeepDiveBySlug
+  getProductionSystemDeepDiveBySlugAsync
 } from "@/service/systems.service";
 import { AppShell } from "@/ui/components/AppShell";
 import { SystemDetailView } from "@/ui/components/SystemDetailView";
+
+export const dynamicParams = true;
 
 export interface SystemDetailPageProps {
   params: Promise<{
@@ -23,7 +25,7 @@ export async function generateMetadata({
   params
 }: SystemDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const deepDive = getProductionSystemDeepDiveBySlug(slug);
+  const deepDive = await getProductionSystemDeepDiveBySlugAsync(slug);
 
   if (!deepDive) {
     return {
@@ -44,7 +46,7 @@ export default async function SystemDetailPage({
   params
 }: SystemDetailPageProps) {
   const { slug } = await params;
-  const deepDive = getProductionSystemDeepDiveBySlug(slug);
+  const deepDive = await getProductionSystemDeepDiveBySlugAsync(slug);
 
   if (!deepDive) {
     notFound();

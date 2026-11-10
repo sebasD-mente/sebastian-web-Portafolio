@@ -1,6 +1,8 @@
 import type {
   AmbientTelemetryStatus,
   ArchitectureLayerSummary,
+  CatalogSectionDescriptor,
+  CatalogSectionId,
   NavigationItem,
   SiteIdentity,
   ThemeMode,
@@ -8,6 +10,32 @@ import type {
 } from "@/types/portfolio";
 
 export const DEFAULT_THEME_MODE: ThemeMode = "light";
+
+export const DEFAULT_CATALOG_UPLOADS_DIR = "/app/data/uploads";
+
+export const CATALOG_SECTIONS_CONFIG: Record<
+  CatalogSectionId,
+  CatalogSectionDescriptor
+> = {
+  "production-systems": {
+    id: "production-systems",
+    anchorId: "proyectos-destacados",
+    heading: "SISTEMAS EN PRODUCCIÓN",
+    subtitle:
+      "Plataformas e infraestructuras distribuidas operando en entornos reales con SLA verificado.",
+    emptyStateMessage:
+      "No hay sistemas publicados aún en la categoría SISTEMAS EN PRODUCCIÓN."
+  },
+  "ai-projects": {
+    id: "ai-projects",
+    anchorId: "mas-proyectos-ia",
+    heading: "MÁS PROYECTOS DE IA",
+    subtitle:
+      "Agentes autónomos con Google ADK, pipelines RAG sobre pgvector y sistemas de IA en construcción.",
+    emptyStateMessage:
+      "Próximamente: nuevos proyectos de IA, agentes autónomos y arquitecturas RAG publicados desde el administrador."
+  }
+};
 
 export const SITE_IDENTITY: SiteIdentity = {
   monogram: "SB // DL",

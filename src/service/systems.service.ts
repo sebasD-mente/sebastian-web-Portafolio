@@ -1,13 +1,24 @@
-import { defaultProductionSystemsRepository } from "@/repo/systems.repo";
+import { CATALOG_SECTIONS_CONFIG } from "@/config/site.config";
+import { defaultPostgresCatalogRepository } from "@/repo/postgres-catalog.repo";
+import {
+  buildRagKnowledgeDocument,
+  defaultProductionSystemsRepository,
+  normalizeSystemGalleryImages
+} from "@/repo/systems.repo";
 import type {
+  AsyncCatalogRepository,
+  CatalogSectionDescriptor,
+  CatalogSectionId,
   HeroTelemetryCardData,
   HeroTelemetrySeriesPoint,
   IndustrialBenchmarkKpi,
   ProductionSystem,
   ProductionSystemCategory,
   ProductionSystemsProvider,
+  ProductionSystemUpsertInput,
   SystemDeepDiveNavigationLink,
   SystemDeepDiveSnapshot,
+  SystemGalleryImage,
   SystemsCatalogSnapshot
 } from "@/types/portfolio";
 
@@ -137,8 +148,131 @@ export function getSystemsCatalogSnapshot(
     benchmarks: repo.getIndustrialBenchmarks(),
     systems,
     primarySystems,
-    secondarySystems
+    secondarySystems,
+    productionSectionSystems: systems.filter(
+      (s) =>
+        (s.catalogSection ?? "production-systems") === "production-systems" &&
+        s.featuredOnHome === true
+    ),
+    aiProjectsSectionSystems: systems.filter(
+      (s) => s.catalogSection === "ai-projects" && s.featuredOnHome === true
+    )
   };
+}
+
+export function getCatalogSectionsConfig(): Record<
+  CatalogSectionId,
+  CatalogSectionDescriptor
+> {
+  return {
+    "production-systems": { ...CATALOG_SECTIONS_CONFIG["production-systems"] },
+    "ai-projects": { ...CATALOG_SECTIONS_CONFIG["ai-projects"] }
+  };
+}
+
+export function getNormalizedSystemGallery(
+  system: Pick<ProductionSystem, "title" | "galleryImages">
+): SystemGalleryImage[] {
+  return normalizeSystemGalleryImages(system.galleryImages, system.title);
+}
+
+export function getSystemRagDocument(system: ProductionSystem): string {
+  return buildRagKnowledgeDocument(system);
+}
+
+export function splitSystemsByHomeCatalogSection(
+  systems: readonly ProductionSystem[]
+): {
+  productionSystems: ProductionSystem[];
+  aiProjects: ProductionSystem[];
+} {
+  const ordered = [...systems].sort((a, b) => a.order.localeCompare(b.order));
+  const productionFeatured = ordered.filter(
+    (s) =>
+      (s.catalogSection ?? "production-systems") === "production-systems" &&
+      s.featuredOnHome === true
+  );
+  const allProduction = ordered.filter(
+    (s) => (s.catalogSection ?? "production-systems") === "production-systems"
+  );
+
+  const aiFeatured = ordered.filter(
+    (s) => s.catalogSection === "ai-projects" && s.featuredOnHome === true
+  );
+
+  return {
+    productionSystems:
+      productionFeatured.length > 0
+        ? productionFeatured
+        : allProduction.slice(0, 1),
+    aiProjects: aiFeatured
+  };
+}
+
+export async function listCatalogSystemsAsync(
+  asyncRepo: AsyncCatalogRepository = defaultPostgresCatalogRepository
+): Promise<ProductionSystem[]> {
+  const systems = await asyncRepo.listSystems();
+  return [...systems].sort((a, b) => a.order.localeCompare(b.order));
+}
+
+export async function getProductionSystemDeepDiveBySlugAsync(
+  slug: string,
+  asyncRepo: AsyncCatalogRepository = defaultPostgresCatalogRepository
+): Promise<SystemDeepDiveSnapshot | null> {
+  const normalizedSlug = typeof slug === "string" ? slug.trim().toLowerCase() : "";
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  const orderedSystems = await listCatalogSystemsAsync(asyncRepo);
+  const currentIndex = orderedSystems.findIndex(
+    (item) => item.slug.toLowerCase() === normalizedSlug
+  );
+  if (currentIndex === -1 || orderedSystems.length === 0) {
+    return null;
+  }
+
+  const system = orderedSystems[currentIndex];
+  if (!system) {
+    return null;
+  }
+
+  const prevIndex =
+    (currentIndex - 1 + orderedSystems.length) % orderedSystems.length;
+  const nextIndex = (currentIndex + 1) % orderedSystems.length;
+
+  const previousCandidate = orderedSystems[prevIndex] ?? system;
+  const nextCandidate = orderedSystems[nextIndex] ?? system;
+
+  return {
+    system: {
+      ...system,
+      galleryImages: normalizeSystemGalleryImages(
+        system.galleryImages,
+        system.title
+      )
+    },
+    previousSystem: toNavigationLink(previousCandidate),
+    nextSystem: toNavigationLink(nextCandidate),
+    relatedSystems: orderedSystems
+      .filter((candidate) => candidate.slug !== system.slug)
+      .map(toNavigationLink)
+  };
+}
+
+export async function upsertCatalogSystemAsync(
+  input: ProductionSystemUpsertInput,
+  asyncRepo: AsyncCatalogRepository = defaultPostgresCatalogRepository
+): Promise<ProductionSystem> {
+  return asyncRepo.upsertSystem(input);
+}
+
+export async function deleteCatalogSystemBySlugAsync(
+  slug: string,
+  asyncRepo: AsyncCatalogRepository = defaultPostgresCatalogRepository
+): Promise<boolean> {
+  return asyncRepo.deleteSystemBySlug(slug);
 }
 
 export function getFeaturedHomeProductionSystems(

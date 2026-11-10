@@ -114,6 +114,26 @@ export type ProductionSystemCategory =
   | "data-pipelines"
   | "cloud-infrastructure";
 
+export type CatalogSectionId = "production-systems" | "ai-projects";
+
+export interface CatalogSectionDescriptor {
+  id: CatalogSectionId;
+  anchorId: "proyectos-destacados" | "mas-proyectos-ia";
+  heading: "SISTEMAS EN PRODUCCIÓN" | "MÁS PROYECTOS DE IA";
+  subtitle: string;
+  emptyStateMessage: string;
+}
+
+export type SystemGallerySlotNumber = 1 | 2 | 3;
+
+export interface SystemGalleryImage {
+  slot: SystemGallerySlotNumber;
+  src: string;
+  alt: string;
+  label: string;
+  caption: string;
+}
+
 export type ProductionSystemLayoutVariant =
   | "primary-7-5"
   | "primary-5-7"
@@ -163,10 +183,11 @@ export interface SystemDeploymentLedger {
 
 export interface ProductionSystem {
   id: string;
-  order: "01" | "02" | "03" | "04";
+  order: "01" | "02" | "03" | "04" | string;
   slug: string;
   title: string;
   subtitle: string;
+  catalogSection?: CatalogSectionId;
   category: ProductionSystemCategory;
   categoryLabel: string;
   projectHeaderLabel?: string;
@@ -187,9 +208,45 @@ export interface ProductionSystem {
   terminalPreviewLines: string[];
   liveUrl: string;
   detailHref: string;
+  galleryImages?: SystemGalleryImage[];
   pipelineStages: PipelineStage[];
   codeTabs: CodeSnippetTab[];
   solvedChallenges: SolvedChallenge[];
+  ragKnowledgeDocument?: string;
+}
+
+export interface ProductionSystemUpsertInput {
+  id?: string;
+  order: string;
+  slug: string;
+  title: string;
+  subtitle: string;
+  catalogSection: CatalogSectionId;
+  category?: ProductionSystemCategory;
+  categoryLabel: string;
+  projectHeaderLabel?: string;
+  versionBadge?: string;
+  previewImageSrc?: string;
+  previewImageAlt?: string;
+  highlightedStackTag?: string;
+  featuredOnHome?: boolean;
+  layoutVariant?: ProductionSystemLayoutVariant;
+  status?: ProductionSystem["status"];
+  liveMetricPill?: string;
+  summary: string;
+  architecturalNarrative: string;
+  stackTags: string[];
+  metrics?: SystemMetric[];
+  architectureSpecs: SystemArchitectureSpec[];
+  deploymentLedger: SystemDeploymentLedger;
+  terminalPreviewLines?: string[];
+  liveUrl: string;
+  detailHref?: string;
+  galleryImages?: SystemGalleryImage[];
+  pipelineStages: PipelineStage[];
+  codeTabs: CodeSnippetTab[];
+  solvedChallenges: SolvedChallenge[];
+  ragKnowledgeDocument?: string;
 }
 
 export interface SystemsCatalogSnapshot {
@@ -198,6 +255,8 @@ export interface SystemsCatalogSnapshot {
   systems: ProductionSystem[];
   primarySystems: ProductionSystem[];
   secondarySystems: ProductionSystem[];
+  productionSectionSystems?: ProductionSystem[];
+  aiProjectsSectionSystems?: ProductionSystem[];
 }
 
 export interface SystemDeepDiveNavigationLink {
@@ -220,6 +279,18 @@ export interface ProductionSystemsProvider {
   getIndustrialBenchmarks(): IndustrialBenchmarkKpi[];
   getAllProductionSystems(): ProductionSystem[];
   getProductionSystemBySlug(slug: string): ProductionSystem | null;
+  upsertProductionSystem?(input: ProductionSystemUpsertInput): ProductionSystem;
+  deleteProductionSystemBySlug?(slug: string): boolean;
+  resetCatalogToDefault?(): ProductionSystem[];
+}
+
+export interface AsyncCatalogRepository {
+  isPostgresConfigured(): boolean;
+  ensureSchemaAndSeed(): Promise<void>;
+  listSystems(): Promise<ProductionSystem[]>;
+  getSystemBySlug(slug: string): Promise<ProductionSystem | null>;
+  upsertSystem(input: ProductionSystemUpsertInput): Promise<ProductionSystem>;
+  deleteSystemBySlug(slug: string): Promise<boolean>;
 }
 
 export interface AgenticWorkflowNode {

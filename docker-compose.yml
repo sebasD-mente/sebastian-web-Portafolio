@@ -1,4 +1,28 @@
 services:
+  dekolabs-db:
+    container_name: dekolabs-db
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-dekolabs}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-dekolabs_homelab_secret}"
+      POSTGRES_DB: "${POSTGRES_DB:-dekolabs_portfolio}"
+    volumes:
+      - dekolabs_pgdata:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-dekolabs} -d $${POSTGRES_DB:-dekolabs_portfolio}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - homelab-edge
+
   dekolabs-portfolio:
     container_name: dekolabs-portfolio
     image: dekolabs/sebastian-portfolio:2.1-standalone
@@ -6,6 +30,9 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    depends_on:
+      dekolabs-db:
+        condition: service_healthy
     env_file:
       - path: .env
         required: false
@@ -17,14 +44,20 @@ services:
       HOMELAB_NODE_ID: "${HOMELAB_NODE_ID:-HOME-LAB: UBUNTU-NODE-01}"
       HOMELAB_PUBLIC_DOMAIN: "${HOMELAB_PUBLIC_DOMAIN:-dekolabs.org}"
       HOMELAB_DEPLOYED_REVISION: "${HOMELAB_DEPLOYED_REVISION:-v2.1-atelier-monolith}"
+      DATABASE_URL: "${DATABASE_URL:-postgresql://dekolabs:dekolabs_homelab_secret@dekolabs-db:5432/dekolabs_portfolio}"
+      ADMIN_ACCESS_KEY: "${ADMIN_ACCESS_KEY:-change_this_admin_access_key_in_production}"
+      CATALOG_UPLOADS_DIR: "${CATALOG_UPLOADS_DIR:-/app/data/uploads}"
     ports:
       - "127.0.0.1:3000:3000"
+    volumes:
+      - dekolabs_uploads:/app/data/uploads
     mem_limit: 256m
     memswap_limit: 256m
     cpus: 1.0
     read_only: true
     tmpfs:
       - /tmp:mode=1777,size=32m
+      - /app/.next/cache:mode=1777,size=64m
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -50,6 +83,12 @@ services:
       traefik.http.services.dekolabs.loadbalancer.server.port: "3000"
     networks:
       - homelab-edge
+
+volumes:
+  dekolabs_pgdata:
+    name: dekolabs_pgdata
+  dekolabs_uploads:
+    name: dekolabs_uploads
 
 networks:
   homelab-edge:

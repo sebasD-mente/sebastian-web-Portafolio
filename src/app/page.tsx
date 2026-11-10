@@ -1,17 +1,22 @@
 import React from "react";
 import { getSiteFoundationSnapshot } from "@/service/site.service";
 import {
-  getFeaturedHomeProductionSystems,
-  getSystemsCatalogSnapshot
+  getSystemsCatalogSnapshot,
+  listCatalogSystemsAsync,
+  splitSystemsByHomeCatalogSection
 } from "@/service/systems.service";
 import { AppShell } from "@/ui/components/AppShell";
 import { HeroSection } from "@/ui/components/HeroSection";
 import { ProductionSystemsSection } from "@/ui/components/ProductionSystemsSection";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
   const siteSnapshot = getSiteFoundationSnapshot();
   const catalogSnapshot = getSystemsCatalogSnapshot();
-  const featuredSystems = getFeaturedHomeProductionSystems();
+  const allCatalogSystems = await listCatalogSystemsAsync();
+  const { productionSystems, aiProjects } =
+    splitSystemsByHomeCatalogSection(allCatalogSystems);
 
   const {
     identity,
@@ -36,8 +41,11 @@ export default function HomePage() {
         defaultTheme={defaultTheme}
       />
 
-      {/* 2. Sistemas en Producción — Tarjeta de Vista Preliminar DECO VINTAGE PLATFORM */}
-      <ProductionSystemsSection systems={featuredSystems} />
+      {/* 2. Las 2 Categorías del Catálogo: SISTEMAS EN PRODUCCIÓN (#proyectos-destacados) y MÁS PROYECTOS DE IA (#mas-proyectos-ia) */}
+      <ProductionSystemsSection
+        systems={productionSystems}
+        aiProjects={aiProjects}
+      />
     </AppShell>
   );
 }

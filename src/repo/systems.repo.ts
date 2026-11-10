@@ -1,9 +1,141 @@
 import type {
+  CatalogSectionId,
   HeroTelemetryCardData,
   IndustrialBenchmarkKpi,
   ProductionSystem,
-  ProductionSystemsProvider
+  ProductionSystemsProvider,
+  ProductionSystemUpsertInput,
+  SystemGalleryImage,
+  SystemGallerySlotNumber
 } from "@/types/portfolio";
+
+const DEFAULT_GALLERY_SLOT_TEMPLATES: ReadonlyArray<{
+  slot: SystemGallerySlotNumber;
+  label: string;
+  caption: string;
+}> = [
+  {
+    slot: 1,
+    label: "VIEW 01 // INTERFAZ PRINCIPAL DE OPERACIÓN",
+    caption:
+      "Espacio reservado para captura exclusiva de la vista principal de operación (administrable desde /admin/proyectos)."
+  },
+  {
+    slot: 2,
+    label: "VIEW 02 // FLUJO TRANSACCIONAL Y MOTOR DE NEGOCIO",
+    caption:
+      "Espacio reservado para captura de detalle del flujo de usuario o motor de negocio en producción."
+  },
+  {
+    slot: 3,
+    label: "VIEW 03 // TOPOLOGÍA Y TELEMETRÍA EN PRODUCCIÓN",
+    caption:
+      "Espacio reservado para captura técnica de arquitectura, pipeline o estado operativo del sistema."
+  }
+];
+
+export function normalizeSystemGalleryImages(
+  images?: readonly SystemGalleryImage[],
+  systemTitle = "Sistema"
+): SystemGalleryImage[] {
+  const bySlot = new Map<SystemGallerySlotNumber, SystemGalleryImage>();
+  if (Array.isArray(images)) {
+    for (const img of images) {
+      if (img && (img.slot === 1 || img.slot === 2 || img.slot === 3)) {
+        bySlot.set(img.slot, img);
+      }
+    }
+  }
+
+  return DEFAULT_GALLERY_SLOT_TEMPLATES.map((tpl) => {
+    const provided = bySlot.get(tpl.slot);
+    const src = typeof provided?.src === "string" ? provided.src.trim() : "";
+    const label =
+      typeof provided?.label === "string" && provided.label.trim().length > 0
+        ? provided.label.trim()
+        : tpl.label;
+    const caption =
+      typeof provided?.caption === "string" && provided.caption.trim().length > 0
+        ? provided.caption.trim()
+        : tpl.caption;
+    const alt =
+      typeof provided?.alt === "string" && provided.alt.trim().length > 0
+        ? provided.alt.trim()
+        : `${systemTitle} — ${label}`;
+
+    return {
+      slot: tpl.slot,
+      src,
+      alt,
+      label,
+      caption
+    };
+  });
+}
+
+export function buildRagKnowledgeDocument(
+  system: Pick<
+    ProductionSystem,
+    | "order"
+    | "slug"
+    | "title"
+    | "subtitle"
+    | "catalogSection"
+    | "categoryLabel"
+    | "summary"
+    | "architecturalNarrative"
+    | "stackTags"
+    | "architectureSpecs"
+    | "deploymentLedger"
+    | "liveUrl"
+    | "pipelineStages"
+    | "solvedChallenges"
+  > & { ragKnowledgeDocument?: string }
+): string {
+  if (
+    typeof system.ragKnowledgeDocument === "string" &&
+    system.ragKnowledgeDocument.trim().length > 0
+  ) {
+    return system.ragKnowledgeDocument.trim();
+  }
+
+  const sectionLabel =
+    system.catalogSection === "ai-projects"
+      ? "MÁS PROYECTOS DE IA"
+      : "SISTEMAS EN PRODUCCIÓN";
+
+  const specsBlock = system.architectureSpecs
+    .map((spec) => `- ${spec.label}: ${spec.value}`)
+    .join("\n");
+
+  const stagesBlock = system.pipelineStages
+    .map(
+      (stage) =>
+        `### ${stage.stageNumber}: ${stage.title} (${stage.latencyOrSlo})\n${stage.description}\nInvariantes: ${stage.invariants.join(" | ")}`
+    )
+    .join("\n\n");
+
+  const challengesBlock = system.solvedChallenges
+    .map(
+      (ch) =>
+        `### Desafío ${ch.number}: ${ch.title}\nProblema: ${ch.problem}\nSolución: ${ch.solution}\nImpacto: ${ch.impactMetric}`
+    )
+    .join("\n\n");
+
+  return [
+    `# ${system.title} (${system.slug})`,
+    `Sección del Catálogo: ${sectionLabel} | Orden: ${system.order} | Categoría: ${system.categoryLabel}`,
+    `URL en Vivo: ${system.liveUrl}`,
+    `Subtítulo: ${system.subtitle}`,
+    `Resumen Ejecutivo: ${system.summary}`,
+    `Narrativa Arquitectónica: ${system.architecturalNarrative}`,
+    `Stack Tecnológico: ${system.stackTags.join(", ")}`,
+    `Patrón de Despliegue: ${system.deploymentLedger.architecturePattern} (${system.deploymentLedger.hostEnvironment})`,
+    `## Especificaciones de Arquitectura\n${specsBlock}`,
+    `## Topología del Pipeline (3 Etapas)\n${stagesBlock}`,
+    `## Desafíos de Ingeniería Resueltos\n${challengesBlock}`
+  ].join("\n\n");
+}
 
 export const HERO_TELEMETRY_CARD: HeroTelemetryCardData = {
   cardTitle: "KERNEL & HOME LAB TELEMETRY",
@@ -84,6 +216,7 @@ export const PRODUCTION_SYSTEMS_CATALOG: ProductionSystem[] = [
     title: "DECO VINTAGE PLATFORM",
     subtitle:
       "Plataforma e-commerce full-stack e infraestructura multimedia sin estado para comercialización y cotización dinámica de cuadros decorativos (+540 obras).",
+    catalogSection: "production-systems",
     category: "distributed-systems",
     categoryLabel: "E-COMMERCE & CLOUD MEDIA ENGINE",
     projectHeaderLabel: "PROJECT 01 // E-COMMERCE & CLOUD MEDIA ENGINE",
@@ -291,6 +424,7 @@ export function calculateAuthoritativeQuote(input: CustomFrameQuoteInput) {
     slug: "aegis-autonomous-data-fabric",
     title: "Aegis // Zero-Trust Telemetry & Real-Time Ledger",
     subtitle: "Motor de ingesta transaccional, auditoría criptográfica y observabilidad en tiempo real para cargas críticas.",
+    catalogSection: "production-systems",
     category: "data-pipelines",
     categoryLabel: "REAL-TIME DATA & OBSERVABILITY",
     featuredOnHome: false,
@@ -476,8 +610,10 @@ export function filterIdempotentBatch(
     slug: "chameleon-agentic-harness",
     title: "Chameleon v2.1 // Orquestación Agéntica & Harness Engineering",
     subtitle: "Entorno autónomo Maker-Checker One-Shot (Zero-Inheritance) con grafo DAG, protocolo MCP y 3 puertas deterministas.",
+    catalogSection: "ai-projects",
     category: "ai-agents",
     categoryLabel: "AGENTIC ORCHESTRATION & HARNESS",
+    featuredOnHome: false,
     layoutVariant: "secondary-split",
     status: "PRODUCTION // VERIFIED",
     liveMetricPill: "GATE SCORE: 100/100 · 6-LAYER ENFORCED",
@@ -647,8 +783,10 @@ export function filterIdempotentBatch(
     slug: "monolith-homelab-cloud-edge",
     title: "Monolith Edge // Ubuntu Home Lab & Self-Hosted Cloud",
     subtitle: "Infraestructura auto-alojada en Ubuntu Linux con orquestación Docker multi-stage, túneles cifrados y despliegue continuo para dekolabs.org.",
+    catalogSection: "production-systems",
     category: "cloud-infrastructure",
     categoryLabel: "UBUNTU HOME LAB & INFRASTRUCTURE",
+    featuredOnHome: false,
     layoutVariant: "secondary-split",
     status: "ACTIVE // EDGE NODE",
     liveMetricPill: "RAM: 118MB · UBUNTU 24.04 LTS · TLS 1.3",
@@ -814,8 +952,24 @@ CMD ["node", "server.js"]`
 ];
 
 function cloneProductionSystem(system: ProductionSystem): ProductionSystem {
+  const catalogSection: CatalogSectionId =
+    system.catalogSection === "ai-projects"
+      ? "ai-projects"
+      : "production-systems";
+  const galleryImages = normalizeSystemGalleryImages(
+    system.galleryImages,
+    system.title
+  );
+  const ragKnowledgeDocument = buildRagKnowledgeDocument({
+    ...system,
+    catalogSection
+  });
+
   return {
     ...system,
+    catalogSection,
+    galleryImages: galleryImages.map((img) => ({ ...img })),
+    ragKnowledgeDocument,
     stackTags: [...system.stackTags],
     metrics: system.metrics.map((metric) => ({ ...metric })),
     architectureSpecs: system.architectureSpecs.map((spec) => ({ ...spec })),
@@ -830,7 +984,177 @@ function cloneProductionSystem(system: ProductionSystem): ProductionSystem {
   };
 }
 
-export function createProductionSystemsRepository(): ProductionSystemsProvider {
+export function buildProductionSystemRecordFromInput(
+  input: ProductionSystemUpsertInput,
+  existing?: ProductionSystem | null
+): ProductionSystem {
+  const normalizedSlug = input.slug
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const catalogSection: CatalogSectionId =
+    input.catalogSection === "ai-projects"
+      ? "ai-projects"
+      : "production-systems";
+
+  const order = input.order.trim() || existing?.order || "01";
+  const id = input.id?.trim() || existing?.id || `sys-${normalizedSlug}`;
+  const category =
+    input.category ??
+    existing?.category ??
+    (catalogSection === "ai-projects" ? "ai-agents" : "distributed-systems");
+  const versionBadge =
+    input.versionBadge?.trim() ||
+    existing?.versionBadge ||
+    (catalogSection === "ai-projects" ? "v1.0.0 AI BUILD" : "v1.0.0 PRODUCTION");
+
+  const projectHeaderLabel =
+    input.projectHeaderLabel?.trim() ||
+    existing?.projectHeaderLabel ||
+    `PROJECT ${order} // ${input.categoryLabel.trim().toUpperCase()}`;
+
+  const previewImageSrc =
+    input.previewImageSrc?.trim() ||
+    existing?.previewImageSrc ||
+    "/assets/deco-vintage-preview.png";
+  const previewImageAlt =
+    input.previewImageAlt?.trim() ||
+    existing?.previewImageAlt ||
+    `Vista preliminar de ${input.title.trim()}`;
+
+  const stackTags =
+    input.stackTags.length > 0
+      ? input.stackTags.map((t) => t.trim()).filter(Boolean)
+      : existing?.stackTags ?? ["TYPESCRIPT", "DOCKER"];
+
+  const highlightedStackTag =
+    input.highlightedStackTag?.trim() ||
+    existing?.highlightedStackTag ||
+    stackTags[0] ||
+    "TYPESCRIPT";
+
+  const featuredOnHome =
+    typeof input.featuredOnHome === "boolean"
+      ? input.featuredOnHome
+      : (existing?.featuredOnHome ?? true);
+
+  const metrics =
+    input.metrics && input.metrics.length > 0
+      ? input.metrics.map((m) => ({ ...m }))
+      : existing?.metrics ?? [
+          {
+            label: "ESTADO OPERATIVO",
+            value: versionBadge,
+            deltaOrTarget: "Verificado en producción"
+          },
+          {
+            label: "ARQUITECTURA",
+            value: input.deploymentLedger.architecturePattern,
+            deltaOrTarget: input.deploymentLedger.hostEnvironment
+          },
+          {
+            label: "COMPUERTA DE CALIDAD",
+            value: input.deploymentLedger.verificationGate,
+            deltaOrTarget: "Zero-Drift"
+          },
+          {
+            label: "REVISIÓN ACTIVA",
+            value: input.deploymentLedger.commitSha,
+            deltaOrTarget: "Despliegue determinista"
+          }
+        ];
+
+  const terminalPreviewLines =
+    input.terminalPreviewLines && input.terminalPreviewLines.length > 0
+      ? [...input.terminalPreviewLines]
+      : existing?.terminalPreviewLines ?? [
+          `[${normalizedSlug.toUpperCase()}] INFO  runtime.boot    pattern="${input.deploymentLedger.architecturePattern}" status=ONLINE`,
+          `[${normalizedSlug.toUpperCase()}] INFO  gate.verify     revision="${input.deploymentLedger.commitSha}" gate="${input.deploymentLedger.verificationGate}"`,
+          `[${normalizedSlug.toUpperCase()}] INFO  endpoint.ready  liveUrl="${input.liveUrl.trim()}"`
+        ];
+
+  const galleryImages = normalizeSystemGalleryImages(
+    input.galleryImages ?? existing?.galleryImages,
+    input.title.trim()
+  );
+
+  const record: ProductionSystem = {
+    id,
+    order,
+    slug: normalizedSlug,
+    title: input.title.trim(),
+    subtitle: input.subtitle.trim(),
+    catalogSection,
+    category,
+    categoryLabel: input.categoryLabel.trim(),
+    projectHeaderLabel,
+    versionBadge,
+    previewImageSrc,
+    previewImageAlt,
+    highlightedStackTag,
+    featuredOnHome,
+    layoutVariant: input.layoutVariant ?? existing?.layoutVariant ?? "primary-7-5",
+    status: input.status ?? existing?.status ?? "PRODUCTION // ONLINE",
+    liveMetricPill:
+      input.liveMetricPill?.trim() ||
+      existing?.liveMetricPill ||
+      `${versionBadge} · ${input.deploymentLedger.verificationGate}`,
+    summary: input.summary.trim(),
+    architecturalNarrative: input.architecturalNarrative.trim(),
+    stackTags,
+    metrics,
+    architectureSpecs: input.architectureSpecs.map((spec) => ({
+      label: spec.label.trim(),
+      value: spec.value.trim()
+    })),
+    deploymentLedger: {
+      architecturePattern: input.deploymentLedger.architecturePattern.trim(),
+      commitSha: input.deploymentLedger.commitSha.trim(),
+      hostEnvironment: input.deploymentLedger.hostEnvironment.trim(),
+      verificationGate: input.deploymentLedger.verificationGate.trim()
+    },
+    terminalPreviewLines,
+    liveUrl: input.liveUrl.trim(),
+    detailHref: `/sistemas/${normalizedSlug}`,
+    galleryImages,
+    pipelineStages: input.pipelineStages.map((stage) => ({
+      stageNumber: stage.stageNumber,
+      title: stage.title.trim(),
+      latencyOrSlo: stage.latencyOrSlo.trim(),
+      description: stage.description.trim(),
+      invariants: stage.invariants.map((inv) => inv.trim()).filter(Boolean)
+    })),
+    codeTabs: input.codeTabs.map((tab) => ({
+      id: tab.id.trim(),
+      filename: tab.filename.trim(),
+      layer: tab.layer.trim(),
+      language: tab.language.trim(),
+      code: tab.code.replace(/\r\n/g, "\n")
+    })),
+    solvedChallenges: input.solvedChallenges.map((ch) => ({
+      number: ch.number,
+      title: ch.title.trim(),
+      problem: ch.problem.trim(),
+      solution: ch.solution.trim(),
+      impactMetric: ch.impactMetric.trim()
+    }))
+  };
+
+  record.ragKnowledgeDocument = buildRagKnowledgeDocument({
+    ...record,
+    ragKnowledgeDocument: input.ragKnowledgeDocument
+  });
+
+  return cloneProductionSystem(record);
+}
+
+export function createProductionSystemsRepository(
+  initialCatalog: readonly ProductionSystem[] = PRODUCTION_SYSTEMS_CATALOG
+): ProductionSystemsProvider {
+  let catalogStore: ProductionSystem[] = initialCatalog.map(cloneProductionSystem);
+
   return {
     getHeroTelemetryCard(): HeroTelemetryCardData {
       return {
@@ -843,14 +1167,49 @@ export function createProductionSystemsRepository(): ProductionSystemsProvider {
       return INDUSTRIAL_BENCHMARKS.map((kpi) => ({ ...kpi }));
     },
     getAllProductionSystems(): ProductionSystem[] {
-      return PRODUCTION_SYSTEMS_CATALOG.map(cloneProductionSystem);
+      return catalogStore.map(cloneProductionSystem);
     },
     getProductionSystemBySlug(slug: string): ProductionSystem | null {
       const normalized = slug.trim().toLowerCase();
-      const found = PRODUCTION_SYSTEMS_CATALOG.find(
+      const found = catalogStore.find(
         (system) => system.slug.toLowerCase() === normalized
       );
       return found ? cloneProductionSystem(found) : null;
+    },
+    upsertProductionSystem(input: ProductionSystemUpsertInput): ProductionSystem {
+      const normalizedSlug = input.slug
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const existingIndex = catalogStore.findIndex(
+        (system) =>
+          system.slug.toLowerCase() === normalizedSlug ||
+          (Boolean(input.id) && system.id === input.id)
+      );
+      const existing = existingIndex >= 0 ? catalogStore[existingIndex] : null;
+      const record = buildProductionSystemRecordFromInput(input, existing);
+
+      if (existingIndex >= 0) {
+        catalogStore[existingIndex] = record;
+      } else {
+        catalogStore.push(record);
+      }
+
+      catalogStore.sort((a, b) => a.order.localeCompare(b.order));
+      return cloneProductionSystem(record);
+    },
+    deleteProductionSystemBySlug(slug: string): boolean {
+      const normalized = slug.trim().toLowerCase();
+      const prevLength = catalogStore.length;
+      catalogStore = catalogStore.filter(
+        (system) => system.slug.toLowerCase() !== normalized
+      );
+      return catalogStore.length < prevLength;
+    },
+    resetCatalogToDefault(): ProductionSystem[] {
+      catalogStore = initialCatalog.map(cloneProductionSystem);
+      return catalogStore.map(cloneProductionSystem);
     }
   };
 }

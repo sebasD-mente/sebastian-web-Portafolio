@@ -4,9 +4,9 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
 
 ---
 
-## Estado Actual del Contrato (`WIP = 0` — Tareas `feat-009 -> feat-010 -> feat-011` Planificadas en Secuencia DAG)
-- **Última tarea completada (`done`):** `feat-008` (*Evolución de Raíz del Arnés: Event-Sourced DAG Deprecation con `deprecated_files` y Purga Física de Componentes Zombi*).
-- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0` al momento de la declaración; la sesión ejecutora debe activar una sola tarea a la vez empezando por `feat-009`).
+## Estado Actual del Contrato (`WIP = 0` — `feat-009` Completada en `done`; Siguiente en Cola: `feat-010`)
+- **Última tarea completada (`done`):** `feat-009` (*Cimiento PostgreSQL (`pgvector` Ready), Volumen Docker `/app/data/uploads` (`read_only`-safe) y Vistas Públicas (2 Categorías en Home + Galería de 3 Imágenes en Detalle)*).
+- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; lista para iniciar `feat-010`).
 - **Siguientes tareas secuenciales listas para iniciar en orden DAG:**
   1. **`feat-009`**: *Cimiento PostgreSQL (`pgvector` Ready), Volumen Docker `/app/data/uploads` (`read_only`-safe) y Vistas Públicas (2 Categorías en Home + Galería de 3 Imágenes en Detalle)*.
   2. **`feat-010`**: *Motor Backend del Administrador: APIs CRUD de Proyectos y Subida/Servidor de Imágenes en `/app/data/uploads` (`/api/admin/systems`, `/api/admin/upload`, `/api/assets/[filename]`)*.

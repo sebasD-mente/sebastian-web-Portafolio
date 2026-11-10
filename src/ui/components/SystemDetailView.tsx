@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { getNormalizedSystemGallery } from "@/service/systems.service";
 import type { SystemDeepDiveSnapshot } from "@/types/portfolio";
 import { CodeInspectorTabs } from "@/ui/components/CodeInspectorTabs";
 
@@ -10,6 +11,7 @@ export interface SystemDetailViewProps {
 export function SystemDetailView({ deepDive }: SystemDetailViewProps) {
   const { system, previousSystem, nextSystem } = deepDive;
   const specsTableCaptionId = `specs-caption-${system.slug}`;
+  const gallerySlots = getNormalizedSystemGallery(system);
 
   return (
     <article
@@ -202,106 +204,99 @@ export function SystemDetailView({ deepDive }: SystemDetailViewProps) {
         </div>
       </section>
 
-      {/* 3. System 4-KPI Grid */}
+      {/* 3. System Detail 3-Image Exclusive Gallery (Replaces 4-KPI Grid & Diagnostic Console) */}
       <section
-        aria-label="Indicadores clave de rendimiento del sistema"
-        className="border-b border-[var(--outline-variant)] bg-[var(--surface-container-low)] py-10"
-      >
-        <div className="swiss-container">
-          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {system.metrics.map((metric, idx) => (
-              <div
-                key={metric.label}
-                className="border border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] p-5 rounded-[2px] flex flex-col justify-between gap-3"
-              >
-                <div className="flex items-center justify-between">
-                  <dt className="mono-label text-[var(--on-surface-variant)]">
-                    {metric.label}
-                  </dt>
-                  <span className="mono-label text-[var(--secondary)]">
-                    M-0{idx + 1}
-                  </span>
-                </div>
-                <dd className="font-display text-2xl sm:text-3xl font-semibold text-[var(--primary)]">
-                  {metric.value}
-                </dd>
-                <dd className="mono-label text-[var(--tertiary-fixed)] border-t border-[var(--outline-variant)] pt-2.5">
-                  {metric.deltaOrTarget}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
-
-      {/* 4. Command & Diagnostic Console */}
-      <section
-        aria-labelledby="diagnostic-console-heading"
+        id="vistas-sistema"
+        aria-labelledby="system-gallery-heading"
         className="border-b border-[var(--outline-variant)] py-14 lg:py-16"
       >
-        <div className="swiss-container space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="swiss-container space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[var(--outline-variant)] pb-5">
             <div className="space-y-1.5">
               <p className="mono-label text-[var(--secondary)]">
-                01 // CONSOLA DE MANDO Y DIAGNÓSTICO EN TIEMPO REAL
+                01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA
               </p>
               <h2
-                id="diagnostic-console-heading"
+                id="system-gallery-heading"
                 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--primary)]"
               >
-                Trazabilidad Operativa y Telemetría de Ejecución
+                Capturas de Detalle y Flujos en Producción (3 Vistas Exclusivas)
               </h2>
             </div>
             <span className="mono-label text-[var(--tertiary-fixed)]">
-              STREAM STATUS: ACTIVE · ZERO PACKET LOSS
+              3 SLOTS DE DETALLE · INDEPENDIENTES DE LA PORTADA
             </span>
           </div>
 
-          <div className="border border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] rounded-[2px] overflow-hidden">
-            {/* Console Top Bar */}
-            <div className="px-4 py-3 border-b border-[var(--outline-variant)] bg-[var(--surface-container-low)] flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className="h-2.5 w-2.5 rounded-full bg-[var(--tertiary-fixed)]"
-                />
-                <span className="mono-label text-[var(--primary)]">
-                  TTY // {system.slug.toUpperCase()} · {system.deploymentLedger.hostEnvironment}
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="mono-label text-[var(--on-surface-variant)]">
-                  REV: {system.deploymentLedger.commitSha}
-                </span>
-                <span className="mono-label text-[var(--secondary)]">
-                  {system.liveMetricPill}
-                </span>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {gallerySlots.map((slotItem) => {
+              const slotBadge = `VIEW 0${slotItem.slot}`;
+              const hasUploadedImage = slotItem.src.trim().length > 0;
 
-            {/* Console Output Lines */}
-            <div className="p-5 sm:p-6 space-y-2.5 bg-[var(--surface-container-lowest)] overflow-x-auto">
-              {system.terminalPreviewLines.map((line, index) => (
-                <div
-                  key={line}
-                  className="flex items-start gap-3 mono-code text-xs sm:text-sm text-[var(--primary)] whitespace-nowrap"
+              return (
+                <figure
+                  key={slotItem.slot}
+                  aria-label={`${slotBadge}: ${slotItem.label}`}
+                  className="border border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] rounded-[2px] overflow-hidden flex flex-col justify-between"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="select-none text-[var(--secondary)] font-semibold"
-                  >
-                    0{index + 1} &gt;
-                  </span>
-                  <span>{line}</span>
-                </div>
-              ))}
-              <div className="flex items-center gap-3 mono-code text-xs text-[var(--tertiary-fixed)] pt-2 border-t border-[var(--outline-variant)]">
-                <span aria-hidden="true">04 &gt;</span>
-                <span>
-                  [INVARIANT-CHECK] 6-Layer directional boundaries verified · Pass-State Gating 100/100 · Ready for inspection
-                </span>
-              </div>
-            </div>
+                  {/* Technical Frame Header */}
+                  <div className="px-4 py-2.5 border-b border-[var(--outline-variant)] bg-[var(--surface-container-low)] flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        aria-hidden="true"
+                        className={
+                          hasUploadedImage
+                            ? "h-2.5 w-2.5 rounded-full bg-[var(--tertiary-fixed)] shrink-0"
+                            : "h-2.5 w-2.5 rounded-full bg-[var(--secondary)] shrink-0"
+                        }
+                      />
+                      <span className="mono-label text-[var(--secondary)] shrink-0">
+                        {slotBadge}
+                      </span>
+                    </div>
+                    <span className="mono-label text-[var(--on-surface-variant)] truncate">
+                      {slotItem.label}
+                    </span>
+                  </div>
+
+                  {/* Image Viewport or Ready-to-Upload Technical Frame */}
+                  <div className="aspect-[16/10] bg-[var(--surface-container-low)] flex items-center justify-center overflow-hidden">
+                    {hasUploadedImage ? (
+                      <img
+                        src={slotItem.src}
+                        alt={slotItem.alt}
+                        loading="lazy"
+                        width={1280}
+                        height={800}
+                        className="w-full h-full object-cover block"
+                      />
+                    ) : (
+                      <div className="p-6 text-center space-y-2.5 max-w-xs">
+                        <span className="inline-block px-2.5 py-1 border border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] rounded-[2px] mono-label text-[var(--secondary)]">
+                          {slotBadge} // SLOT RESERVADO
+                        </span>
+                        <p className="font-display text-sm font-semibold text-[var(--primary)]">
+                          {slotItem.label}
+                        </p>
+                        <p className="mono-code text-[11px] text-[var(--on-surface-variant)] leading-relaxed">
+                          Espacio listo para recibir captura exclusiva desde el panel /admin/proyectos.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Caption Footer */}
+                  <figcaption className="p-4 border-t border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] space-y-1">
+                    <p className="mono-label text-[var(--primary)]">
+                      {slotItem.label}
+                    </p>
+                    <p className="text-xs text-[var(--on-surface-variant)] leading-relaxed">
+                      {slotItem.caption}
+                    </p>
+                  </figcaption>
+                </figure>
+              );
+            })}
           </div>
         </div>
       </section>
