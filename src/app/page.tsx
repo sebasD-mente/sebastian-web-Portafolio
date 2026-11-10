@@ -22,7 +22,8 @@ export default async function HomePage() {
     identity,
     navigation,
     ambientTelemetry,
-    defaultTheme
+    defaultTheme,
+    footer
   } = siteSnapshot;
 
   const { heroTelemetry } = catalogSnapshot;
@@ -33,6 +34,7 @@ export default async function HomePage() {
       navigation={navigation}
       ambientTelemetry={ambientTelemetry}
       defaultTheme={defaultTheme}
+      footer={footer}
       currentPath="/"
     >
       {/* 1. Hero Editorial Des-saturado (8 cols) + KERNEL & HOME LAB TELEMETRY Card (4 cols) */}

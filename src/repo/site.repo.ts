@@ -2,6 +2,7 @@ import {
   ATELIER_MONOLITH_PALETTES,
   DEFAULT_THEME_MODE,
   getAmbientTelemetryDefaults,
+  getOfficialFooterConfig,
   SITE_IDENTITY,
   SITE_NAVIGATION,
   SIX_LAYER_ARCHITECTURE
@@ -10,13 +11,17 @@ import type {
   AmbientTelemetryStatus,
   ArchitectureLayerSummary,
   NavigationItem,
+  OfficialFooterData,
   SiteConfigProvider,
   SiteIdentity,
+  SocialLinksEnvOverrides,
   ThemeMode,
   ThemeTokenPalette
 } from "@/types/portfolio";
 
-export function createSiteRepository(): SiteConfigProvider {
+export function createSiteRepository(
+  socialOverrides?: SocialLinksEnvOverrides
+): SiteConfigProvider {
   return {
     getIdentity(): SiteIdentity {
       return { ...SITE_IDENTITY };
@@ -38,6 +43,13 @@ export function createSiteRepository(): SiteConfigProvider {
     },
     getArchitectureLayers(): ArchitectureLayerSummary[] {
       return SIX_LAYER_ARCHITECTURE.map((layer) => ({ ...layer }));
+    },
+    getOfficialFooter(): OfficialFooterData {
+      const footer = getOfficialFooterConfig(socialOverrides);
+      return {
+        ...footer,
+        socialLinks: footer.socialLinks.map((link) => ({ ...link }))
+      };
     }
   };
 }

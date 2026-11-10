@@ -1,8 +1,10 @@
-import { defaultSiteRepository } from "@/repo/site.repo";
+import { createSiteRepository, defaultSiteRepository } from "@/repo/site.repo";
 import type {
+  OfficialFooterData,
   SiteConfigProvider,
   SiteFoundationSnapshot,
   SiteIdentity,
+  SocialLinksEnvOverrides,
   ThemeMode,
   ThemeTokenPalette
 } from "@/types/portfolio";
@@ -16,8 +18,18 @@ export function getSiteFoundationSnapshot(
     navigation: repo.getNavigation(),
     ambientTelemetry: repo.getAmbientTelemetry(),
     palettes: repo.getThemePalettes(),
-    architectureLayers: repo.getArchitectureLayers()
+    architectureLayers: repo.getArchitectureLayers(),
+    footer: repo.getOfficialFooter()
   };
+}
+
+export function getOfficialFooterSnapshot(
+  overrides?: SocialLinksEnvOverrides
+): OfficialFooterData {
+  const repo = overrides
+    ? createSiteRepository(overrides)
+    : defaultSiteRepository;
+  return repo.getOfficialFooter();
 }
 
 export function getSiteMetadataSummary(

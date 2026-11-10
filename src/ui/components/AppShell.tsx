@@ -3,18 +3,22 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getOfficialFooterSnapshot } from "@/service/site.service";
 import type {
   AmbientTelemetryStatus,
   NavigationItem,
+  OfficialFooterData,
   SiteIdentity,
   ThemeMode
 } from "@/types/portfolio";
+import { OfficialFooter } from "@/ui/components/OfficialFooter";
 
 export interface AppShellProps {
   identity: SiteIdentity;
   navigation: NavigationItem[];
   ambientTelemetry: AmbientTelemetryStatus;
   defaultTheme: ThemeMode;
+  footer?: OfficialFooterData;
   currentPath?: string;
   children: React.ReactNode;
 }
@@ -63,11 +67,13 @@ export function AppShell({
   identity,
   navigation,
   defaultTheme,
+  footer,
   currentPath,
   children
 }: AppShellProps) {
   const pathnameFromHook = usePathname();
   const activePath = currentPath ?? pathnameFromHook ?? "";
+  const resolvedFooter = footer ?? getOfficialFooterSnapshot();
 
   useEffect(() => {
     applyDocumentTheme(defaultTheme);
@@ -157,6 +163,9 @@ export function AppShell({
       <main id="contenido-principal" className="flex-1">
         {children}
       </main>
+
+      {/* Official Institutional Footer & Social Channels */}
+      <OfficialFooter footer={resolvedFooter} />
     </div>
   );
 }

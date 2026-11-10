@@ -6,7 +6,10 @@ import type {
   CatalogSectionDescriptor,
   CatalogSectionId,
   NavigationItem,
+  OfficialFooterData,
   SiteIdentity,
+  SocialLinksEnvOverrides,
+  SocialPlatformId,
   ThemeMode,
   ThemeTokenPalette
 } from "@/types/portfolio";
@@ -310,5 +313,107 @@ export function getAmbientTelemetryDefaults(): AmbientTelemetryStatus {
     harnessScore: "100/100 (3 Puertas PASS)",
     deployedRevision: "v2.1-atelier-monolith",
     domain: SITE_IDENTITY.domain
+  };
+}
+
+export const OFFICIAL_COPYRIGHT_YEAR = 2026;
+export const OFFICIAL_AUTHOR_CREDIT = "Creado por Sebastian Jimenez 2026";
+export const OFFICIAL_COPYRIGHT_NOTICE =
+  "© 2026 · Creado por Sebastian Jimenez 2026";
+
+export const DEFAULT_SOCIAL_LINKS_URLS: Record<SocialPlatformId, string> = {
+  linkedin: "https://www.linkedin.com/in/sebastian-jimenez-dekolabs",
+  facebook: "https://www.facebook.com/dekolabs",
+  instagram: "https://www.instagram.com/dekolabs",
+  whatsapp: "https://wa.me/573000000000"
+};
+
+export function resolveSafeSocialUrl(
+  rawValue: string | undefined,
+  fallbackUrl: string
+): string {
+  const candidate = rawValue?.trim() ?? "";
+  if (!candidate) {
+    return fallbackUrl;
+  }
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+      return candidate;
+    }
+    return fallbackUrl;
+  } catch {
+    return fallbackUrl;
+  }
+}
+
+export function getOfficialFooterConfig(
+  overrides?: SocialLinksEnvOverrides
+): OfficialFooterData {
+  const linkedinHref = resolveSafeSocialUrl(
+    overrides?.linkedinUrl !== undefined
+      ? overrides.linkedinUrl
+      : process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN_URL,
+    DEFAULT_SOCIAL_LINKS_URLS.linkedin
+  );
+  const facebookHref = resolveSafeSocialUrl(
+    overrides?.facebookUrl !== undefined
+      ? overrides.facebookUrl
+      : process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL,
+    DEFAULT_SOCIAL_LINKS_URLS.facebook
+  );
+  const instagramHref = resolveSafeSocialUrl(
+    overrides?.instagramUrl !== undefined
+      ? overrides.instagramUrl
+      : process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL,
+    DEFAULT_SOCIAL_LINKS_URLS.instagram
+  );
+  const whatsappHref = resolveSafeSocialUrl(
+    overrides?.whatsappUrl !== undefined
+      ? overrides.whatsappUrl
+      : process.env.NEXT_PUBLIC_SOCIAL_WHATSAPP_URL,
+    DEFAULT_SOCIAL_LINKS_URLS.whatsapp
+  );
+
+  return {
+    copyrightNotice: OFFICIAL_COPYRIGHT_NOTICE,
+    copyrightYear: OFFICIAL_COPYRIGHT_YEAR,
+    authorCredit: OFFICIAL_AUTHOR_CREDIT,
+    sectionTitle: "Canales Oficiales & Contacto Directo",
+    sectionSubtitle:
+      "Conecta conmigo para arquitectura de software, agentes autónomos con Google ADK, pipelines RAG e implementaciones end-to-end.",
+    technicalNote:
+      "DEKOLABS.ORG · ARQUITECTURA AGÉNTICA & SISTEMAS EN PRODUCCIÓN",
+    socialLinks: [
+      {
+        id: "linkedin",
+        label: "LinkedIn",
+        href: linkedinHref,
+        ariaLabel: "LinkedIn (abre en nueva pestaña)",
+        handleOrHint: "Red profesional"
+      },
+      {
+        id: "facebook",
+        label: "Facebook",
+        href: facebookHref,
+        ariaLabel: "Facebook (abre en nueva pestaña)",
+        handleOrHint: "Canal oficial"
+      },
+      {
+        id: "instagram",
+        label: "Instagram",
+        href: instagramHref,
+        ariaLabel: "Instagram (abre en nueva pestaña)",
+        handleOrHint: "Actualizaciones visuales"
+      },
+      {
+        id: "whatsapp",
+        label: "WhatsApp",
+        href: whatsappHref,
+        ariaLabel: "WhatsApp (abre en nueva pestaña)",
+        handleOrHint: "Mensaje directo"
+      }
+    ]
   };
 }

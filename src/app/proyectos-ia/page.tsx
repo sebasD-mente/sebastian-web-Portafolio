@@ -30,7 +30,8 @@ export default async function AiProjectsPage() {
     identity,
     navigation,
     ambientTelemetry,
-    defaultTheme
+    defaultTheme,
+    footer
   } = siteSnapshot;
 
   return (
@@ -39,6 +40,7 @@ export default async function AiProjectsPage() {
       navigation={navigation}
       ambientTelemetry={ambientTelemetry}
       defaultTheme={defaultTheme}
+      footer={footer}
       currentPath="/proyectos-ia"
     >
       <AiProjectsCatalogView

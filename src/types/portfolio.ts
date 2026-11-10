@@ -60,6 +60,37 @@ export interface ArchitectureLayerSummary {
   invariantRule: string;
 }
 
+export type SocialPlatformId =
+  | "linkedin"
+  | "facebook"
+  | "instagram"
+  | "whatsapp";
+
+export interface SocialLinkItem {
+  id: SocialPlatformId;
+  label: "LinkedIn" | "Facebook" | "Instagram" | "WhatsApp";
+  href: string;
+  ariaLabel: string;
+  handleOrHint: string;
+}
+
+export interface OfficialFooterData {
+  copyrightNotice: string;
+  copyrightYear: number;
+  authorCredit: string;
+  sectionTitle: string;
+  sectionSubtitle: string;
+  technicalNote: string;
+  socialLinks: SocialLinkItem[];
+}
+
+export interface SocialLinksEnvOverrides {
+  linkedinUrl?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  whatsappUrl?: string;
+}
+
 export interface SiteFoundationSnapshot {
   identity: SiteIdentity;
   defaultTheme: ThemeMode;
@@ -67,6 +98,7 @@ export interface SiteFoundationSnapshot {
   ambientTelemetry: AmbientTelemetryStatus;
   palettes: Record<ThemeMode, ThemeTokenPalette>;
   architectureLayers: ArchitectureLayerSummary[];
+  footer: OfficialFooterData;
 }
 
 export interface SiteConfigProvider {
@@ -76,6 +108,7 @@ export interface SiteConfigProvider {
   getAmbientTelemetry(): AmbientTelemetryStatus;
   getThemePalettes(): Record<ThemeMode, ThemeTokenPalette>;
   getArchitectureLayers(): ArchitectureLayerSummary[];
+  getOfficialFooter(): OfficialFooterData;
 }
 
 export interface HeroTelemetrySeriesPoint {

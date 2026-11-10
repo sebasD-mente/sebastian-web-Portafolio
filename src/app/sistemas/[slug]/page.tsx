@@ -60,6 +60,7 @@ export default async function SystemDetailPage({
       navigation={siteSnapshot.navigation}
       ambientTelemetry={siteSnapshot.ambientTelemetry}
       defaultTheme={siteSnapshot.defaultTheme}
+      footer={siteSnapshot.footer}
     >
       <SystemDetailView deepDive={deepDive} />
     </AppShell>
