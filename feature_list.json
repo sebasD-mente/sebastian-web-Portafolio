@@ -303,7 +303,7 @@
       "area": "catalog-admin-backend-and-uploads",
       "user_visible_behavior": "El sistema cuenta con endpoints seguros de administración para crear, editar y eliminar proyectos en PostgreSQL y subir imágenes desde el PC hacia el volumen dedicado '/app/data/uploads', sirviéndolas dinámicamente en '/api/assets/[filename]' dentro del contenedor Next.js standalone con 'read_only: true'.",
       "priority": "P0",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-009"
       ],
@@ -322,7 +322,7 @@
         "npm test",
         "npm run build"
       ],
-      "evidence": "",
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 35/35 tests PASS en 9 suites incluyendo tests/admin-api-and-uploads.test.ts, next build standalone OK con rutas /api/admin/systems, /api/admin/upload y /api/assets/[filename]).",
       "notes": "REGLAS CRÍTICAS DE FEAT-010: (1) Los archivos route.ts en 'src/app/api/' pertenecen a la frontera superior y NUNCA deben importar directamente de 'src/config/' ni 'src/repo/'; toda la lógica debe delegarse a 'src/runtime/admin-catalog.handler.ts' y 'src/service/systems.service.ts'. (2) Nunca guardar imágenes subidas en '/app/public/' porque el contenedor de producción tiene 'read_only: true'; escribirlas siempre en el directorio configurado por 'CATALOG_UPLOADS_DIR' ('/app/data/uploads' en contenedor o carpeta temporal aislada en tests) y servirlas mediante '/api/assets/[filename]'. (3) Validar estrictamente nombres de archivo contra path traversal ('..', '/', '\\\\')."
     },
     {
