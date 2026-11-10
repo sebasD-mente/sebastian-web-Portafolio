@@ -491,6 +491,36 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 53/53 tests PASS en 13 suites incluyendo tests/official-footer.test.ts con OfficialFooter integrado globalmente en AppShell, 4 botones SVG accesibles LinkedIn/Facebook/Instagram/WhatsApp y leyenda 'Creado por Sebastian Jimenez 2026', next build standalone OK en 4.4s).",
       "notes": "REGLAS CRÍTICAS DE FEAT-015: (1) Respetar las 6 capas: 'OfficialFooter.tsx' y 'AppShell.tsx' están en la capa UI y jamás deben importar de 'src/config/' ni 'src/repo/'; reciben 'OfficialFooterData' por props desde 'getSiteFoundationSnapshot()' en 'src/service/site.service.ts' (dejando 'footer?: OfficialFooterData' opcional en 'AppShellProps' con valores seguros por defecto para no romper renders existentes en tests). (2) Garantizar que el texto renderizado contenga literalmente 'Creado por Sebastian Jimenez 2026' y los 4 botones accesibles para LinkedIn, Facebook, Instagram y WhatsApp. (3) Añadir 'OfficialFooter.tsx' a 'activeComponents' en 'tests/harness-deprecation-dag.test.ts'."
+    },
+    {
+      "id": "feat-016",
+      "name": "Depuración Pre-Push de Datos de Prueba en el Catálogo Base (Conservar Únicamente Deco Vintage Platform)",
+      "description": "Eliminar del catálogo semilla en 'src/repo/systems.repo.ts' los 3 proyectos ficticios de demostración ('sys-02': 'aegis-autonomous-data-fabric', 'sys-03': 'chameleon-agentic-harness', 'sys-04': 'monolith-homelab-cloud-edge'), dejando exclusivamente 'sys-01' ('deco-vintage-platform', DECO VINTAGE PLATFORM) como único proyecto real pre-cargado antes de publicar en GitHub. Sincronizar las suites de prueba ('tests/systems.service.test.ts', 'tests/system-detail.test.ts', 'tests/deployment-config.test.ts', 'tests/postgres-catalog-and-gallery.test.ts' y 'tests/admin-api-and-uploads.test.ts') para verificar el catálogo limpio de 1 solo sistema real en producción.",
+      "area": "catalog-seed-cleanup",
+      "user_visible_behavior": "El catálogo público, el sitemap.xml y el panel '/admin/proyectos' muestran de fábrica únicamente el proyecto real 'DECO VINTAGE PLATFORM', sin proyectos de prueba ficticios.",
+      "priority": "P0",
+      "status": "done",
+      "dependencies": [
+        "feat-015"
+      ],
+      "required_files": [
+        "src/repo/systems.repo.ts",
+        "tests/systems.service.test.ts",
+        "tests/system-detail.test.ts",
+        "tests/deployment-config.test.ts",
+        "tests/postgres-catalog-and-gallery.test.ts",
+        "tests/admin-api-and-uploads.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 53/53 tests PASS en 13 suites verificando catálogo base limpio con únicamente 'deco-vintage-platform', next build standalone OK).",
+      "notes": "Garantizar 0 referencias huérfanas a 'aegis-autonomous-data-fabric', 'chameleon-agentic-harness' y 'monolith-homelab-cloud-edge' en el catálogo base de 'src/repo/systems.repo.ts'."
     }
   ]
 }

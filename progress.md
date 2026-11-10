@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-10 14:32
-**Session ID:** sesion-023 (Implementación y Verificación Completa de `feat-015`: Pie de Página Oficial `OfficialFooter` con Copyright "Creado por Sebastian Jimenez 2026" y Botones de Redes Sociales)
-**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-015` en `"done"`, hoja de ruta Pre-GitHub v2.3 100% completada)
+**Last Updated:** 2026-11-10 15:18
+**Session ID:** sesion-024 (Implementación y Verificación Completa de `feat-016`: Depuración Pre-Push de Datos de Prueba en el Catálogo Base — Conservando Únicamente Deco Vintage Platform)
+**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-016` en `"done"`, repositorio libre de proyectos ficticios y listo para `git push`)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -12,11 +12,10 @@
 
 ### What's Done
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y certificación de **Universal Chameleon Harness v2.1** (`Overall: 100/100`, `0 CRLF`, `0 UTF-8 BOM`).
-- [x] **`feat-001` a `feat-014` completadas y cerradas en `"done"` (`100/100`)**.
-- [x] **`feat-015` completada y verificada en `"done"` (`sesion-023`)**:
-  - **Contratos y Parametrización en 6 Capas (`src/types/portfolio.ts`, `.env.example`, `src/config/site.config.ts`, `src/repo/site.repo.ts`, `src/service/site.service.ts`)**: Definidos `SocialPlatformId` (`"linkedin" | "facebook" | "instagram" | "whatsapp"`), `SocialLinkItem`, `OfficialFooterData` y `SocialLinksEnvOverrides`; parametrizadas las 4 variables `NEXT_PUBLIC_SOCIAL_LINKEDIN_URL`, `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL`, `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL` y `NEXT_PUBLIC_SOCIAL_WHATSAPP_URL` con validación `resolveSafeSocialUrl` (`http:` / `https:` únicamente, bloqueando esquemas inseguros `javascript:` / `data:`) y expuestas vía `getSiteFoundationSnapshot().footer` y `getOfficialFooterSnapshot()`.
-  - **Componente Visual `OfficialFooter.tsx` e Integración Global en `AppShell.tsx` (`src/ui/components/OfficialFooter.tsx`, `src/ui/components/AppShell.tsx`, `src/app/page.tsx`, `src/app/proyectos-ia/page.tsx`, `src/app/sistemas/[slug]/page.tsx`)**: Landmark semántico único `<footer id="contacto">` con estética suiza *Atelier Monolith*, región `<nav aria-label="Redes sociales y contacto directo">`, 4 botones interactivos de tamaño táctil accesible (`min-h-11 min-w-11`, `target="_blank"`, `rel="noopener noreferrer"`) con íconos vectoriales SVG decorativos (`aria-hidden="true"`) y aviso `.visually-hidden` para LinkedIn, Facebook, Instagram y WhatsApp, más la leyenda oficial literal `"© 2026 · Creado por Sebastian Jimenez 2026"`.
-  - **Pruebas Automatizadas (`53/53 PASS`)**: Creada `tests/official-footer.test.ts` y registrado `OfficialFooter.tsx` en `activeComponents` de `tests/harness-deprecation-dag.test.ts` (`53/53` tests PASS en 13 suites).
+- [x] **`feat-001` a `feat-015` completadas y cerradas en `"done"` (`100/100`)**.
+- [x] **`feat-016` completada y verificada en `"done"` (`sesion-024`)**:
+  - **Depuración del Catálogo Semilla (`src/repo/systems.repo.ts`)**: Eliminados por completo los 3 proyectos ficticios de demostración (`sys-02`: `aegis-autonomous-data-fabric`, `sys-03`: `chameleon-agentic-harness`, `sys-04`: `monolith-homelab-cloud-edge`), dejando exclusivamente `sys-01` (`deco-vintage-platform` — **DECO VINTAGE PLATFORM**) como único proyecto real pre-cargado de fábrica.
+  - **Sincronización de Suites de Prueba (`53/53 PASS`)**: Actualizadas `tests/systems.service.test.ts`, `tests/system-detail.test.ts`, `tests/deployment-config.test.ts`, `tests/postgres-catalog-and-gallery.test.ts` y `tests/admin-api-and-uploads.test.ts` para verificar que el catálogo base, el `sitemap.xml` y el panel `/admin/proyectos` contienen de fábrica únicamente el proyecto real `DECO VINTAGE PLATFORM`.
 
 ### What's In Progress
 - Ninguna tarea en curso (`WIP = 0`).

@@ -1,19 +1,15 @@
 # Session Handoff
 
 ## Current Objective
-- **Goal:** Implementar y verificar al `100/100` la tarea **`feat-015`** (*Pie de Página Oficial (`OfficialFooter`) con Copyright "Creado por Sebastian Jimenez 2026" y Botones de Redes Sociales (LinkedIn, Facebook, Instagram, WhatsApp)*), cerrando la hoja de ruta Pre-GitHub v2.3 en `clean-state` (`WIP = 0`).
-- **Current status:** `clean-state` (`feat-001` a `feat-015` en `"done"`, `WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `53/53` tests unitarios en 13 suites PASS y build `standalone` OK)
-- **Branch / commit:** `main` (`feat-015` implementada y verificada)
+- **Goal:** Implementar y verificar al `100/100` la tarea **`feat-016`** (*Depuración Pre-Push de Datos de Prueba en el Catálogo Base (Conservar Únicamente Deco Vintage Platform)*), dejando el repositorio libre de proyectos ficticios antes de subir a GitHub (`WIP = 0`).
+- **Current status:** `clean-state` (`feat-001` a `feat-016` en `"done"`, `WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `53/53` tests unitarios en 13 suites PASS y build `standalone` OK)
+- **Branch / commit:** `main` (`feat-016` implementada y verificada)
 
 ## Completed This Session
-- [x] **Contratos y Configuración Desacoplada en 6 Capas (`.env.example`, `src/types/portfolio.ts`, `src/config/site.config.ts`, `src/repo/site.repo.ts`, `src/service/site.service.ts`)**:
-  - Definidos `SocialPlatformId`, `SocialLinkItem` y `OfficialFooterData`.
-  - Parametrizadas las 4 variables `NEXT_PUBLIC_SOCIAL_LINKEDIN_URL`, `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL`, `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL` y `NEXT_PUBLIC_SOCIAL_WHATSAPP_URL` con sanitización `resolveSafeSocialUrl`, exponiendo `OfficialFooterData` en `getSiteFoundationSnapshot().footer`.
-- [x] **Pie de Página Oficial Global (`src/ui/components/OfficialFooter.tsx`, `src/ui/components/AppShell.tsx`, `src/app/page.tsx`, `src/app/proyectos-ia/page.tsx`, `src/app/sistemas/[slug]/page.tsx`)**:
-  - Construido `OfficialFooter.tsx` bajo estética *Atelier Monolith* con landmark `<footer id="contacto">`, región `<nav aria-label="Redes sociales y contacto directo">`, 4 botones interactivos con íconos SVG accesibles (`LinkedIn`, `Facebook`, `Instagram`, `WhatsApp`, `target="_blank"`, `rel="noopener noreferrer"`) y la leyenda oficial `"© 2026 · Creado por Sebastian Jimenez 2026"`.
-  - Integrado globalmente al final de `AppShell.tsx` con prop opcional `footer?: OfficialFooterData` y fallback seguro hacia `getOfficialFooterSnapshot()`.
-- [x] **Pruebas Automatizadas (`53/53 PASS`)**:
-  - Creada `tests/official-footer.test.ts` y actualizado `activeComponents` en `tests/harness-deprecation-dag.test.ts`.
+- [x] **Eliminación de Proyectos Ficticios del Catálogo Semilla (`src/repo/systems.repo.ts`)**:
+  - Retirados `sys-02` (`aegis-autonomous-data-fabric`), `sys-03` (`chameleon-agentic-harness`) y `sys-04` (`monolith-homelab-cloud-edge`), conservando únicamente `sys-01` (`deco-vintage-platform` — **DECO VINTAGE PLATFORM**).
+- [x] **Sincronización de Suites de Prueba (`53/53 PASS`)**:
+  - Actualizadas `tests/systems.service.test.ts`, `tests/system-detail.test.ts`, `tests/deployment-config.test.ts`, `tests/postgres-catalog-and-gallery.test.ts` y `tests/admin-api-and-uploads.test.ts`.
 
 ## Verification Evidence
 

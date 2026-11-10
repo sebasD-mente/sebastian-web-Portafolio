@@ -76,7 +76,7 @@ describe("feat-009: Cimiento PostgreSQL (pgvector), Volumen /app/data/uploads, 2
     });
 
     const initialList = await listCatalogSystemsAsync(isolatedAsyncRepo);
-    expect(initialList).toHaveLength(4);
+    expect(initialList).toHaveLength(1);
     const initialHomeSplit = splitSystemsByHomeCatalogSection(initialList);
     expect(initialHomeSplit.productionSystems).toHaveLength(1);
     expect(initialHomeSplit.productionSystems[0]?.slug).toBe("deco-vintage-platform");

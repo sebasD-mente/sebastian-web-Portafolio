@@ -5,13 +5,10 @@ import {
 } from "@/service/systems.service";
 
 describe("System Deep-Dive Service & Code Inspector Contracts (feat-003)", () => {
-  it("generates static params for all 4 production systems in order", () => {
+  it("generates static params for the production system catalog (Deco Vintage Platform)", () => {
     const slugs = getAllProductionSystemSlugs();
     expect(slugs).toEqual([
-      { slug: "deco-vintage-platform" },
-      { slug: "aegis-autonomous-data-fabric" },
-      { slug: "chameleon-agentic-harness" },
-      { slug: "monolith-homelab-cloud-edge" }
+      { slug: "deco-vintage-platform" }
     ]);
   });
 
@@ -74,29 +71,20 @@ describe("System Deep-Dive Service & Code Inspector Contracts (feat-003)", () =>
       }
 
       // Related systems exclude current system
-      expect(relatedSystems).toHaveLength(3);
+      expect(relatedSystems).toHaveLength(0);
       expect(relatedSystems.some((item) => item.slug === slug)).toBe(false);
     }
   });
 
-  it("computes cyclic previous and next system navigation across the 4-system catalog", () => {
+  it("computes cyclic previous and next system navigation on the single-system seed catalog", () => {
     const first = getProductionSystemDeepDiveBySlug(
       "deco-vintage-platform"
     );
     expect(first).not.toBeNull();
-    expect(first?.previousSystem.order).toBe("04");
-    expect(first?.previousSystem.slug).toBe("monolith-homelab-cloud-edge");
-    expect(first?.nextSystem.order).toBe("02");
-    expect(first?.nextSystem.slug).toBe("aegis-autonomous-data-fabric");
-
-    const last = getProductionSystemDeepDiveBySlug(
-      "monolith-homelab-cloud-edge"
-    );
-    expect(last).not.toBeNull();
-    expect(last?.previousSystem.order).toBe("03");
-    expect(last?.previousSystem.slug).toBe("chameleon-agentic-harness");
-    expect(last?.nextSystem.order).toBe("01");
-    expect(last?.nextSystem.slug).toBe("deco-vintage-platform");
+    expect(first?.previousSystem.order).toBe("01");
+    expect(first?.previousSystem.slug).toBe("deco-vintage-platform");
+    expect(first?.nextSystem.order).toBe("01");
+    expect(first?.nextSystem.slug).toBe("deco-vintage-platform");
   });
 
   it("returns null for non-existent or empty slugs", () => {

@@ -29,20 +29,17 @@ describe("feat-006: Empaquetado Docker Multi-Stage, SEO dekolabs.org y Guía de 
     });
   });
 
-  it("genera sitemap.xml determinista con la raíz dekolabs.org y los 4 casos de estudio /sistemas/[slug]", () => {
+  it("genera sitemap.xml determinista con la raíz dekolabs.org y el caso de estudio real /sistemas/deco-vintage-platform", () => {
     const entries = sitemap();
 
-    expect(entries).toHaveLength(5);
+    expect(entries).toHaveLength(2);
     expect(entries[0]?.url).toBe("https://dekolabs.org");
     expect(entries[0]?.priority).toBe(1.0);
     expect(entries[0]?.changeFrequency).toBe("weekly");
 
     const systemUrls = entries.slice(1).map((item) => item.url);
     expect(systemUrls).toEqual([
-      "https://dekolabs.org/sistemas/deco-vintage-platform",
-      "https://dekolabs.org/sistemas/aegis-autonomous-data-fabric",
-      "https://dekolabs.org/sistemas/chameleon-agentic-harness",
-      "https://dekolabs.org/sistemas/monolith-homelab-cloud-edge"
+      "https://dekolabs.org/sistemas/deco-vintage-platform"
     ]);
     for (const item of entries.slice(1)) {
       expect(item.priority).toBe(0.85);

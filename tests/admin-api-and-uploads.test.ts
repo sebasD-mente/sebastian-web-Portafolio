@@ -81,7 +81,8 @@ describe("Admin Catalog Backend APIs & Read-Only-Safe Asset Uploads (feat-010)",
     expect(validRes.status).toBe(200);
     const validBody = (await validRes.json()) as AdminSystemsListSuccessPayload;
     expect(validBody.ok).toBe(true);
-    expect(validBody.systems.length).toBeGreaterThanOrEqual(4);
+    expect(validBody.systems).toHaveLength(1);
+    expect(validBody.systems[0]?.slug).toBe("deco-vintage-platform");
     expect(validBody.sections["production-systems"].heading).toBe(
       "SISTEMAS EN PRODUCCIÓN"
     );

@@ -27,8 +27,8 @@ describe("feat-002 & feat-007: Production Systems Catalog, Hero Telemetry & Deco
       "KPI // 04"
     ]);
 
-    expect(snapshot.systems).toHaveLength(4);
-    expect(snapshot.systems.map((s) => s.order)).toEqual(["01", "02", "03", "04"]);
+    expect(snapshot.systems).toHaveLength(1);
+    expect(snapshot.systems.map((s) => s.order)).toEqual(["01"]);
 
     expect(featured).toHaveLength(1);
     expect(featured[0]?.slug).toBe("deco-vintage-platform");
@@ -41,14 +41,10 @@ describe("feat-002 & feat-007: Production Systems Catalog, Hero Telemetry & Deco
     expect(featured[0]?.liveUrl).toBe("https://www.decovintage.online");
     expect(featured[0]?.previewImageSrc).toBe("/assets/deco-vintage-preview.png");
 
-    expect(snapshot.primarySystems).toHaveLength(2);
+    expect(snapshot.primarySystems).toHaveLength(1);
     expect(snapshot.primarySystems[0]?.layoutVariant).toBe("primary-7-5");
-    expect(snapshot.primarySystems[1]?.layoutVariant).toBe("primary-5-7");
 
-    expect(snapshot.secondarySystems).toHaveLength(2);
-    expect(
-      snapshot.secondarySystems.every((s) => s.layoutVariant === "secondary-split")
-    ).toBe(true);
+    expect(snapshot.secondarySystems).toHaveLength(0);
   });
 
   it("resolves systems by slug and returns null for unknown or empty slugs", () => {
@@ -66,10 +62,10 @@ describe("feat-002 & feat-007: Production Systems Catalog, Hero Telemetry & Deco
       "ZOD + ZERO-TRUST"
     ]);
 
-    const chameleon = getProductionSystemBySlug("  CHAMELEON-AGENTIC-HARNESS ");
-    expect(chameleon).not.toBeNull();
-    expect(chameleon?.order).toBe("03");
-    expect(chameleon?.category).toBe("ai-agents");
+    const normalizedDeco = getProductionSystemBySlug("  DECO-VINTAGE-PLATFORM ");
+    expect(normalizedDeco).not.toBeNull();
+    expect(normalizedDeco?.order).toBe("01");
+    expect(normalizedDeco?.category).toBe("distributed-systems");
 
     expect(getProductionSystemBySlug("non-existent-system")).toBeNull();
     expect(getProductionSystemBySlug("")).toBeNull();
@@ -77,15 +73,17 @@ describe("feat-002 & feat-007: Production Systems Catalog, Hero Telemetry & Deco
 
   it("filters production systems by category and preserves immutability", () => {
     const all = filterProductionSystemsByCategory("all");
-    expect(all).toHaveLength(4);
+    expect(all).toHaveLength(1);
+
+    const distributedSystems = filterProductionSystemsByCategory("distributed-systems");
+    expect(distributedSystems).toHaveLength(1);
+    expect(distributedSystems[0]?.slug).toBe("deco-vintage-platform");
 
     const aiSystems = filterProductionSystemsByCategory("ai-agents");
-    expect(aiSystems).toHaveLength(1);
-    expect(aiSystems[0]?.slug).toBe("chameleon-agentic-harness");
+    expect(aiSystems).toHaveLength(0);
 
     const homelabSystems = filterProductionSystemsByCategory("cloud-infrastructure");
-    expect(homelabSystems).toHaveLength(1);
-    expect(homelabSystems[0]?.slug).toBe("monolith-homelab-cloud-edge");
+    expect(homelabSystems).toHaveLength(0);
 
     // Verify defensive cloning
     const firstCall = getProductionSystems();

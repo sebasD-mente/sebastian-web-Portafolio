@@ -4,15 +4,16 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
 
 ---
 
-## Estado Actual del Contrato (`WIP = 0` — Hoja de Ruta `feat-001`..`feat-015` 100% Completada)
-- **Última tarea completada (`done`):** `feat-015` (*Pie de Página Oficial (`OfficialFooter`) con Copyright "Creado por Sebastian Jimenez 2026" y Botones de Redes Sociales (LinkedIn, Facebook, Instagram, WhatsApp)*).
-- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; `feat-001` a `feat-015` verificadas al `100/100` en las 3 puertas de `init.sh`).
-- **Siguiente tarea secuencial lista para iniciar:** Ninguna pendiente en cola (todas las tareas de Pre-GitHub v2.3 cerradas en `"done"`).
-- **Hoja de ruta secuencial declarada en el DAG (`feat-012 -> feat-013 -> feat-014 -> feat-015`):**
+## Estado Actual del Contrato (`WIP = 0` — Hoja de Ruta `feat-001`..`feat-016` 100% Completada y Limpia de Datos de Prueba)
+- **Última tarea completada (`done`):** `feat-016` (*Depuración Pre-Push de Datos de Prueba en el Catálogo Base (Conservar Únicamente Deco Vintage Platform)*).
+- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; `feat-001` a `feat-016` verificadas al `100/100` en las 3 puertas de `init.sh`).
+- **Siguiente tarea secuencial lista para iniciar:** Ninguna pendiente en cola (repositorio limpio y listo para `git push`).
+- **Hoja de ruta secuencial declarada en el DAG (`feat-012 -> feat-013 -> feat-014 -> feat-015 -> feat-016`):**
   1. **`feat-012`** (`done`, depende de `feat-011`): *Sistema Profesional de Login (`/admin/login`) con Sesión Firmada `HttpOnly`, Límite Anti-Fuerza Bruta y Cierre de Sesión*.
   2. **`feat-013`** (`done`, depende de `feat-012`): *Reestructuración del Administrador (`/admin/proyectos`) en 2 Vistas Separadas, Selector `<select>` de Sección y Evolución de IA a Producción*.
   3. **`feat-014`** (`done`, depende de `feat-013`): *Página de Inicio (`/`) Exclusiva para Sistemas en Producción y Nueva Página Pública Dedicada `/proyectos-ia`*.
   4. **`feat-015`** (`done`, depende de `feat-014`): *Pie de Página Oficial (`OfficialFooter`) con Copyright "Creado por Sebastian Jimenez 2026" y Botones de Redes Sociales (LinkedIn, Facebook, Instagram, WhatsApp)*.
+  5. **`feat-016`** (`done`, depende de `feat-015`): *Depuración Pre-Push de Datos de Prueba en el Catálogo Base (Conservar Únicamente Deco Vintage Platform)*.
 - **Especificación maestra de referencia:** `docs/product-specs/dekolabs-portfolio-spec.md` (Sección 8), `docs/design-docs/homelab-deployment.md`, `docs/RELIABILITY.md`, `docs/SECURITY.md` y `ARCHITECTURE.md`.
 
 ## Justificación de Dependencias en `package.json` (Regla Dura #4 de `ARCHITECTURE.md`)
