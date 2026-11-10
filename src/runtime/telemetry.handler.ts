@@ -99,6 +99,8 @@ export async function handleTelemetryGet(request?: Request): Promise<Response> {
       status: telemetry.status,
       rssMemoryMb: telemetry.runtimeMetrics.rssMemoryMb,
       activeContainers: telemetry.containers.length,
+      liveMonitorHeader: telemetry.liveMonitor.headerTitle,
+      cpuTempC: telemetry.liveMonitor.thermalSensors.cpuTempC,
       executedCommandId: executedCommand?.id ?? null
     },
     error: null,

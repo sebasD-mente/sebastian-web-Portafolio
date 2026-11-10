@@ -1,27 +1,95 @@
-import React from "react";
-import { buildSparklineSvgGeometry } from "@/service/systems.service";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { getServerdmenteLiveMonitor } from "@/service/telemetry.service";
 import type {
   HeroTelemetryCardData,
+  ServerdmenteLiveGauge,
+  ServerdmenteLiveMonitorData,
   SiteIdentity,
   ThemeMode
 } from "@/types/portfolio";
 
 export interface HeroSectionProps {
   identity: SiteIdentity;
-  telemetryCard: HeroTelemetryCardData;
-  defaultTheme: ThemeMode;
+  telemetryCard?: HeroTelemetryCardData;
+  defaultTheme?: ThemeMode;
+  liveMonitor?: ServerdmenteLiveMonitorData;
+}
+
+const LIVE_TELEMETRY_POLL_MS = 5000;
+
+function resolveGaugeBarColor(tone: ServerdmenteLiveGauge["tone"]): string {
+  if (tone === "amber") {
+    return "bg-[#D97706]";
+  }
+  if (tone === "blue") {
+    return "bg-[#2563EB]";
+  }
+  return "bg-[#059669]";
+}
+
+function resolveGaugeValueTextColor(tone: ServerdmenteLiveGauge["tone"]): string {
+  if (tone === "amber") {
+    return "text-[#B45309]";
+  }
+  if (tone === "blue") {
+    return "text-[#2563EB]";
+  }
+  return "text-[#059669]";
 }
 
 export function HeroSection({
   identity,
-  telemetryCard,
-  defaultTheme
+  liveMonitor
 }: HeroSectionProps) {
-  const sparkline = buildSparklineSvgGeometry(
-    telemetryCard.sparklinePoints,
-    320,
-    72
+  const [monitor, setMonitor] = useState<ServerdmenteLiveMonitorData>(
+    () => liveMonitor ?? getServerdmenteLiveMonitor()
   );
+
+  useEffect(() => {
+    if (liveMonitor) {
+      setMonitor(liveMonitor);
+    }
+  }, [liveMonitor]);
+
+  useEffect(() => {
+    let active = true;
+
+    const pollServerdmenteTelemetry = async () => {
+      try {
+        const response = await fetch("/api/telemetry", {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json"
+          }
+        });
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as {
+          telemetry?: {
+            liveMonitor?: ServerdmenteLiveMonitorData;
+          };
+        };
+
+        if (active && payload?.telemetry?.liveMonitor) {
+          setMonitor(payload.telemetry.liveMonitor);
+        }
+      } catch {
+        // Keep last verified telemetry reading on transient network interruption
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      void pollServerdmenteTelemetry();
+    }, LIVE_TELEMETRY_POLL_MS);
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   return (
     <>
@@ -44,109 +112,108 @@ export function HeroSection({
             </p>
           </div>
 
-          {/* Right Column (4 cols): KERNEL & HOME LAB TELEMETRY Monitor */}
+          {/* Right Column (4 cols): Real-Time serverdmente Hardware & Kernel Monitor */}
           <div className="lg:col-span-4 flex justify-center lg:justify-end">
-            <div className="w-full max-w-[420px] bg-white border border-[#6B8EBF]/80 p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+            <div className="w-full max-w-[440px] bg-white border border-[#6B8EBF]/80 p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
               <aside
-                aria-label="Tarjeta de telemetría del Kernel y Ubuntu Home Lab"
-                className="border border-[#D1D5DB] bg-[#F3F4F6] p-4 sm:p-5 space-y-4"
+                aria-label="Monitor en tiempo real del servidor físico serverdmente"
+                className="border border-[#D1D5DB] bg-[#F3F4F6] p-4 sm:p-5 space-y-3.5"
               >
                 <div className="flex items-center justify-between border-b border-[#D1D5DB] pb-2.5">
-                  <span className="mono-pixel text-[10px] sm:text-[11px] text-[#111827]">
-                    {telemetryCard.cardTitle}
+                  <span className="mono-pixel text-[10px] sm:text-[11px] font-semibold text-[#111827]">
+                    {monitor.headerTitle}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 mono-pixel text-[10px] sm:text-[11px] text-[#059669]">
+                  <span className="inline-flex items-center gap-1.5 mono-pixel text-[10px] sm:text-[11px] font-semibold text-[#059669]">
                     <span
                       aria-hidden="true"
-                      className="h-1.5 w-1.5 rounded-full bg-[#059669]"
+                      className="h-2 w-2 rounded-full bg-[#059669] animate-pulse"
                     />
-                    {telemetryCard.nodeStatus}
+                    {monitor.statusBadge}
                   </span>
                 </div>
 
-                <dl className="space-y-2 mono-pixel text-[10px] sm:text-[11px]">
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#4B5563]">NODE ID</dt>
-                    <dd className="text-[#111827] font-semibold text-right">
-                      {telemetryCard.nodeId}
+                <dl className="space-y-1.5 mono-pixel text-[10px] sm:text-[10.5px]">
+                  <div className="flex justify-between items-baseline gap-2">
+                    <dt className="text-[#4B5563] shrink-0">HOST &amp; KERNEL</dt>
+                    <dd className="text-[#111827] font-semibold text-right truncate">
+                      {monitor.hostAndKernel}
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#4B5563]">HOST OS</dt>
-                    <dd className="text-[#111827] text-right max-w-[230px]">
-                      {telemetryCard.hostEnvironment}
+                  <div className="flex justify-between items-baseline gap-2">
+                    <dt className="text-[#4B5563] shrink-0">CPU &amp; LOAD</dt>
+                    <dd className="text-[#111827] text-right truncate">
+                      {monitor.cpuAndLoad}
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#4B5563]">ACTIVE CONTAINERS</dt>
-                    <dd className="text-[#111827] font-semibold">
-                      {telemetryCard.activeContainers} NODES
+                  <div className="flex justify-between items-baseline gap-2">
+                    <dt className="text-[#4B5563] shrink-0">THERMAL SENSORS</dt>
+                    <dd className="text-[#059669] font-semibold text-right truncate">
+                      {monitor.thermalSensors.label}
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#4B5563]">P99 LATENCY</dt>
-                    <dd className="text-[#059669] font-semibold">
-                      {telemetryCard.p99LatencyMs} ms (AVG {sparkline.avgLatencyMs} ms)
+                  <div className="flex justify-between items-baseline gap-2">
+                    <dt className="text-[#4B5563] shrink-0">HOST MEMORY</dt>
+                    <dd className="text-[#111827] font-semibold text-right truncate">
+                      {monitor.hostMemory.label}
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#4B5563]">HARNESS SCORE</dt>
-                    <dd className="text-[#2563EB] font-semibold">
-                      {telemetryCard.harnessGateScore}
+                  <div className="flex justify-between items-baseline gap-2">
+                    <dt className="text-[#4B5563] shrink-0">CONTAINER CGROUP</dt>
+                    <dd className="text-[#2563EB] font-semibold text-right truncate">
+                      {monitor.containerCgroup.label}
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#4B5563]">MEMORY RSS</dt>
-                    <dd className="text-[#111827]">
-                      {telemetryCard.memoryFootprint}
+                  <div className="flex justify-between items-baseline gap-2">
+                    <dt className="text-[#4B5563] shrink-0">STORAGE (NVME)</dt>
+                    <dd className="text-[#111827] text-right truncate">
+                      {monitor.storageNvme.label}
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#4B5563]">DEFAULT THEME</dt>
-                    <dd className="text-[#111827] uppercase">{defaultTheme}</dd>
+                  <div className="flex justify-between items-baseline gap-2">
+                    <dt className="text-[#4B5563] shrink-0">DATA &amp; EDGE MESH</dt>
+                    <dd className="text-[#059669] font-semibold text-right truncate">
+                      {monitor.dataAndEdgeMesh}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between items-baseline gap-2">
+                    <dt className="text-[#4B5563] shrink-0">HOST UPTIME</dt>
+                    <dd className="text-[#111827] font-semibold text-right truncate">
+                      {monitor.hostUptime.label}
+                    </dd>
                   </div>
                 </dl>
 
-                {/* SVG Sparkline Telemetry Visualization */}
-                <div className="border-t border-[#D1D5DB] pt-3 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="mono-pixel text-[9.5px] sm:text-[10px] text-[#4B5563] leading-tight">
-                      {telemetryCard.sparklineLabel}
-                    </span>
-                    <span className="mono-pixel text-[9.5px] sm:text-[10px] text-[#2563EB] whitespace-nowrap">
-                      {sparkline.minLatencyMs}MS – {sparkline.maxLatencyMs}MS
-                    </span>
-                  </div>
-
-                  <div className="border border-[#D1D5DB] bg-[#FAFAFA] p-2.5">
-                    <svg
-                      role="img"
-                      viewBox="0 0 320 72"
-                      className="w-full h-12 overflow-visible"
-                    >
-                      <title>
-                        Gráfico sparkline de latencia P99 en ventana de 24 horas entre{" "}
-                        {sparkline.minLatencyMs}ms y {sparkline.maxLatencyMs}ms con
-                        promedio de {sparkline.avgLatencyMs}ms
-                      </title>
-                      <path
-                        d={sparkline.areaPath}
-                        fill="#2563EB"
-                        fillOpacity="0.12"
-                      />
-                      <polyline
-                        fill="none"
-                        stroke="#2563EB"
-                        strokeWidth="1.75"
-                        points={sparkline.polylinePoints}
-                      />
-                    </svg>
-                    <div className="flex justify-between mono-pixel text-[9.5px] text-[#4B5563] pt-1">
-                      <span>00:00 UTC</span>
-                      <span>SLO {telemetryCard.uptimePercent}</span>
-                      <span>NOW // LIVE</span>
+                {/* Real-Time Hardware & Cgroup Gauges */}
+                <div className="border-t border-[#D1D5DB] pt-3 space-y-2.5">
+                  {monitor.gauges.map((gauge) => (
+                    <div key={gauge.id} className="space-y-1">
+                      <div className="flex items-center justify-between gap-2 mono-pixel text-[9.5px] sm:text-[10px]">
+                        <span className="text-[#4B5563] font-semibold">
+                          {gauge.label}
+                        </span>
+                        <span
+                          className={`font-semibold whitespace-nowrap ${resolveGaugeValueTextColor(gauge.tone)}`}
+                        >
+                          {gauge.valueLabel}
+                        </span>
+                      </div>
+                      <div
+                        role="progressbar"
+                        aria-label={gauge.label}
+                        aria-valuenow={gauge.percent}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        className="w-full h-1.5 bg-[#E5E7EB] border border-[#D1D5DB] overflow-hidden"
+                      >
+                        <div
+                          className={`h-full transition-all duration-500 ${resolveGaugeBarColor(gauge.tone)}`}
+                          style={{
+                            width: `${Math.min(100, Math.max(2, gauge.percent))}%`
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </aside>
             </div>

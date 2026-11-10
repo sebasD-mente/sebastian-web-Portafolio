@@ -1,7 +1,11 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { POST as postContactRoute } from "@/app/api/contact/route";
 import { GET as getHealthRoute } from "@/app/api/health/route";
 import { GET as getTelemetryRoute } from "@/app/api/telemetry/route";
+import HomePage from "@/app/page";
+import { buildServerdmenteLiveMonitor } from "@/repo/telemetry.repo";
 import type {
   ContactEndpointErrorPayload,
   ContactEndpointSuccessPayload
@@ -15,11 +19,14 @@ import {
   getEngagementModalities,
   validateContactInquiry
 } from "@/service/contact.service";
+import { getSiteFoundationSnapshot } from "@/service/site.service";
 import {
   executeTerminalCommand,
   getHomeLabHealthReport,
-  getHomeLabTelemetrySnapshot
+  getHomeLabTelemetrySnapshot,
+  getServerdmenteLiveMonitor
 } from "@/service/telemetry.service";
+import { HeroSection } from "@/ui/components/HeroSection";
 
 describe("Ubuntu Home Lab Telemetry & Contact Advisory (feat-005)", () => {
   it("builds a deterministic Home Lab telemetry snapshot and executes terminal presets", () => {
@@ -178,5 +185,140 @@ describe("Ubuntu Home Lab Telemetry & Contact Advisory (feat-005)", () => {
     });
     const malformedRes = await postContactRoute(malformedReq);
     expect(malformedRes.status).toBe(400);
+  });
+
+  it("feat-020: exposes liveMonitor in /api/telemetry, parses Linux kernel sensors safely, and renders serverdmente monitor in HeroSection without DEFAULT THEME or HARNESS SCORE", async () => {
+    const liveMonitor = getServerdmenteLiveMonitor();
+    expect(liveMonitor.headerTitle).toBe("HOME-LAB // SERVERDMENTE");
+    expect(liveMonitor.statusBadge).toBe("ONLINE · LIVE 5S");
+    expect(liveMonitor.hostAndKernel).toContain("Ubuntu 26.04 LTS");
+    expect(liveMonitor.cpuAndLoad).toContain("Core i5-1035G1 (4C/8T)");
+    expect(liveMonitor.thermalSensors.label).toContain("CPU");
+    expect(liveMonitor.thermalSensors.label).toContain("NVMe");
+    expect(liveMonitor.hostMemory.label).toContain("14.81 GiB");
+    expect(liveMonitor.containerCgroup.label).toContain("256 MiB (Next.js Standalone)");
+    expect(liveMonitor.storageNvme.label).toContain("KINGSTON 1TB NVMe");
+    expect(liveMonitor.dataAndEdgeMesh).toBe(
+      "pgvector:pg17 ONLINE · Tailscale WireGuard"
+    );
+    expect(liveMonitor.hostUptime.label).toContain("Continuous");
+    expect(liveMonitor.gauges.map((g) => g.label)).toEqual([
+      "THERMAL HEADROOM",
+      "HOST RAM USAGE",
+      "CONTAINER CGROUP QUOTA"
+    ]);
+
+    // Verify Linux kernel probe parsing on simulated serverdmente /sys and /proc files
+    const simulatedLinuxMonitor = buildServerdmenteLiveMonitor({
+      platform: "linux",
+      arch: "x64",
+      kernelRelease: "7.0.0-42-generic",
+      cpuModels: Array.from(
+        { length: 8 },
+        () => "Intel(R) Core(TM) i5-1035G1 CPU @ 1.00GHz"
+      ),
+      loadAvg: [0.02, 0.05, 0.01],
+      uptimeSeconds: 760320,
+      processRssBytes: 50331648,
+      readDir(dirPath: string): string[] {
+        if (dirPath === "/sys/class/hwmon") return ["hwmon0", "hwmon1"];
+        return [];
+      },
+      readFile(filePath: string): string | null {
+        const files: Record<string, string> = {
+          "/etc/os-release": 'PRETTY_NAME="Ubuntu 26.04.1 LTS"\nNAME="Ubuntu"\n',
+          "/sys/class/hwmon/hwmon0/name": "coretemp\n",
+          "/sys/class/hwmon/hwmon0/temp1_input": "58000\n",
+          "/sys/class/hwmon/hwmon1/name": "nvme\n",
+          "/sys/class/hwmon/hwmon1/temp1_input": "50850\n",
+          "/proc/meminfo":
+            "MemTotal:       15529188 kB\nMemFree:        11000000 kB\nMemAvailable:   13115200 kB\n",
+          "/sys/fs/cgroup/memory.current": "50331648\n",
+          "/sys/fs/cgroup/memory.max": "268435456\n",
+          "/proc/uptime": "760320.45 6000000.00\n"
+        };
+        return files[filePath] ?? null;
+      },
+      statRootFs() {
+        return {
+          bsize: 4096,
+          blocks: 239861760, // ~915 GiB
+          bfree: 224133120,  // ~60 GiB used
+          bavail: 212074496
+        };
+      }
+    });
+
+    expect(simulatedLinuxMonitor.hostAndKernel).toBe(
+      "Ubuntu 26.04 LTS · Linux 7.0.0-42 x86_64"
+    );
+    expect(simulatedLinuxMonitor.cpuAndLoad).toBe(
+      "Core i5-1035G1 (4C/8T) · Load 0.02 / 0.05"
+    );
+    expect(simulatedLinuxMonitor.thermalSensors).toEqual({
+      cpuTempC: 58.0,
+      nvmeTempC: 50.9,
+      label: "CPU 58.0°C · NVMe 50.9°C"
+    });
+    expect(simulatedLinuxMonitor.hostMemory).toEqual({
+      usedGib: 2.3,
+      totalGib: 14.81,
+      usedPercent: 16,
+      label: "2.30 GiB / 14.81 GiB (16% Used)"
+    });
+    expect(simulatedLinuxMonitor.containerCgroup).toEqual({
+      usedMib: 48,
+      limitMib: 256,
+      usedPercent: 19,
+      label: "48 MiB / 256 MiB (Next.js Standalone)"
+    });
+    expect(simulatedLinuxMonitor.storageNvme).toEqual({
+      usedGb: 60,
+      totalGb: 915,
+      usedPercent: 7,
+      label: "KINGSTON 1TB NVMe · 60 GB / 915 GB (7%)"
+    });
+    expect(simulatedLinuxMonitor.hostUptime).toEqual({
+      uptimeHours: 211.2,
+      label: "8d 19h 12m (211.2h Continuous)"
+    });
+
+    // Verify GET /api/telemetry includes liveMonitor
+    const telRes = await getTelemetryRoute(
+      new Request("http://localhost:3000/api/telemetry")
+    );
+    expect(telRes.status).toBe(200);
+    expect(telRes.headers.get("Cache-Control")).toContain("no-store");
+    const telPayload = (await telRes.json()) as TelemetryEndpointPayload;
+    expect(telPayload.telemetry.liveMonitor.headerTitle).toBe(
+      "HOME-LAB // SERVERDMENTE"
+    );
+    expect(telPayload.telemetry.liveMonitor.gauges).toHaveLength(3);
+
+    // Verify HeroSection and HomePage markup contain the 8 real rows and 3 gauges and NO leaked harness/theme rows
+    const { identity } = getSiteFoundationSnapshot();
+    const heroHtml = renderToStaticMarkup(
+      React.createElement(HeroSection, { identity })
+    );
+    const homeHtml = renderToStaticMarkup(await HomePage());
+
+    for (const html of [heroHtml, homeHtml]) {
+      expect(html).toContain("HOME-LAB // SERVERDMENTE");
+      expect(html).toContain("ONLINE · LIVE 5S");
+      expect(html).toContain("HOST &amp; KERNEL");
+      expect(html).toContain("CPU &amp; LOAD");
+      expect(html).toContain("THERMAL SENSORS");
+      expect(html).toContain("HOST MEMORY");
+      expect(html).toContain("CONTAINER CGROUP");
+      expect(html).toContain("STORAGE (NVME)");
+      expect(html).toContain("DATA &amp; EDGE MESH");
+      expect(html).toContain("HOST UPTIME");
+      expect(html).toContain("THERMAL HEADROOM");
+      expect(html).toContain("HOST RAM USAGE");
+      expect(html).toContain("CONTAINER CGROUP QUOTA");
+      expect(html).not.toContain("DEFAULT THEME");
+      expect(html).not.toContain("HARNESS SCORE");
+      expect(html).not.toContain("14 NODES");
+    }
   });
 });

@@ -610,6 +610,37 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 54/54 tests PASS en 13 suites verificando TechStackSection #stack-tecnologico en HomePage y activeComponents, next build standalone OK en 3.5s).",
       "notes": "REGLAS CRÍTICAS DE FEAT-019: (1) OBLIGATORIO añadir 'TechStackSection.tsx' en orden alfabético dentro del arreglo 'activeComponents' en 'tests/harness-deprecation-dag.test.ts' (junto a 'SystemDetailView.tsx') para que el test de inventario de componentes UI pase al 100%. (2) Respetar las 6 capas: 'TechStackSection.tsx' está en 'src/ui/components/' y no debe importar de 'src/config/' ni 'src/repo/'."
+    },
+    {
+      "id": "feat-020",
+      "name": "Monitor de Telemetría en Tiempo Real del Servidor serverdmente ('HOME-LAB // SERVERDMENTE') en el Hero y /api/telemetry",
+      "description": "Reemplazar el cuadro estático antiguo del Hero por un Monitor de Telemetría en Tiempo Real del servidor físico 'serverdmente' (Sección 9.4 de docs/product-specs/dekolabs-portfolio-spec.md) respetando estrictamente las 6 capas (Types -> Config -> Repo -> Service -> Runtime -> UI): (1) Definir en 'src/types/portfolio.ts' la interfaz 'ServerdmenteLiveMonitorData' (con 'headerTitle', 'statusBadge', 'hostAndKernel', 'cpuAndLoad', 'thermalSensors', 'hostMemory', 'containerCgroup', 'storageNvme', 'dataAndEdgeMesh', 'hostUptime' y 'gauges') e incluirla como propiedad 'liveMonitor: ServerdmenteLiveMonitorData' dentro de 'HomeLabTelemetrySnapshot'; (2) Implementar en 'src/repo/telemetry.repo.ts' lectores reales sin privilegios root ('node:os' y 'node:fs' con 'try/catch' Fail-Safe y respaldo determinista de 'serverdmente' fuera de Linux/en Vitest) para leer '/etc/os-release' + 'os.release()', 'os.cpus()' + 'os.loadavg()', temperaturas reales en '/sys/class/hwmon/' y '/sys/class/thermal/' (CPU ~58.0°C, NVMe ~50.9°C), RAM del host en '/proc/meminfo' ('MemTotal' y 'MemAvailable', ~2.30 GiB / 14.81 GiB), cuota cgroup v2 en '/sys/fs/cgroup/memory.current' y '/sys/fs/cgroup/memory.max' (~48 MiB / 256 MiB), almacenamiento NVMe con 'fs.statfsSync(\"/\")' ('KINGSTON 1TB NVMe · 60 GB / 915 GB (7%)'), malla 'pgvector:pg17 ONLINE · Tailscale WireGuard' y uptime continuo 'os.uptime()'; (3) Exponer 'getServerdmenteLiveMonitor()' en 'src/service/telemetry.service.ts' e incluir 'liveMonitor' en la respuesta de 'GET /api/telemetry' ('src/runtime/telemetry.handler.ts'); (4) Actualizar 'src/ui/components/HeroSection.tsx' y 'src/app/page.tsx' eliminando por completo del Hero las filas filtradas 'DEFAULT THEME', 'HARNESS SCORE: 100/100 (3 Puertas PASS)', 'ACTIVE CONTAINERS: 14 NODES' y la gráfica ficticia de 24h, renderizando en su lugar el encabezado 'HOME-LAB // SERVERDMENTE' ('ONLINE · LIVE 5S'), las 8 filas reales ('HOST & KERNEL', 'CPU & LOAD', 'THERMAL SENSORS', 'HOST MEMORY', 'CONTAINER CGROUP', 'STORAGE (NVME)', 'DATA & EDGE MESH', 'HOST UPTIME'), las 3 barras de progreso técnicas en vivo ('THERMAL HEADROOM', 'HOST RAM USAGE', 'CONTAINER CGROUP QUOTA') y un polling ligero cada 5 segundos hacia 'GET /api/telemetry' en el navegador; y (5) Ampliar 'tests/telemetry-and-contact.test.ts' verificando las 8 filas reales de 'serverdmente', las 3 barras de progreso y la ausencia total de 'DEFAULT THEME' y 'HARNESS SCORE' en el render de 'HeroSection'.",
+      "area": "live-homelab-server-monitor",
+      "user_visible_behavior": "El cuadro derecho del Hero en dekolabs.org muestra en vivo el monitor real del servidor 'HOME-LAB // SERVERDMENTE' (Ubuntu 26.04 LTS · Linux 7.0, Core i5-1035G1 4C/8T, temperaturas reales de CPU y NVMe, RAM del host 14.81 GiB, cgroup del contenedor 256 MiB, NVMe Kingston 1TB, pgvector:pg17 + Tailscale WireGuard y Uptime continuo con 3 medidores de progreso), actualizándose cada 5 segundos y sin mostrar datos del arnés ni 'DEFAULT THEME'.",
+      "priority": "P0",
+      "status": "done",
+      "dependencies": [
+        "feat-019"
+      ],
+      "required_files": [
+        "src/types/portfolio.ts",
+        "src/repo/telemetry.repo.ts",
+        "src/service/telemetry.service.ts",
+        "src/runtime/telemetry.handler.ts",
+        "src/ui/components/HeroSection.tsx",
+        "src/app/page.tsx",
+        "tests/telemetry-and-contact.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 55/55 tests PASS en 13 suites verificando el monitor en tiempo real HOME-LAB // SERVERDMENTE en HeroSection y /api/telemetry con 8 filas reales, 3 barras de progreso y 0 fugas de DEFAULT THEME o HARNESS SCORE, next build standalone OK en 3.8s).",
+      "notes": "REGLAS CRÍTICAS DE FEAT-020: (1) Conservar intacto el contrato de 'getHeroTelemetryCardData()' y 'buildSparklineSvgGeometry()' en 'src/service/systems.service.ts' / 'src/repo/systems.repo.ts' para que 'tests/systems.service.test.ts' siga pasando al 100% sin romper compatibilidad. (2) En 'HeroSectionProps' ('src/ui/components/HeroSection.tsx'), hacer que 'liveMonitor?: ServerdmenteLiveMonitorData' sea opcional y use 'getServerdmenteLiveMonitor()' (desde 'src/service/telemetry.service.ts') como fallback por defecto cuando no se pase por prop, respetando las 6 capas (UI -> Service). (3) Verificar con 'renderToStaticMarkup(HeroSection)' en 'tests/telemetry-and-contact.test.ts' que el HTML del Hero contiene 'HOME-LAB // SERVERDMENTE', 'HOST &amp; KERNEL', 'CPU &amp; LOAD', 'THERMAL SENSORS', 'HOST MEMORY', 'CONTAINER CGROUP', 'STORAGE (NVME)', 'DATA &amp; EDGE MESH' y 'HOST UPTIME', y que NO contiene 'DEFAULT THEME' ni 'HARNESS SCORE'."
     }
   ]
 }

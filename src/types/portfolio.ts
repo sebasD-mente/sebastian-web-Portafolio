@@ -476,6 +476,50 @@ export interface TerminalCommandPreset {
   outputLines: string[];
 }
 
+export interface ServerdmenteLiveGauge {
+  id: "thermal-headroom" | "host-ram-usage" | "container-cgroup-quota";
+  label: "THERMAL HEADROOM" | "HOST RAM USAGE" | "CONTAINER CGROUP QUOTA";
+  valueLabel: string;
+  percent: number;
+  tone: "emerald" | "blue" | "amber";
+}
+
+export interface ServerdmenteLiveMonitorData {
+  headerTitle: "HOME-LAB // SERVERDMENTE";
+  statusBadge: "ONLINE · LIVE 5S";
+  hostAndKernel: string;
+  cpuAndLoad: string;
+  thermalSensors: {
+    cpuTempC: number;
+    nvmeTempC: number;
+    label: string;
+  };
+  hostMemory: {
+    usedGib: number;
+    totalGib: number;
+    usedPercent: number;
+    label: string;
+  };
+  containerCgroup: {
+    usedMib: number;
+    limitMib: number;
+    usedPercent: number;
+    label: string;
+  };
+  storageNvme: {
+    usedGb: number;
+    totalGb: number;
+    usedPercent: number;
+    label: string;
+  };
+  dataAndEdgeMesh: string;
+  hostUptime: {
+    uptimeHours: number;
+    label: string;
+  };
+  gauges: ServerdmenteLiveGauge[];
+}
+
 export interface HomeLabTelemetrySnapshot {
   timestamp: string;
   correlationId: string;
@@ -492,6 +536,7 @@ export interface HomeLabTelemetrySnapshot {
   containers: HomeLabContainerStatus[];
   terminalCommands: TerminalCommandPreset[];
   initialTtyLines: string[];
+  liveMonitor: ServerdmenteLiveMonitorData;
 }
 
 export interface HomeLabHealthReport {
@@ -518,6 +563,7 @@ export interface HomeLabTelemetryProvider {
     metrics: HomeLabRuntimeMetrics,
     containers: HomeLabContainerStatus[]
   ): TerminalCommandPreset[];
+  getLiveMonitor(): ServerdmenteLiveMonitorData;
 }
 
 export type EngagementModalityId =

@@ -350,3 +350,25 @@ Tras la auditoría en vivo sobre `https://dekolabs.org/`, se declaran **3 tareas
    - Añadir la sección semántica `<section id="stack-tecnologico" aria-labelledby="tech-stack-heading">` en la página de inicio (`/`) debajo de `ProductionSystemsSection` (`#proyectos-destacados`).
    - Diseñada bajo estética suiza *Atelier Monolith* con encabezado `02 // ARQUITECTURA & HERRAMIENTAS`, título `STACK TECNOLÓGICO`, badge visible **`SECCIÓN EN CONSTRUCCIÓN`** y tarjeta informativa sobria indicando que el mapa detallado de tecnologías, agentes autónomos (Google ADK, MCP), pipelines RAG (`PostgreSQL + pgvector`) e infraestructura Linux Home Lab se encuentra actualmente en construcción y curaduría técnica.
    - Garantiza que el botón **`STACK TECNOLÓGICO`** (`href="/#stack-tecnologico"`) de la barra de navegación superior funcione en todas las páginas sin enlaces muertos.
+
+### 9.4 Monitor en Tiempo Real del Servidor `serverdmente` (`HOME-LAB // SERVERDMENTE`) en el Hero y `/api/telemetry` (`feat-020`)
+Con base en la auditoría de hardware, sensores y cgroups v2 del nodo real **`serverdmente`** (`Ubuntu 26.04.1 LTS · Linux 7.0.0-42-generic x86_64`, `Intel Core i5-1035G1 4C/8T`, `14.81 GiB RAM`, `KINGSTON SNV2S1000G 1TB NVMe`, `dekolabs-db pgvector:pg17`, malla `Traefik Edge HTTP/3 -> Tailscale WireGuard -> 127.0.0.1:3000`), se reemplaza el cuadro estático antiguo del Hero por un **Monitor en Tiempo Real de `serverdmente`**:
+1. **Eliminación Total de Filas Filtradas del Arnés/Configuración en `HeroSection.tsx`**:
+   - Quedan **100% eliminadas** del cuadro derecho del Hero las filas `DEFAULT THEME`, `HARNESS SCORE: 100/100 (3 Puertas PASS)`, `ACTIVE CONTAINERS: 14 NODES` y el gráfico estático ficticio `24H WINDOW`.
+2. **Lectura Real desde el Kernel Linux sin Privilegios Root (`src/repo/telemetry.repo.ts`)**:
+   - Desde dentro del contenedor `dekolabs-portfolio` (`uid=1001(nextjs)`, `read_only: true`), el repositorio lee en tiempo real (con `try/catch` y respaldo determinista de `serverdmente` cuando corre en Windows/CI):
+     - **`HOST & KERNEL`**: `/etc/os-release` + `os.release()` / `os.arch()` (ej. `Ubuntu 26.04 LTS · Linux 7.0.0-42 x86_64`).
+     - **`CPU & LOAD`**: `os.cpus()` + `os.loadavg()` (ej. `Core i5-1035G1 (4C/8T) · Load 0.01 / 0.04`).
+     - **`THERMAL SENSORS`**: `/sys/class/hwmon/hwmon*/temp*_input` y `/sys/class/thermal/thermal_zone*/temp` (ej. `CPU 58.0°C · NVMe 50.9°C`).
+     - **`HOST MEMORY`**: `/proc/meminfo` (`MemTotal` y `MemAvailable`) (ej. `2.30 GiB / 14.81 GiB (15% Used)`).
+     - **`CONTAINER CGROUP`**: `/sys/fs/cgroup/memory.current` y `/sys/fs/cgroup/memory.max` + `process.memoryUsage().rss` (ej. `48 MiB / 256 MiB (Next.js Standalone)`).
+     - **`STORAGE (NVME)`**: `fs.statfsSync('/')` (ej. `KINGSTON 1TB NVMe · 60 GB / 915 GB (7%)`).
+     - **`DATA & EDGE MESH`**: `pgvector:pg17 ONLINE · Tailscale WireGuard`.
+     - **`HOST UPTIME`**: `os.uptime()` formateado en vivo (ej. `8d 19h 12m (211.0h Continuous)`).
+3. **Medidores Técnicos en Vivo y Polling Cada 5 Segundos (`src/ui/components/HeroSection.tsx` y `GET /api/telemetry`)**:
+   - Encabezado **`HOME-LAB // SERVERDMENTE`** con badge pulsante **`ONLINE · LIVE 5S`**.
+   - Bloque inferior con **3 barras de progreso técnicas en tiempo real**:
+     1. **`THERMAL HEADROOM`**: Temperatura de CPU (`°C / 100°C`) y NVMe (`°C / 78°C`).
+     2. **`HOST RAM USAGE`**: Porcentaje y GiB usados sobre los `14.81 GiB` del host.
+     3. **`CONTAINER CGROUP QUOTA`**: Porcentaje y MiB usados sobre el límite duro de `256 MiB` del contenedor.
+   - En el navegador, `HeroSection.tsx` realiza polling ligero cada `5000 ms` contra `GET /api/telemetry` (`Cache-Control: no-store`) para refrescar los valores reales en vivo sin recargar la página.

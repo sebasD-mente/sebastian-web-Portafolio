@@ -4,10 +4,17 @@ import type {
   HomeLabHealthReport,
   HomeLabTelemetryProvider,
   HomeLabTelemetrySnapshot,
+  ServerdmenteLiveMonitorData,
   SiteConfigProvider,
   TerminalCommandId,
   TerminalCommandPreset
 } from "@/types/portfolio";
+
+export function getServerdmenteLiveMonitor(
+  telemetryProvider: HomeLabTelemetryProvider = homeLabTelemetryRepo
+): ServerdmenteLiveMonitorData {
+  return telemetryProvider.getLiveMonitor();
+}
 
 export function getHomeLabTelemetrySnapshot(
   correlationId = "homelab-snapshot-01",
@@ -23,6 +30,7 @@ export function getHomeLabTelemetrySnapshot(
     runtimeMetrics,
     containers
   );
+  const liveMonitor = telemetryProvider.getLiveMonitor();
 
   const initialTtyLines: string[] = [
     `$ ssh -i ~/.ssh/ed25519_dekolabs sebastian@${ambient.domain} -p 2222`,
@@ -48,7 +56,8 @@ export function getHomeLabTelemetrySnapshot(
     runtimeMetrics,
     containers,
     terminalCommands,
-    initialTtyLines
+    initialTtyLines,
+    liveMonitor
   };
 }
 
