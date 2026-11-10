@@ -1,10 +1,16 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { createProductionSystemsRepository } from "@/repo/systems.repo";
 import {
+  deduplicateSystemSummary,
   getAllProductionSystemSlugs,
+  getDefaultSystemTemplateInput,
   getProductionSystemDeepDiveBySlug
 } from "@/service/systems.service";
+import { SystemDetailView } from "@/ui/components/SystemDetailView";
 
-describe("System Deep-Dive Service & Code Inspector Contracts (feat-003)", () => {
+describe("System Deep-Dive Service & Code Inspector Contracts (feat-003 & feat-018)", () => {
   it("generates static params for the production system catalog (Deco Vintage Platform)", () => {
     const slugs = getAllProductionSystemSlugs();
     expect(slugs).toEqual([
@@ -23,6 +29,12 @@ describe("System Deep-Dive Service & Code Inspector Contracts (feat-003)", () =>
       const { system, relatedSystems } = deepDive;
       expect(system.slug).toBe(slug);
       expect(system.detailHref).toBe(`/sistemas/${slug}`);
+
+      // Subtitle and summary must not duplicate the opening sentence (feat-018)
+      expect(system.summary.startsWith(system.subtitle)).toBe(false);
+      expect(system.summary).toContain(
+        "Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips"
+      );
 
       // Deployment Metadata Ledger
       expect(system.deploymentLedger.architecturePattern.length).toBeGreaterThan(3);
@@ -85,6 +97,76 @@ describe("System Deep-Dive Service & Code Inspector Contracts (feat-003)", () =>
     expect(first?.previousSystem.slug).toBe("deco-vintage-platform");
     expect(first?.nextSystem.order).toBe("01");
     expect(first?.nextSystem.slug).toBe("deco-vintage-platform");
+  });
+
+  it("deduplicates repeated subtitle prefixes in summary and hides self-referential prev/next cards when only 1 system exists (feat-018)", () => {
+    const subtitle =
+      "Plataforma e-commerce full-stack e infraestructura multimedia sin estado para comercialización y cotización dinámica de cuadros decorativos (+540 obras).";
+    const legacySummaryFromDb =
+      "Plataforma e-commerce full-stack e infraestructura multimedia sin estado para comercialización y cotización dinámica de cuadros decorativos (+540 obras). Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips.";
+
+    expect(deduplicateSystemSummary(subtitle, legacySummaryFromDb)).toBe(
+      "Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips."
+    );
+
+    const singleDeepDive = getProductionSystemDeepDiveBySlug("deco-vintage-platform");
+    expect(singleDeepDive).not.toBeNull();
+    if (!singleDeepDive) return;
+
+    // Simulate a legacy DB record that still has the repeated first sentence in summary
+    const legacyDeepDive = {
+      ...singleDeepDive,
+      system: {
+        ...singleDeepDive.system,
+        summary: legacySummaryFromDb
+      }
+    };
+
+    const singleSystemHtml = renderToStaticMarkup(
+      React.createElement(SystemDetailView, { deepDive: legacyDeepDive })
+    );
+
+    // Subtitle sentence appears only once (never duplicated in summary paragraph)
+    const occurrences = singleSystemHtml.split(subtitle).length - 1;
+    expect(occurrences).toBe(1);
+    expect(singleSystemHtml).toContain(
+      "Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips."
+    );
+
+    // Self-referential SISTEMA ANTERIOR / SIGUIENTE SISTEMA cards are hidden for 1 system
+    expect(singleSystemHtml).not.toContain("SISTEMA ANTERIOR");
+    expect(singleSystemHtml).not.toContain("SIGUIENTE SISTEMA");
+    expect(singleSystemHtml).toContain("← VOLVER A SISTEMAS EN PRODUCCIÓN");
+    expect(singleSystemHtml).toContain("SOLICITAR IMPLEMENTACIÓN SIMILAR →");
+
+    // When a second system exists in the catalog, sequential navigation cards are rendered
+    const multiRepo = createProductionSystemsRepository();
+    const baseTemplate = getDefaultSystemTemplateInput(multiRepo);
+    multiRepo.upsertProductionSystem?.({
+      ...baseTemplate,
+      order: "02",
+      slug: "adk-vector-orchestrator",
+      title: "ADK VECTOR ORCHESTRATOR",
+      subtitle: "Orquestador multi-agente sobre Google ADK y pgvector.",
+      categoryLabel: "AGENTIC AI & RAG ENGINE"
+    });
+
+    const multiDeepDive = getProductionSystemDeepDiveBySlug(
+      "deco-vintage-platform",
+      multiRepo
+    );
+    expect(multiDeepDive).not.toBeNull();
+    if (!multiDeepDive) return;
+
+    expect(multiDeepDive.previousSystem.slug).toBe("adk-vector-orchestrator");
+    expect(multiDeepDive.nextSystem.slug).toBe("adk-vector-orchestrator");
+
+    const multiSystemHtml = renderToStaticMarkup(
+      React.createElement(SystemDetailView, { deepDive: multiDeepDive })
+    );
+    expect(multiSystemHtml).toContain("← SISTEMA ANTERIOR (02)");
+    expect(multiSystemHtml).toContain("SIGUIENTE SISTEMA (02) →");
+    expect(multiSystemHtml).toContain("ADK VECTOR ORCHESTRATOR");
   });
 
   it("returns null for non-existent or empty slugs", () => {

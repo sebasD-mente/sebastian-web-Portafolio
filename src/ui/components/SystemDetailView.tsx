@@ -1,6 +1,9 @@
 import React from "react";
 import Link from "next/link";
-import { getNormalizedSystemGallery } from "@/service/systems.service";
+import {
+  deduplicateSystemSummary,
+  getNormalizedSystemGallery
+} from "@/service/systems.service";
 import type { SystemDeepDiveSnapshot } from "@/types/portfolio";
 import { CodeInspectorTabs } from "@/ui/components/CodeInspectorTabs";
 
@@ -12,6 +15,11 @@ export function SystemDetailView({ deepDive }: SystemDetailViewProps) {
   const { system, previousSystem, nextSystem } = deepDive;
   const specsTableCaptionId = `specs-caption-${system.slug}`;
   const gallerySlots = getNormalizedSystemGallery(system);
+  const deduplicatedSummary = deduplicateSystemSummary(
+    system.subtitle,
+    system.summary
+  );
+  const hasDistinctAdjacentSystems = previousSystem.slug !== system.slug;
 
   return (
     <article
@@ -93,7 +101,7 @@ export function SystemDetailView({ deepDive }: SystemDetailViewProps) {
 
             <div className="space-y-4 pt-2 border-t border-[var(--outline-variant)]">
               <p className="text-base text-[var(--on-surface-variant)] leading-relaxed">
-                {system.summary}
+                {deduplicatedSummary}
               </p>
               <p className="text-sm sm:text-base text-[var(--on-surface-variant)] leading-relaxed">
                 {system.architecturalNarrative}
@@ -589,37 +597,54 @@ export function SystemDetailView({ deepDive }: SystemDetailViewProps) {
         className="py-12 lg:py-16 bg-[var(--background)]"
       >
         <div className="swiss-container space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link
-              href={previousSystem.detailHref}
-              className="group border border-[var(--outline-variant)] bg-[var(--surface-container-low)] hover:bg-[var(--surface-container-high)] p-6 rounded-[2px] transition-colors flex flex-col justify-between gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--secondary)]"
-            >
-              <span className="mono-label text-[var(--on-surface-variant)]">
-                ← SISTEMA ANTERIOR ({previousSystem.order})
-              </span>
-              <span className="font-display text-lg sm:text-xl font-semibold text-[var(--primary)]">
-                {previousSystem.title}
-              </span>
-              <span className="mono-label text-[var(--secondary)]">
-                {previousSystem.categoryLabel}
-              </span>
-            </Link>
+          {hasDistinctAdjacentSystems ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Link
+                href={previousSystem.detailHref}
+                className="group border border-[var(--outline-variant)] bg-[var(--surface-container-low)] hover:bg-[var(--surface-container-high)] p-6 rounded-[2px] transition-colors flex flex-col justify-between gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--secondary)]"
+              >
+                <span className="mono-label text-[var(--on-surface-variant)]">
+                  ← SISTEMA ANTERIOR ({previousSystem.order})
+                </span>
+                <span className="font-display text-lg sm:text-xl font-semibold text-[var(--primary)]">
+                  {previousSystem.title}
+                </span>
+                <span className="mono-label text-[var(--secondary)]">
+                  {previousSystem.categoryLabel}
+                </span>
+              </Link>
 
-            <Link
-              href={nextSystem.detailHref}
-              className="group border border-[var(--outline-variant)] bg-[var(--surface-container-low)] hover:bg-[var(--surface-container-high)] p-6 rounded-[2px] transition-colors flex flex-col justify-between gap-2 md:text-right focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--secondary)]"
-            >
-              <span className="mono-label text-[var(--on-surface-variant)]">
-                SIGUIENTE SISTEMA ({nextSystem.order}) →
-              </span>
-              <span className="font-display text-lg sm:text-xl font-semibold text-[var(--primary)]">
-                {nextSystem.title}
-              </span>
-              <span className="mono-label text-[var(--secondary)]">
-                {nextSystem.categoryLabel}
-              </span>
-            </Link>
-          </div>
+              <Link
+                href={nextSystem.detailHref}
+                className="group border border-[var(--outline-variant)] bg-[var(--surface-container-low)] hover:bg-[var(--surface-container-high)] p-6 rounded-[2px] transition-colors flex flex-col justify-between gap-2 md:text-right focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--secondary)]"
+              >
+                <span className="mono-label text-[var(--on-surface-variant)]">
+                  SIGUIENTE SISTEMA ({nextSystem.order}) →
+                </span>
+                <span className="font-display text-lg sm:text-xl font-semibold text-[var(--primary)]">
+                  {nextSystem.title}
+                </span>
+                <span className="mono-label text-[var(--secondary)]">
+                  {nextSystem.categoryLabel}
+                </span>
+              </Link>
+            </div>
+          ) : (
+            <div className="border border-[var(--outline-variant)] bg-[var(--surface-container-low)] p-6 rounded-[2px] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <Link
+                href="/#proyectos-destacados"
+                className="inline-flex items-center gap-2 px-4 py-2.5 border border-[var(--outline-variant)] bg-[var(--surface-container-lowest)] hover:bg-[var(--surface-container-high)] text-[var(--primary)] rounded-[2px] mono-label transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--secondary)]"
+              >
+                ← VOLVER A SISTEMAS EN PRODUCCIÓN
+              </Link>
+              <Link
+                href="/#contacto"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-[var(--background)] hover:opacity-90 rounded-[2px] mono-label transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--secondary)]"
+              >
+                SOLICITAR IMPLEMENTACIÓN SIMILAR →
+              </Link>
+            </div>
+          )}
         </div>
       </nav>
     </article>

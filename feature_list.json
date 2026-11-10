@@ -562,7 +562,7 @@
       "area": "system-detail-surgical-polish",
       "user_visible_behavior": "Al abrir '/sistemas/deco-vintage-platform', el resumen inicial fluye sin repetir dos veces la misma oración del subtítulo y al final de la página ya no aparecen dos botones 'SISTEMA ANTERIOR' y 'SIGUIENTE SISTEMA' apuntándose al mismo proyecto, sino una barra limpia de retorno al catálogo y contacto.",
       "priority": "P0",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-017"
       ],
@@ -580,6 +580,7 @@
         "npm test",
         "npm run build"
       ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 54/54 tests PASS en 13 suites verificando deduplicateSystemSummary en memoria/PostgreSQL y retiro de tarjetas SISTEMA ANTERIOR/SIGUIENTE SISTEMA autoreferenciadas en SystemDetailView, next build standalone OK).",
       "notes": "REGLAS CRÍTICAS DE FEAT-018: (1) Conservar intactas las propiedades 'previousSystem' y 'nextSystem' en el objeto retornado por 'getProductionSystemDeepDiveBySlug' ('src/service/systems.service.ts') para no romper los tests de contrato existentes en 'tests/system-detail.test.ts'; la decisión de ocultar las tarjetas autoreferenciadas cuando 'previousSystem.slug === system.slug' se realiza limpiamente en 'src/ui/components/SystemDetailView.tsx'. (2) Asegurar que 'deduplicateSystemSummary' limpie el prefijo duplicado tanto en memoria como al leer desde PostgreSQL."
     },
     {

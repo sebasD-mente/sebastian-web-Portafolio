@@ -230,7 +230,7 @@ export const PRODUCTION_SYSTEMS_CATALOG: ProductionSystem[] = [
     status: "PRODUCTION // ONLINE",
     liveMetricPill: "v3.4.0 PRODUCTION · 99.9% SLA ACTIVO",
     summary:
-      "Plataforma e-commerce full-stack e infraestructura multimedia sin estado para comercialización y cotización dinámica de cuadros decorativos (+540 obras). Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips, persistencia relacional con paginación por cursores, motor autoritativo de cotizaciones a medida e inyección SSR dinámica para indexación social en tiempo real.",
+      "Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips, persistencia relacional con paginación por cursores, motor autoritativo de cotizaciones a medida e inyección SSR dinámica para indexación social en tiempo real.",
     architecturalNarrative:
       "Arquitectura Stateless Cloud-Native / Zero Split-Brain diseñada para operar sin almacenamiento local efímero: todo activo gráfico se procesa en memoria RAM controlada por semáforos libvips y se distribuye desde Google Cloud Storage CDN con validación estricta Zod + Zero-Trust.",
     stackTags: [

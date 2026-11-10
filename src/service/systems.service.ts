@@ -89,6 +89,43 @@ function toNavigationLink(
   };
 }
 
+export function deduplicateSystemSummary(
+  subtitle: string,
+  summary: string
+): string {
+  const cleanSubtitle = typeof subtitle === "string" ? subtitle.trim() : "";
+  const cleanSummary = typeof summary === "string" ? summary.trim() : "";
+  if (!cleanSubtitle || !cleanSummary) {
+    return cleanSummary;
+  }
+
+  const lowerSummary = cleanSummary.toLowerCase();
+  const lowerSubtitle = cleanSubtitle.toLowerCase();
+  const subtitleWithoutDot = cleanSubtitle.replace(/\.+$/, "").trim();
+  const lowerSubtitleWithoutDot = subtitleWithoutDot.toLowerCase();
+
+  if (lowerSummary.startsWith(lowerSubtitle)) {
+    const stripped = cleanSummary
+      .slice(cleanSubtitle.length)
+      .replace(/^[\s.·—–-]+/, "")
+      .trim();
+    return stripped.length > 0 ? stripped : cleanSummary;
+  }
+
+  if (
+    lowerSubtitleWithoutDot.length > 0 &&
+    lowerSummary.startsWith(lowerSubtitleWithoutDot)
+  ) {
+    const stripped = cleanSummary
+      .slice(subtitleWithoutDot.length)
+      .replace(/^[\s.·—–-]+/, "")
+      .trim();
+    return stripped.length > 0 ? stripped : cleanSummary;
+  }
+
+  return cleanSummary;
+}
+
 export function getProductionSystemDeepDiveBySlug(
   slug: string,
   repo: ProductionSystemsProvider = defaultProductionSystemsRepository
@@ -119,7 +156,10 @@ export function getProductionSystemDeepDiveBySlug(
   const nextCandidate = orderedSystems[nextIndex] ?? system;
 
   return {
-    system,
+    system: {
+      ...system,
+      summary: deduplicateSystemSummary(system.subtitle, system.summary)
+    },
     previousSystem: toNavigationLink(previousCandidate),
     nextSystem: toNavigationLink(nextCandidate),
     relatedSystems: orderedSystems
@@ -257,6 +297,7 @@ export async function getProductionSystemDeepDiveBySlugAsync(
   return {
     system: {
       ...system,
+      summary: deduplicateSystemSummary(system.subtitle, system.summary),
       galleryImages: normalizeSystemGalleryImages(
         system.galleryImages,
         system.title
