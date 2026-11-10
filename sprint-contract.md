@@ -4,13 +4,13 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
 
 ---
 
-## Estado Actual del Contrato (`WIP = 0` — `feat-012` Completada; Siguiente en Cola: `feat-013`)
-- **Última tarea completada (`done`):** `feat-012` (*Sistema Profesional de Login (`/admin/login`) con Sesión Firmada `HttpOnly`, Límite Anti-Fuerza Bruta y Cierre de Sesión*).
-- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; `feat-012` verificada al `100/100` en las 3 puertas de `init.sh`).
-- **Siguiente tarea secuencial lista para iniciar:** `feat-013` (*Reestructuración del Administrador (`/admin/proyectos`) en 2 Vistas Separadas, Selector `<select>` de Sección y Evolución de IA a Producción*).
+## Estado Actual del Contrato (`WIP = 0` — `feat-013` Completada; Siguiente en Cola: `feat-014`)
+- **Última tarea completada (`done`):** `feat-013` (*Reestructuración del Administrador (`/admin/proyectos`) en 2 Vistas Separadas, Selector `<select>` de Sección y Evolución de IA a Producción*).
+- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; `feat-013` verificada al `100/100` en las 3 puertas de `init.sh`).
+- **Siguiente tarea secuencial lista para iniciar:** `feat-014` (*Página de Inicio (`/`) Exclusiva para Sistemas en Producción y Nueva Página Pública Dedicada `/proyectos-ia`*).
 - **Hoja de ruta secuencial declarada en el DAG (`feat-012 -> feat-013 -> feat-014 -> feat-015`):**
   1. **`feat-012`** (`done`, depende de `feat-011`): *Sistema Profesional de Login (`/admin/login`) con Sesión Firmada `HttpOnly`, Límite Anti-Fuerza Bruta y Cierre de Sesión*.
-  2. **`feat-013`** (`not-started`, depende de `feat-012`): *Reestructuración del Administrador (`/admin/proyectos`) en 2 Vistas Separadas, Selector `<select>` de Sección y Evolución de IA a Producción*.
+  2. **`feat-013`** (`done`, depende de `feat-012`): *Reestructuración del Administrador (`/admin/proyectos`) en 2 Vistas Separadas, Selector `<select>` de Sección y Evolución de IA a Producción*.
   3. **`feat-014`** (`not-started`, depende de `feat-013`): *Página de Inicio (`/`) Exclusiva para Sistemas en Producción y Nueva Página Pública Dedicada `/proyectos-ia`*.
   4. **`feat-015`** (`not-started`, depende de `feat-014`): *Pie de Página Oficial (`OfficialFooter`) con Copyright "Creado por Sebastian Jimenez 2026" y Botones de Redes Sociales (LinkedIn, Facebook, Instagram, WhatsApp)*.
 - **Especificación maestra de referencia:** `docs/product-specs/dekolabs-portfolio-spec.md` (Sección 8), `docs/design-docs/homelab-deployment.md`, `docs/RELIABILITY.md`, `docs/SECURITY.md` y `ARCHITECTURE.md`.

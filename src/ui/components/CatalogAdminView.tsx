@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type {
   CatalogSectionDescriptor,
   CatalogSectionId,
   CodeSnippetTab,
   PipelineStage,
   ProductionSystem,
-  ProductionSystemCategory,
-  ProductionSystemLayoutVariant,
   ProductionSystemUpsertInput,
   SolvedChallenge,
   SystemArchitectureSpec,
@@ -16,11 +14,15 @@ import type {
   SystemGallerySlotNumber
 } from "@/types/portfolio";
 
+export type AdminCatalogViewMode = "list" | "form";
+
 export interface CatalogAdminViewProps {
   initialSystems: ProductionSystem[];
   sections: Record<CatalogSectionId, CatalogSectionDescriptor>;
   defaultTemplate: ProductionSystemUpsertInput;
   authenticatedUsername?: string;
+  initialViewMode?: AdminCatalogViewMode;
+  initialEditingSlug?: string;
 }
 
 export interface UploadSlotStatus {
@@ -362,27 +364,75 @@ export function buildDecoTemplateDraft(
   };
 }
 
+export function buildPromoteToProductionPayload(
+  system: ProductionSystem | ProductionSystemUpsertInput
+): ProductionSystemUpsertInput {
+  const converted = convertSystemToFormInput(system);
+  const rawBadge = converted.versionBadge?.trim() ?? "";
+  const upgradedBadge = rawBadge
+    ? rawBadge.replace(/\b(?:IN\s+BUILD|AI\s+BUILD)\b/gi, "PRODUCTION")
+    : "v1.0.0 PRODUCTION";
+
+  return {
+    ...converted,
+    catalogSection: "production-systems",
+    versionBadge: upgradedBadge,
+    featuredOnHome: true
+  };
+}
+
+const INPUT_FOCUS_CLASSES =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]";
+
 export function CatalogAdminView({
   initialSystems,
   sections,
   defaultTemplate,
-  authenticatedUsername = "admin@dekolabs.org"
+  authenticatedUsername = "admin@dekolabs.org",
+  initialViewMode = "list",
+  initialEditingSlug
 }: CatalogAdminViewProps) {
   const [systems, setSystems] = useState<ProductionSystem[]>(() =>
     [...initialSystems].sort((a, b) => a.order.localeCompare(b.order))
   );
+  const [viewMode, setViewMode] =
+    useState<AdminCatalogViewMode>(initialViewMode);
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
-  const [isEditingExisting, setIsEditingExisting] = useState<boolean>(() =>
-    initialSystems.some((s) => s.slug === "deco-vintage-platform")
-  );
+  const [promotingSlug, setPromotingSlug] = useState<string | null>(null);
+
+  const [isEditingExisting, setIsEditingExisting] = useState<boolean>(() => {
+    if (!initialEditingSlug) {
+      return false;
+    }
+    return initialSystems.some((s) => s.slug === initialEditingSlug);
+  });
 
   const [formState, setFormState] = useState<ProductionSystemUpsertInput>(() => {
-    const deco = initialSystems.find((s) => s.slug === "deco-vintage-platform");
-    if (deco) {
-      return convertSystemToFormInput(deco);
+    if (initialEditingSlug) {
+      const target = initialSystems.find((s) => s.slug === initialEditingSlug);
+      if (target) {
+        return convertSystemToFormInput(target);
+      }
     }
-    return convertSystemToFormInput(defaultTemplate);
+    const nextOrder = String(initialSystems.length + 1).padStart(2, "0");
+    return createBlankProjectDraft(nextOrder, "ai-projects");
   });
+
+  const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  const formHeadingRef = useRef<HTMLHeadingElement>(null);
+  const hasHydratedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!hasHydratedRef.current) {
+      hasHydratedRef.current = true;
+      return;
+    }
+    if (viewMode === "form") {
+      formHeadingRef.current?.focus();
+    } else {
+      listHeadingRef.current?.focus();
+    }
+  }, [viewMode]);
 
   const [newStackTagInput, setNewStackTagInput] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -392,7 +442,7 @@ export function CatalogAdminView({
   }>({
     type: "idle",
     message:
-      "Selecciona un proyecto existente para editar sus 4 imágenes y datos técnicos, o crea un proyecto nuevo."
+      "Revisa tus proyectos creados, promueve desarrollos de IA hacia Producción o pulsa '+ Crear Nuevo Proyecto'."
   });
 
   const [coverUploadStatus, setCoverUploadStatus] = useState<UploadSlotStatus>({
@@ -445,26 +495,54 @@ export function CatalogAdminView({
     }
   }
 
+  function resetUploadIndicators(): void {
+    setCoverUploadStatus({
+      uploading: false,
+      error: null,
+      lastUploadedUrl: null
+    });
+    setGalleryUploadStatus({
+      1: { uploading: false, error: null, lastUploadedUrl: null },
+      2: { uploading: false, error: null, lastUploadedUrl: null },
+      3: { uploading: false, error: null, lastUploadedUrl: null }
+    });
+  }
+
+  function handleOpenCreateNewProject(
+    targetSection: CatalogSectionId = "ai-projects"
+  ): void {
+    const nextOrderNum = String(systems.length + 1).padStart(2, "0");
+    setIsEditingExisting(false);
+    setFormState(createBlankProjectDraft(nextOrderNum, targetSection));
+    setFieldErrors({});
+    resetUploadIndicators();
+    setViewMode("form");
+    setStatusBanner({
+      type: "idle",
+      message:
+        "Formulario de nuevo proyecto abierto. Selecciona la sección del catálogo, completa los campos y sube las imágenes."
+    });
+  }
+
   function handleSelectSystemForEdit(system: ProductionSystem): void {
     setIsEditingExisting(true);
     setFormState(convertSystemToFormInput(system));
     setFieldErrors({});
+    resetUploadIndicators();
+    setViewMode("form");
     setStatusBanner({
       type: "idle",
       message: `Editando proyecto '${system.title}' (/sistemas/${system.slug}).`
     });
   }
 
-  function handleCreateNewBlank(
-    targetSection: CatalogSectionId = "production-systems"
-  ): void {
-    const nextOrderNum = String(systems.length + 1).padStart(2, "0");
-    setIsEditingExisting(false);
-    setFormState(createBlankProjectDraft(nextOrderNum, targetSection));
+  function handleReturnToListView(): void {
     setFieldErrors({});
+    setViewMode("list");
     setStatusBanner({
       type: "idle",
-      message: `Creando nuevo proyecto para la sección '${sections[targetSection].heading}'.`
+      message:
+        "Vista de proyectos creados activa. Selecciona 'Editar' en cualquier tarjeta o pulsa '+ Crear Nuevo Proyecto'."
     });
   }
 
@@ -484,8 +562,80 @@ export function CatalogAdminView({
     setStatusBanner({
       type: "success",
       message:
-        "Molde base de DECO VINTAGE PLATFORM cargado. Ajusta el título, slug, categoría e imágenes antes de guardar."
+        "Molde base de DECO VINTAGE PLATFORM cargado. Ajusta el título, slug, sección e imágenes antes de guardar."
     });
+  }
+
+  async function handlePromoteProjectToProduction(
+    system: ProductionSystem
+  ): Promise<void> {
+    if (promotingSlug) return;
+    setPromotingSlug(system.slug);
+    setStatusBanner({
+      type: "loading",
+      message: `Promoviendo '${system.title}' hacia Proyectos en Producción...`
+    });
+
+    const promotedPayload = buildPromoteToProductionPayload(system);
+
+    try {
+      const response = await fetch("/api/admin/systems", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(promotedPayload)
+      });
+
+      const payload = (await response.json()) as {
+        ok: boolean;
+        system?: ProductionSystem;
+        message?: string;
+      };
+
+      if (response.status === 401) {
+        setStatusBanner({
+          type: "error",
+          message:
+            payload.message ||
+            "Sesión expirada. Redirigiendo a /admin/login..."
+        });
+        if (typeof window !== "undefined") {
+          window.location.assign("/admin/login");
+        }
+        return;
+      }
+
+      if (!response.ok || !payload.ok || !payload.system) {
+        setStatusBanner({
+          type: "error",
+          message:
+            payload.message ||
+            `No fue posible evolucionar '${system.title}' a Producción (HTTP ${response.status}).`
+        });
+        return;
+      }
+
+      const updated = payload.system;
+      setSystems((prev) => {
+        const filtered = prev.filter((item) => item.slug !== updated.slug);
+        return [...filtered, updated].sort((a, b) =>
+          a.order.localeCompare(b.order)
+        );
+      });
+      setStatusBanner({
+        type: "success",
+        message: `Proyecto '${updated.title}' evolucionado exitosamente a Proyectos en Producción (/sistemas/${updated.slug}).`
+      });
+    } catch {
+      setStatusBanner({
+        type: "error",
+        message: "Error de red al evolucionar el proyecto hacia Producción."
+      });
+    } finally {
+      setPromotingSlug(null);
+    }
   }
 
   async function handleLogout(): Promise<void> {
@@ -595,7 +745,7 @@ export function CatalogAdminView({
     });
     setStatusBanner({
       type: "success",
-      message: `Imagen de portada subida a ${result.url}. Recuerda hacer clic en 'Guardar y Publicar Proyecto' para confirmar.`
+      message: `Imagen de portada subida a ${result.url}. Recuerda guardar el proyecto para publicar los cambios.`
     });
   }
 
@@ -640,7 +790,7 @@ export function CatalogAdminView({
     }));
     setStatusBanner({
       type: "success",
-      message: `Imagen de detalle VIEW 0${slot} subida a ${result.url}. Haz clic en 'Guardar y Publicar Proyecto' para persistir en PostgreSQL.`
+      message: `Imagen de detalle VIEW 0${slot} subida a ${result.url}. Guarda el proyecto para persistir en PostgreSQL.`
     });
   }
 
@@ -876,6 +1026,7 @@ export function CatalogAdminView({
       setIsEditingExisting(true);
       setFormState(convertSystemToFormInput(saved));
       setFieldErrors({});
+      setViewMode("list");
       setStatusBanner({
         type: "success",
         message: `Proyecto '${saved.title}' publicado exitosamente en '${
@@ -966,14 +1117,11 @@ export function CatalogAdminView({
                 Panel de Administración de Proyectos e Imágenes
               </h1>
               <p className="mt-2 text-sm sm:text-base text-[#4B5563] max-w-3xl">
-                Gestiona las tarjetas de inicio en{" "}
-                <strong className="text-[#111827]">SISTEMAS EN PRODUCCIÓN</strong> y{" "}
-                <strong className="text-[#111827]">MÁS PROYECTOS DE IA</strong>, y sube
-                desde tu PC la imagen de portada más las{" "}
-                <strong className="text-[#111827]">
-                  3 imágenes exclusivas de la vista de detalle
-                </strong>{" "}
-                hacia el volumen persistente{" "}
+                Administra tus desarrollos en{" "}
+                <strong className="text-[#111827]">Proyectos en Producción</strong>{" "}
+                y <strong className="text-[#111827]">Más Proyectos de IA</strong>,
+                evoluciona proyectos listos hacia producción y gestiona sus 4
+                imágenes en{" "}
                 <code className="font-mono text-xs bg-[#F3F4F6] px-1.5 py-0.5 rounded">
                   /app/data/uploads
                 </code>
@@ -981,36 +1129,43 @@ export function CatalogAdminView({
               </p>
             </div>
 
-            {/* Quick Action Buttons */}
+            {/* Single Primary Header Action per Active View */}
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => handleCreateNewBlank("production-systems")}
-                className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white font-mono text-xs font-semibold uppercase tracking-wider rounded-[8px] transition-colors cursor-pointer"
-              >
-                + Nuevo en Producción
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCreateNewBlank("ai-projects")}
-                className="px-4 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-mono text-xs font-semibold uppercase tracking-wider rounded-[8px] transition-colors cursor-pointer"
-              >
-                + Nuevo Proyecto de IA
-              </button>
-              <button
-                type="button"
-                onClick={handleLoadDecoTemplate}
-                className="px-4 py-2.5 bg-white hover:bg-[#F3F4F6] text-[#111827] border border-[#D1D5DB] font-mono text-xs font-semibold uppercase tracking-wider rounded-[8px] transition-colors cursor-pointer"
-              >
-                Cargar Molde Base (Deco Vintage)
-              </button>
+              {viewMode === "list" ? (
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateNewProject("ai-projects")}
+                  className={`min-h-[48px] px-5 py-3 bg-[#0A0A0A] hover:bg-[#1F2937] text-white font-mono text-xs sm:text-sm font-semibold uppercase tracking-wider rounded-[8px] transition-colors cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                >
+                  + Crear Nuevo Proyecto
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleReturnToListView}
+                    className={`min-h-[48px] px-4 py-2.5 bg-white hover:bg-[#F3F4F6] text-[#111827] border border-[#6B7280] font-mono text-xs font-semibold uppercase tracking-wider rounded-[8px] transition-colors cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                  >
+                    ← Volver a Proyectos Creados
+                  </button>
+                  {!isEditingExisting && (
+                    <button
+                      type="button"
+                      onClick={handleLoadDecoTemplate}
+                      className={`min-h-[48px] px-4 py-2.5 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1D4ED8] border border-[#2563EB] font-mono text-xs font-semibold uppercase tracking-wider rounded-[8px] transition-colors cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                    >
+                      Cargar Molde Base (Deco Vintage)
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
           {/* Active Session & Live Status Bar */}
           <div className="mt-6 p-4 rounded-[10px] bg-[#F8F9FA] border border-[#E5E7EB] flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[6px] bg-[#ECFDF5] border border-[#6EE7B7] font-mono text-xs font-semibold text-[#065F46]">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[6px] bg-[#ECFDF5] border border-[#059669] font-mono text-xs font-semibold text-[#065F46]">
                 <span
                   aria-hidden="true"
                   className="w-2 h-2 rounded-full bg-[#10B981]"
@@ -1025,7 +1180,7 @@ export function CatalogAdminView({
                 type="button"
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="min-h-[40px] px-3.5 py-1.5 bg-white hover:bg-[#FEF2F2] text-[#991B1B] border border-[#FCA5A5] rounded-[6px] font-mono text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-60"
+                className={`min-h-[40px] px-3.5 py-1.5 bg-white hover:bg-[#FEF2F2] text-[#991B1B] border border-[#B91C1C] rounded-[6px] font-mono text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-60 ${INPUT_FOCUS_CLASSES}`}
               >
                 {isLoggingOut ? "Cerrando Sesión..." : "Cerrar Sesión"}
               </button>
@@ -1035,14 +1190,14 @@ export function CatalogAdminView({
             <div
               role="status"
               aria-live="polite"
-              className={`px-4 py-3 rounded-[8px] border text-xs sm:text-sm font-medium md:max-w-md ${
+              className={`px-4 py-3 rounded-[8px] border text-xs sm:text-sm font-medium md:max-w-xl ${
                 statusBanner.type === "error"
-                  ? "bg-[#FEF2F2] border-[#FCA5A5] text-[#991B1B]"
+                  ? "bg-[#FEF2F2] border-[#B91C1C] text-[#991B1B]"
                   : statusBanner.type === "success"
-                    ? "bg-[#ECFDF5] border-[#6EE7B7] text-[#065F46]"
+                    ? "bg-[#ECFDF5] border-[#059669] text-[#065F46]"
                     : statusBanner.type === "loading"
-                      ? "bg-[#EFF6FF] border-[#93C5FD] text-[#1E40AF]"
-                      : "bg-white border-[#E5E7EB] text-[#374151]"
+                      ? "bg-[#EFF6FF] border-[#2563EB] text-[#1E40AF]"
+                      : "bg-white border-[#D1D5DB] text-[#374151]"
               }`}
             >
               {statusBanner.message}
@@ -1051,308 +1206,370 @@ export function CatalogAdminView({
         </div>
       </section>
 
-      {/* Main Studio Grid: Left Catalog Sidebar (4 cols) + Right 4-Block Form (8 cols) */}
-      <div className="swiss-container mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Existing Projects Grouped by Category */}
-        <aside
-          aria-label="Proyectos registrados en el catálogo"
-          className="lg:col-span-4 space-y-6"
+      {/* ==================================================================== */}
+      {/* VISTA 1 (ENTRADA POR DEFECTO): LISTADO LIMPIO DE PROYECTOS CREADOS   */}
+      {/* ==================================================================== */}
+      {viewMode === "list" ? (
+        <section
+          aria-labelledby="admin-projects-list-heading"
+          className="swiss-container mt-8 space-y-6"
         >
-          {/* Category 1: SISTEMAS EN PRODUCCIÓN */}
-          <div className="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-xs">
-            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3 mb-4">
-              <div>
-                <span className="font-mono text-[11px] uppercase tracking-wider text-[#2563EB] font-semibold block">
-                  SECCIÓN 01 // #proyectos-destacados
-                </span>
-                <h2 className="font-display text-base font-bold text-[#0A0A0A]">
-                  SISTEMAS EN PRODUCCIÓN ({productionSystemsList.length})
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleCreateNewBlank("production-systems")}
-                className="px-2.5 py-1 bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#111827] font-mono text-xs font-semibold rounded-[6px] cursor-pointer"
-              >
-                + Añadir
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {productionSystemsList.map((sys) => {
-                const populatedSlots = ensureThreeGallerySlots(
-                  sys.galleryImages,
-                  sys.title
-                ).filter((g) => g.src.trim().length > 0).length;
-                const isSelected =
-                  isEditingExisting && formState.slug === sys.slug;
-
-                return (
-                  <div
-                    key={sys.slug}
-                    className={`p-3.5 rounded-[8px] border transition-colors ${
-                      isSelected
-                        ? "border-[#2563EB] bg-[#EFF6FF]/60"
-                        : "border-[#E5E7EB] bg-[#F8F9FA]"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="font-mono text-[11px] text-[#4B5563] block">
-                          #{sys.order} · /sistemas/{sys.slug}
-                        </span>
-                        <h3 className="font-display text-sm font-bold text-[#111827]">
-                          {sys.title}
-                        </h3>
-                      </div>
-                      <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-white border border-[#D1D5DB] text-[#111827]">
-                        {populatedSlots}/3 fotos detalle
-                      </span>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectSystemForEdit(sys)}
-                          className="px-3 py-1.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white font-mono text-xs font-semibold rounded-[6px] cursor-pointer"
-                        >
-                          Editar
-                        </button>
-                        <a
-                          href={`/sistemas/${sys.slug}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2.5 py-1.5 bg-white hover:bg-[#F3F4F6] border border-[#D1D5DB] text-[#111827] font-mono text-xs rounded-[6px]"
-                        >
-                          Ver ↗
-                        </a>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteProject(sys.slug)}
-                        className="px-2.5 py-1.5 text-[#B91C1C] hover:bg-[#FEF2F2] font-mono text-xs rounded-[6px] cursor-pointer"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2
+              id="admin-projects-list-heading"
+              ref={listHeadingRef}
+              tabIndex={-1}
+              className="font-display text-xl sm:text-2xl font-bold text-[#0A0A0A] outline-none"
+            >
+              Proyectos Creados en el Catálogo ({systems.length})
+            </h2>
+            <p className="font-mono text-xs text-[#4B5563]">
+              Ciclo de vida: Más Proyectos de IA → Evolución a Producción
+            </p>
           </div>
 
-          {/* Category 2: MÁS PROYECTOS DE IA */}
-          <div className="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-xs">
-            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3 mb-4">
-              <div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Group 1: PROYECTOS EN PRODUCCIÓN */}
+            <div className="bg-white border border-[#D1D5DB] rounded-[12px] p-6 shadow-xs">
+              <div className="border-b border-[#E5E7EB] pb-4 mb-5">
                 <span className="font-mono text-[11px] uppercase tracking-wider text-[#2563EB] font-semibold block">
-                  SECCIÓN 02 // #mas-proyectos-ia
+                  SECCIÓN 01 // SISTEMAS EN PRODUCCIÓN (#proyectos-destacados)
                 </span>
-                <h2 className="font-display text-base font-bold text-[#0A0A0A]">
-                  MÁS PROYECTOS DE IA ({aiProjectsList.length})
-                </h2>
+                <h3 className="font-display text-lg font-bold text-[#0A0A0A] mt-0.5">
+                  PROYECTOS EN PRODUCCIÓN ({productionSystemsList.length})
+                </h3>
+                <p className="text-xs text-[#4B5563] mt-1">
+                  Plataformas operativas visibles en la vitrina principal de
+                  producción.
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => handleCreateNewBlank("ai-projects")}
-                className="px-2.5 py-1 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1D4ED8] font-mono text-xs font-semibold rounded-[6px] cursor-pointer"
-              >
-                + Añadir IA
-              </button>
-            </div>
 
-            {aiProjectsList.length === 0 ? (
-              <p className="text-xs text-[#4B5563] font-mono py-3">
-                Aún no hay proyectos en MÁS PROYECTOS DE IA. Usa el botón{" "}
-                <strong>&quot;+ Nuevo Proyecto de IA&quot;</strong> para publicar el
-                primero.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {aiProjectsList.map((sys) => {
-                  const populatedSlots = ensureThreeGallerySlots(
-                    sys.galleryImages,
-                    sys.title
-                  ).filter((g) => g.src.trim().length > 0).length;
-                  const isSelected =
-                    isEditingExisting && formState.slug === sys.slug;
+              {productionSystemsList.length === 0 ? (
+                <p className="text-xs text-[#4B5563] font-mono py-4">
+                  Aún no hay proyectos en Producción. Crea uno nuevo o evoluciona
+                  un desarrollo desde Más Proyectos de IA.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {productionSystemsList.map((sys) => {
+                    const populatedSlots = ensureThreeGallerySlots(
+                      sys.galleryImages,
+                      sys.title
+                    ).filter((g) => g.src.trim().length > 0).length;
 
-                  return (
-                    <div
-                      key={sys.slug}
-                      className={`p-3.5 rounded-[8px] border transition-colors ${
-                        isSelected
-                          ? "border-[#2563EB] bg-[#EFF6FF]/60"
-                          : "border-[#E5E7EB] bg-[#F8F9FA]"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="font-mono text-[11px] text-[#4B5563] block">
-                            #{sys.order} · /sistemas/{sys.slug}
+                    return (
+                      <article
+                        key={sys.slug}
+                        className="p-4 rounded-[10px] border border-[#D1D5DB] bg-[#F8F9FA] space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            {sys.previewImageSrc && (
+                              <img
+                                src={sys.previewImageSrc}
+                                alt={sys.previewImageAlt || sys.title}
+                                className="w-16 h-12 rounded-[6px] object-cover border border-[#D1D5DB] bg-white shrink-0"
+                              />
+                            )}
+                            <div className="min-w-0">
+                              <span className="font-mono text-[11px] text-[#4B5563] block truncate">
+                                #{sys.order} · /sistemas/{sys.slug}
+                              </span>
+                              <h4 className="font-display text-base font-bold text-[#111827] truncate">
+                                {sys.title}
+                              </h4>
+                              <span className="font-mono text-[11px] text-[#065F46] font-semibold">
+                                {sys.versionBadge || "PRODUCTION"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className="font-mono text-[11px] px-2.5 py-1 rounded bg-white border border-[#6B7280] text-[#111827] shrink-0">
+                            {populatedSlots}/3 fotos detalle
                           </span>
-                          <h3 className="font-display text-sm font-bold text-[#111827]">
-                            {sys.title}
-                          </h3>
                         </div>
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-white border border-[#D1D5DB] text-[#111827]">
-                          {populatedSlots}/3 fotos detalle
-                        </span>
-                      </div>
 
-                      <div className="mt-3 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
+                        <div className="pt-2 border-t border-[#E5E7EB] flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectSystemForEdit(sys)}
+                              className={`min-h-[40px] px-3.5 py-1.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white font-mono text-xs font-semibold rounded-[6px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                            >
+                              Editar
+                            </button>
+                            <a
+                              href={`/sistemas/${sys.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`min-h-[40px] inline-flex items-center px-3 py-1.5 bg-white hover:bg-[#F3F4F6] border border-[#6B7280] text-[#111827] font-mono text-xs font-medium rounded-[6px] ${INPUT_FOCUS_CLASSES}`}
+                            >
+                              Ver ↗
+                            </a>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => handleSelectSystemForEdit(sys)}
-                            className="px-3 py-1.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white font-mono text-xs font-semibold rounded-[6px] cursor-pointer"
+                            onClick={() => handleDeleteProject(sys.slug)}
+                            className={`min-h-[40px] px-3 py-1.5 text-[#991B1B] hover:bg-[#FEF2F2] border border-transparent hover:border-[#B91C1C] font-mono text-xs font-semibold rounded-[6px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
                           >
-                            Editar
+                            Eliminar
                           </button>
-                          <a
-                            href={`/sistemas/${sys.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2.5 py-1.5 bg-white hover:bg-[#F3F4F6] border border-[#D1D5DB] text-[#111827] font-mono text-xs rounded-[6px]"
-                          >
-                            Ver ↗
-                          </a>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteProject(sys.slug)}
-                          className="px-2.5 py-1.5 text-[#B91C1C] hover:bg-[#FEF2F2] font-mono text-xs rounded-[6px] cursor-pointer"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </aside>
-
-        {/* Right Column: Complete 4-Block Project & 4-Image Editor Form */}
-        <form
-          action="/api/admin/systems"
-          method="POST"
-          onSubmit={handleSubmitForm}
-          className="lg:col-span-8 space-y-8"
-          noValidate
-        >
-          {/* ================================================================ */}
-          {/* BLOQUE A — SELECTOR DE CATEGORÍA Y DATOS DE LA TARJETA DE INICIO */}
-          {/* ================================================================ */}
-          <fieldset className="bg-white border border-[#E5E7EB] rounded-[12px] p-6 sm:p-8 shadow-xs space-y-6">
-            <legend className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] px-2">
-              BLOQUE A // CATEGORÍA EN HOME, TARJETA PRELIMINAR E IMAGEN DE PORTADA
-            </legend>
-
-            {/* Category Radio Buttons (Zero-Click Scanning for 2 Exclusive Choices) */}
-            <div>
-              <span className="block font-mono text-xs font-semibold uppercase tracking-wider text-[#111827] mb-2">
-                Ubicación del Proyecto en la Página de Inicio (catalogSection) *
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label
-                  htmlFor="catalog-section-production"
-                  className={`flex items-start gap-3 p-4 rounded-[8px] border cursor-pointer transition-colors ${
-                    formState.catalogSection === "production-systems"
-                      ? "border-[#2563EB] bg-[#EFF6FF]/60"
-                      : "border-[#D1D5DB] bg-[#F8F9FA]"
-                  }`}
-                >
-                  <input
-                    id="catalog-section-production"
-                    type="radio"
-                    name="catalogSection"
-                    value="production-systems"
-                    checked={formState.catalogSection === "production-systems"}
-                    onChange={() =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        catalogSection: "production-systems"
-                      }))
-                    }
-                    className="mt-1 accent-[#2563EB]"
-                  />
-                  <div>
-                    <span className="font-display text-sm font-bold text-[#111827] block">
-                      SISTEMAS EN PRODUCCIÓN
-                    </span>
-                    <span className="text-xs text-[#4B5563] block mt-0.5">
-                      Aparece en la sección principal (#proyectos-destacados) para
-                      plataformas ya desplegadas en producción.
-                    </span>
-                  </div>
-                </label>
-
-                <label
-                  htmlFor="catalog-section-ai"
-                  className={`flex items-start gap-3 p-4 rounded-[8px] border cursor-pointer transition-colors ${
-                    formState.catalogSection === "ai-projects"
-                      ? "border-[#2563EB] bg-[#EFF6FF]/60"
-                      : "border-[#D1D5DB] bg-[#F8F9FA]"
-                  }`}
-                >
-                  <input
-                    id="catalog-section-ai"
-                    type="radio"
-                    name="catalogSection"
-                    value="ai-projects"
-                    checked={formState.catalogSection === "ai-projects"}
-                    onChange={() =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        catalogSection: "ai-projects"
-                      }))
-                    }
-                    className="mt-1 accent-[#2563EB]"
-                  />
-                  <div>
-                    <span className="font-display text-sm font-bold text-[#111827] block">
-                      MÁS PROYECTOS DE IA
-                    </span>
-                    <span className="text-xs text-[#4B5563] block mt-0.5">
-                      Aparece bajo &quot;MÁS PROYECTOS DE IA&quot; (#mas-proyectos-ia) para
-                      agentes ADK, RAG y arquitecturas en construcción.
-                    </span>
-                  </div>
-                </label>
-              </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Order, Header Label, Version Badge & Featured Checkbox */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="project-order-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  Orden *
-                </label>
-                <input
-                  id="project-order-input"
-                  name="order"
-                  type="text"
-                  value={formState.order}
-                  onChange={(e) =>
-                    setFormState((prev) => ({ ...prev, order: e.target.value }))
-                  }
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  className="w-full min-h-[44px] px-3 py-2 border border-[#D1D5DB] rounded-[6px] font-mono text-sm"
-                />
+            {/* Group 2: MÁS PROYECTOS DE IA */}
+            <div className="bg-white border border-[#D1D5DB] rounded-[12px] p-6 shadow-xs">
+              <div className="border-b border-[#E5E7EB] pb-4 mb-5">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-[#2563EB] font-semibold block">
+                  SECCIÓN 02 // INCUBACIÓN AGÉNTICA, ADK &amp; RAG
+                </span>
+                <h3 className="font-display text-lg font-bold text-[#0A0A0A] mt-0.5">
+                  MÁS PROYECTOS DE IA ({aiProjectsList.length})
+                </h3>
+                <p className="text-xs text-[#4B5563] mt-1">
+                  Desarrollos de IA en construcción listos para evolucionar a
+                  Producción con un clic.
+                </p>
               </div>
 
-              <div className="sm:col-span-6">
+              {aiProjectsList.length === 0 ? (
+                <p className="text-xs text-[#4B5563] font-mono py-4">
+                  Aún no hay desarrollos registrados en MÁS PROYECTOS DE IA. Pulsa{" "}
+                  <strong className="text-[#111827]">
+                    &quot;+ Crear Nuevo Proyecto&quot;
+                  </strong>{" "}
+                  en la parte superior para registrar el primero.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {aiProjectsList.map((sys) => {
+                    const populatedSlots = ensureThreeGallerySlots(
+                      sys.galleryImages,
+                      sys.title
+                    ).filter((g) => g.src.trim().length > 0).length;
+                    const isPromotingThis = promotingSlug === sys.slug;
+
+                    return (
+                      <article
+                        key={sys.slug}
+                        className="p-4 rounded-[10px] border border-[#D1D5DB] bg-[#F8F9FA] space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            {sys.previewImageSrc && (
+                              <img
+                                src={sys.previewImageSrc}
+                                alt={sys.previewImageAlt || sys.title}
+                                className="w-16 h-12 rounded-[6px] object-cover border border-[#D1D5DB] bg-white shrink-0"
+                              />
+                            )}
+                            <div className="min-w-0">
+                              <span className="font-mono text-[11px] text-[#4B5563] block truncate">
+                                #{sys.order} · /sistemas/{sys.slug}
+                              </span>
+                              <h4 className="font-display text-base font-bold text-[#111827] truncate">
+                                {sys.title}
+                              </h4>
+                              <span className="font-mono text-[11px] text-[#1D4ED8] font-semibold">
+                                {sys.versionBadge || "IN BUILD"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className="font-mono text-[11px] px-2.5 py-1 rounded bg-white border border-[#6B7280] text-[#111827] shrink-0">
+                            {populatedSlots}/3 fotos detalle
+                          </span>
+                        </div>
+
+                        <div className="pt-2 border-t border-[#E5E7EB] flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectSystemForEdit(sys)}
+                              className={`min-h-[40px] px-3.5 py-1.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white font-mono text-xs font-semibold rounded-[6px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isPromotingThis}
+                              onClick={() => handlePromoteProjectToProduction(sys)}
+                              className={`min-h-[40px] px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-60 text-white font-mono text-xs font-semibold rounded-[6px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                            >
+                              {isPromotingThis
+                                ? "Evolucionando..."
+                                : "Evolucionar a Producción ↗"}
+                            </button>
+                            <a
+                              href={`/sistemas/${sys.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`min-h-[40px] inline-flex items-center px-3 py-1.5 bg-white hover:bg-[#F3F4F6] border border-[#6B7280] text-[#111827] font-mono text-xs font-medium rounded-[6px] ${INPUT_FOCUS_CLASSES}`}
+                            >
+                              Ver ↗
+                            </a>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProject(sys.slug)}
+                            className={`min-h-[40px] px-3 py-1.5 text-[#991B1B] hover:bg-[#FEF2F2] border border-transparent hover:border-[#B91C1C] font-mono text-xs font-semibold rounded-[6px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      ) : (
+        /* ================================================================== */
+        /* VISTA 2 (BAJO DEMANDA): FORMULARIO COMPLETO DE CREACIÓN / EDICIÓN  */
+        /* ================================================================== */
+        <section className="swiss-container mt-8 max-w-5xl">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-[#D1D5DB] rounded-[12px] p-5">
+            <div>
+              <span className="font-mono text-xs uppercase tracking-[0.14em] text-[#2563EB] font-semibold block">
+                {isEditingExisting
+                  ? "MODO EDICIÓN // PROYECTO EXISTENTE"
+                  : "MODO CREACIÓN // NUEVO PROYECTO"}
+              </span>
+              <h2
+                id="catalog-editor-form-heading"
+                ref={formHeadingRef}
+                tabIndex={-1}
+                className="font-display text-xl sm:text-2xl font-bold text-[#0A0A0A] outline-none mt-0.5"
+              >
+                {isEditingExisting
+                  ? `Editar Proyecto: ${formState.title || formState.slug}`
+                  : "Registrar Nuevo Proyecto en el Catálogo"}
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleReturnToListView}
+                className={`min-h-[44px] px-4 py-2 bg-[#F8F9FA] hover:bg-[#E5E7EB] text-[#111827] border border-[#6B7280] font-mono text-xs font-semibold rounded-[8px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+              >
+                ← Volver a Proyectos Creados
+              </button>
+            </div>
+          </div>
+
+          <form
+            aria-labelledby="catalog-editor-form-heading"
+            action="/api/admin/systems"
+            method="POST"
+            onSubmit={handleSubmitForm}
+            className="space-y-8"
+            noValidate
+          >
+            {/* ============================================================== */}
+            {/* BLOQUE A — SELECTOR <SELECT> DE SECCIÓN Y TARJETA PRELIMINAR   */}
+            {/* ============================================================== */}
+            <fieldset className="bg-white border border-[#D1D5DB] rounded-[12px] p-6 sm:p-8 shadow-xs space-y-6">
+              <legend className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] px-2">
+                BLOQUE A // SECCIÓN DEL CATÁLOGO, TARJETA PRELIMINAR E IMAGEN DE PORTADA
+              </legend>
+
+              {/* Clean <select> Dropdown for Project Lifecycle Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
+                <div className="sm:col-span-6">
+                  <label
+                    htmlFor="project-catalog-section-select"
+                    className="block font-mono text-xs font-semibold uppercase tracking-wider text-[#111827] mb-1.5"
+                  >
+                    Sección / Etapa del Proyecto (catalogSection) *
+                  </label>
+                  <select
+                    id="project-catalog-section-select"
+                    name="catalogSection"
+                    required
+                    aria-describedby="catalog-section-hint"
+                    value={formState.catalogSection}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        catalogSection: e.target.value as CatalogSectionId
+                      }))
+                    }
+                    className={`w-full min-h-[48px] px-3.5 py-2.5 bg-white border border-[#6B7280] rounded-[8px] font-mono text-sm font-semibold text-[#111827] ${INPUT_FOCUS_CLASSES}`}
+                  >
+                    <option value="production-systems">
+                      Proyectos en Producción
+                    </option>
+                    <option value="ai-projects">Más Proyectos de IA</option>
+                  </select>
+                  <p
+                    id="catalog-section-hint"
+                    className="mt-1.5 text-xs text-[#4B5563]"
+                  >
+                    Inicia nuevos desarrollos en &quot;Más Proyectos de IA&quot; y
+                    promuévelos a &quot;Proyectos en Producción&quot; cuando operen
+                    con SLA activo.
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="project-order-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                  >
+                    Orden *
+                  </label>
+                  <input
+                    id="project-order-input"
+                    name="order"
+                    type="text"
+                    value={formState.order}
+                    onChange={(e) =>
+                      setFormState((prev) => ({ ...prev, order: e.target.value }))
+                    }
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    className={`w-full min-h-[48px] px-3 py-2 border border-[#6B7280] rounded-[8px] font-mono text-sm ${INPUT_FOCUS_CLASSES}`}
+                  />
+                </div>
+
+                <div className="sm:col-span-4">
+                  <label
+                    htmlFor="project-version-badge-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                  >
+                    Badge de Versión (versionBadge)
+                  </label>
+                  <input
+                    id="project-version-badge-input"
+                    name="versionBadge"
+                    type="text"
+                    value={formState.versionBadge || ""}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        versionBadge: e.target.value
+                      }))
+                    }
+                    placeholder="v3.4.0 PRODUCTION"
+                    className={`w-full min-h-[48px] px-3 py-2 border border-[#6B7280] rounded-[8px] font-mono text-sm ${INPUT_FOCUS_CLASSES}`}
+                  />
+                </div>
+              </div>
+
+              {/* Header Label */}
+              <div>
                 <label
                   htmlFor="project-header-label-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
+                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
                 >
                   Header Izquierdo de Tarjeta (projectHeaderLabel)
                 </label>
@@ -1368,1229 +1585,1230 @@ export function CatalogAdminView({
                     }))
                   }
                   placeholder="PROJECT 01 // E-COMMERCE & CLOUD MEDIA ENGINE"
-                  className="w-full min-h-[44px] px-3 py-2 border border-[#D1D5DB] rounded-[6px] font-mono text-sm"
+                  className={`w-full min-h-[48px] px-3 py-2 border border-[#6B7280] rounded-[8px] font-mono text-sm ${INPUT_FOCUS_CLASSES}`}
                 />
               </div>
 
-              <div className="sm:col-span-4">
-                <label
-                  htmlFor="project-version-badge-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  Badge de Versión (versionBadge)
-                </label>
-                <input
-                  id="project-version-badge-input"
-                  name="versionBadge"
-                  type="text"
-                  value={formState.versionBadge || ""}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      versionBadge: e.target.value
-                    }))
-                  }
-                  placeholder="v3.4.0 PRODUCTION"
-                  className="w-full min-h-[44px] px-3 py-2 border border-[#D1D5DB] rounded-[6px] font-mono text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Title, Slug & Category Label */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-              <div className="sm:col-span-5">
-                <label
-                  htmlFor="project-title-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  Título del Proyecto (title) *
-                </label>
-                <input
-                  id="project-title-input"
-                  name="title"
-                  type="text"
-                  required
-                  value={formState.title}
-                  onChange={(e) => {
-                    const nextTitle = e.target.value;
-                    clearFieldError("title");
-                    setFormState((prev) => ({
-                      ...prev,
-                      title: nextTitle,
-                      slug:
-                        !isEditingExisting && !prev.slug
-                          ? slugifyProjectTitle(nextTitle)
-                          : prev.slug
-                    }));
-                  }}
-                  onBlur={(e) => validateFieldOnBlur("title", e.target.value)}
-                  placeholder="DECO VINTAGE PLATFORM"
-                  className="w-full min-h-[44px] px-3 py-2 border border-[#D1D5DB] rounded-[6px] text-sm font-semibold"
-                />
-                {fieldErrors.title && (
-                  <p className="mt-1 text-xs text-[#B91C1C]">{fieldErrors.title}</p>
-                )}
-              </div>
-
-              <div className="sm:col-span-4">
-                <label
-                  htmlFor="project-slug-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  Slug URL (/sistemas/[slug]) *
-                </label>
-                <div className="flex items-center gap-1.5">
+              {/* Title, Slug & Category Label */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                <div className="sm:col-span-5">
+                  <label
+                    htmlFor="project-title-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                  >
+                    Título del Proyecto (title) *
+                  </label>
                   <input
-                    id="project-slug-input"
-                    name="slug"
+                    id="project-title-input"
+                    name="title"
                     type="text"
                     required
-                    value={formState.slug}
+                    aria-invalid={Boolean(fieldErrors.title)}
+                    value={formState.title}
                     onChange={(e) => {
-                      clearFieldError("slug");
+                      const nextTitle = e.target.value;
+                      clearFieldError("title");
                       setFormState((prev) => ({
                         ...prev,
-                        slug: slugifyProjectTitle(e.target.value)
+                        title: nextTitle,
+                        slug:
+                          !isEditingExisting && !prev.slug
+                            ? slugifyProjectTitle(nextTitle)
+                            : prev.slug
                       }));
                     }}
-                    onBlur={(e) => validateFieldOnBlur("slug", e.target.value)}
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    placeholder="deco-vintage-platform"
-                    className="w-full min-h-[44px] px-3 py-2 border border-[#D1D5DB] rounded-[6px] font-mono text-sm"
+                    onBlur={(e) => validateFieldOnBlur("title", e.target.value)}
+                    placeholder="DECO VINTAGE PLATFORM"
+                    className={`w-full min-h-[48px] px-3 py-2 border border-[#6B7280] rounded-[8px] text-sm font-semibold ${INPUT_FOCUS_CLASSES}`}
                   />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        slug: slugifyProjectTitle(prev.title)
-                      }))
-                    }
-                    className="min-h-[44px] px-2.5 py-2 bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-[#D1D5DB] rounded-[6px] font-mono text-[11px] cursor-pointer"
-                  >
-                    Auto
-                  </button>
+                  {fieldErrors.title && (
+                    <p className="mt-1 text-xs text-[#B91C1C]">
+                      {fieldErrors.title}
+                    </p>
+                  )}
                 </div>
-                {fieldErrors.slug && (
-                  <p className="mt-1 text-xs text-[#B91C1C]">{fieldErrors.slug}</p>
-                )}
-              </div>
 
-              <div className="sm:col-span-3">
-                <label
-                  htmlFor="project-category-label-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  Etiqueta Categoría *
-                </label>
-                <input
-                  id="project-category-label-input"
-                  name="categoryLabel"
-                  type="text"
-                  required
-                  value={formState.categoryLabel}
-                  onChange={(e) => {
-                    clearFieldError("categoryLabel");
-                    setFormState((prev) => ({
-                      ...prev,
-                      categoryLabel: e.target.value
-                    }));
-                  }}
-                  onBlur={(e) =>
-                    validateFieldOnBlur("categoryLabel", e.target.value)
-                  }
-                  placeholder="E-COMMERCE & CLOUD MEDIA ENGINE"
-                  className="w-full min-h-[44px] px-3 py-2 border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
-                />
-                {fieldErrors.categoryLabel && (
-                  <p className="mt-1 text-xs text-[#B91C1C]">
-                    {fieldErrors.categoryLabel}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Summary Description on Card */}
-            <div>
-              <label
-                htmlFor="project-summary-textarea"
-                className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-              >
-                Descripción de la Tarjeta de Inicio (summary) *
-              </label>
-              <textarea
-                id="project-summary-textarea"
-                name="summary"
-                rows={3}
-                required
-                value={formState.summary}
-                onChange={(e) => {
-                  clearFieldError("summary");
-                  setFormState((prev) => ({
-                    ...prev,
-                    summary: e.target.value
-                  }));
-                }}
-                onBlur={(e) => validateFieldOnBlur("summary", e.target.value)}
-                placeholder="Resumen ejecutivo del sistema que se muestra en la tarjeta de vista preliminar..."
-                className="w-full px-3.5 py-2.5 border border-[#D1D5DB] rounded-[6px] text-sm"
-              />
-              {fieldErrors.summary && (
-                <p className="mt-1 text-xs text-[#B91C1C]">{fieldErrors.summary}</p>
-              )}
-            </div>
-
-            {/* Stack Pills Editor + Highlighted Blue Pill Selector */}
-            <div className="p-4 rounded-[8px] bg-[#F8F9FA] border border-[#E5E7EB] space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-                <div className="flex-1">
+                <div className="sm:col-span-4">
                   <label
-                    htmlFor="new-stack-tag-input"
-                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
+                    htmlFor="project-slug-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
                   >
-                    Pills de Stack Tecnológico (stackTags) *
+                    Slug URL (/sistemas/[slug]) *
                   </label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <input
-                      id="new-stack-tag-input"
-                      name="newStackTag"
+                      id="project-slug-input"
+                      name="slug"
                       type="text"
-                      value={newStackTagInput}
-                      onChange={(e) => setNewStackTagInput(e.target.value)}
-                      placeholder="Ej. GOOGLE ADK, POSTGRESQL + PGVECTOR, DOCKER..."
-                      className="w-full min-h-[42px] px-3 py-1.5 bg-white border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddStackTag}
-                      className="min-h-[42px] px-4 py-1.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white font-mono text-xs font-semibold rounded-[6px] cursor-pointer whitespace-nowrap"
-                    >
-                      + Añadir Pill
-                    </button>
-                  </div>
-                </div>
-
-                <div className="sm:w-64">
-                  <label
-                    htmlFor="highlighted-stack-tag-select"
-                    className="block font-mono text-xs font-semibold uppercase text-[#2563EB] mb-1"
-                  >
-                    Pill Destacado en Azul (highlightedStackTag)
-                  </label>
-                  <select
-                    id="highlighted-stack-tag-select"
-                    name="highlightedStackTag"
-                    value={formState.highlightedStackTag || ""}
-                    onChange={(e) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        highlightedStackTag: e.target.value
-                      }))
-                    }
-                    className="w-full min-h-[42px] px-3 py-1.5 bg-white border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
-                  >
-                    {formState.stackTags.map((tag) => (
-                      <option key={tag} value={tag}>
-                        {tag}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {formState.stackTags.map((tag) => {
-                  const isHighlighted = formState.highlightedStackTag === tag;
-                  return (
-                    <span
-                      key={tag}
-                      className={`inline-flex items-center gap-2 px-3 py-1 rounded-[6px] font-mono text-xs font-semibold border ${
-                        isHighlighted
-                          ? "bg-[#EFF6FF] border-[#93C5FD] text-[#2563EB]"
-                          : "bg-white border-[#D1D5DB] text-[#111827]"
-                      }`}
-                    >
-                      {tag}
-                      {isHighlighted && (
-                        <span className="text-[10px] uppercase">(AZUL)</span>
-                      )}
-                      <button
-                        type="button"
-                        aria-label={`Quitar tag ${tag}`}
-                        onClick={() => handleRemoveStackTag(tag)}
-                        className="text-[#6B7280] hover:text-[#B91C1C] font-bold cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Architecture & Availability Specs + Live URL + Featured Toggle */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[0, 1].map((specIdx) => {
-                const spec = formState.architectureSpecs[specIdx] ?? {
-                  label: specIdx === 0 ? "ARQUITECTURA" : "DISPONIBILIDAD",
-                  value: ""
-                };
-                return (
-                  <div
-                    key={specIdx}
-                    className="p-3.5 rounded-[8px] border border-[#E5E7EB] bg-[#F8F9FA] space-y-2"
-                  >
-                    <label
-                      htmlFor={`arch-spec-label-${specIdx}`}
-                      className="block font-mono text-[11px] font-semibold uppercase text-[#4B5563]"
-                    >
-                      Recuadro Métrica {specIdx + 1} (Etiqueta / Valor)
-                    </label>
-                    <input
-                      id={`arch-spec-label-${specIdx}`}
-                      name={`archSpecLabel_${specIdx}`}
-                      type="text"
-                      value={spec.label}
-                      onChange={(e) =>
-                        handleUpdateArchSpec(specIdx, "label", e.target.value)
-                      }
-                      className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-xs"
-                    />
-                    <input
-                      id={`arch-spec-value-${specIdx}`}
-                      name={`archSpecValue_${specIdx}`}
-                      type="text"
-                      aria-label={`Valor de especificación ${specIdx + 1}`}
-                      value={spec.value}
-                      onChange={(e) =>
-                        handleUpdateArchSpec(specIdx, "value", e.target.value)
-                      }
-                      className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded text-sm font-semibold"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-              <div className="sm:col-span-8">
-                <label
-                  htmlFor="project-live-url-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  URL del Sistema en Vivo (liveUrl — Botón &quot;PROBAR SISTEMA EN VIVO ↗&quot;) *
-                </label>
-                <input
-                  id="project-live-url-input"
-                  name="liveUrl"
-                  type="url"
-                  required
-                  value={formState.liveUrl}
-                  onChange={(e) => {
-                    clearFieldError("liveUrl");
-                    setFormState((prev) => ({
-                      ...prev,
-                      liveUrl: e.target.value
-                    }));
-                  }}
-                  onBlur={(e) => validateFieldOnBlur("liveUrl", e.target.value)}
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  placeholder="https://www.decovintage.online"
-                  className="w-full min-h-[44px] px-3 py-2 border border-[#D1D5DB] rounded-[6px] font-mono text-sm"
-                />
-                {fieldErrors.liveUrl && (
-                  <p className="mt-1 text-xs text-[#B91C1C]">
-                    {fieldErrors.liveUrl}
-                  </p>
-                )}
-              </div>
-
-              <div className="sm:col-span-4 pt-4">
-                <label
-                  htmlFor="project-featured-checkbox"
-                  className="inline-flex items-center gap-2.5 cursor-pointer select-none"
-                >
-                  <input
-                    id="project-featured-checkbox"
-                    name="featuredOnHome"
-                    type="checkbox"
-                    checked={formState.featuredOnHome ?? true}
-                    onChange={(e) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        featuredOnHome: e.target.checked
-                      }))
-                    }
-                    className="w-4 h-4 accent-[#2563EB]"
-                  />
-                  <span className="font-mono text-xs font-semibold text-[#111827]">
-                    Mostrar Tarjeta en Home (featuredOnHome)
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Cover Image Uploader (Image #1 of 4: Home Card Preview Image) */}
-            <div className="p-5 rounded-[10px] border-2 border-dashed border-[#CBD5E1] bg-[#F8F9FA] space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#2563EB] block">
-                    IMAGEN 1 DE 4 // PORTADA DE LA TARJETA EN EL INICIO (previewImageSrc)
-                  </span>
-                  <p className="text-xs text-[#4B5563]">
-                    Esta imagen se muestra únicamente en la tarjeta resumen de la
-                    página principal (diferente a las 3 imágenes de detalle).
-                  </p>
-                </div>
-                {coverUploadStatus.uploading && (
-                  <span className="font-mono text-xs text-[#2563EB] font-semibold">
-                    Subiendo a /app/data/uploads...
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                <div className="md:col-span-5">
-                  <div className="aspect-16/10 w-full rounded-[8px] overflow-hidden border border-[#D1D5DB] bg-white flex items-center justify-center">
-                    {formState.previewImageSrc ? (
-                      <img
-                        src={formState.previewImageSrc}
-                        alt={
-                          formState.previewImageAlt ||
-                          formState.title ||
-                          "Vista previa portada"
-                        }
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="font-mono text-xs text-[#6B7280]">
-                        Sin imagen de portada
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="md:col-span-7 space-y-3">
-                  <div>
-                    <label
-                      htmlFor="cover-image-file-input"
-                      className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                    >
-                      Subir Imagen de Portada desde tu PC (PNG, JPG, WEBP &lt;= 10 MB)
-                    </label>
-                    <input
-                      id="cover-image-file-input"
-                      name="coverImageFile"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={handleCoverFileChange}
-                      className="block w-full text-xs text-[#374151] file:mr-3 file:py-2 file:px-3.5 file:rounded-[6px] file:border-0 file:font-mono file:text-xs file:font-semibold file:bg-[#0A0A0A] file:text-white hover:file:bg-[#1F2937] cursor-pointer"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="cover-image-src-input"
-                      className="block font-mono text-[11px] font-semibold uppercase text-[#4B5563] mb-1"
-                    >
-                      Ruta o URL Activa de Portada (previewImageSrc)
-                    </label>
-                    <input
-                      id="cover-image-src-input"
-                      name="previewImageSrc"
-                      type="text"
-                      value={formState.previewImageSrc || ""}
-                      onChange={(e) =>
+                      required
+                      aria-invalid={Boolean(fieldErrors.slug)}
+                      value={formState.slug}
+                      onChange={(e) => {
+                        clearFieldError("slug");
                         setFormState((prev) => ({
                           ...prev,
-                          previewImageSrc: e.target.value
-                        }))
-                      }
+                          slug: slugifyProjectTitle(e.target.value)
+                        }));
+                      }}
+                      onBlur={(e) => validateFieldOnBlur("slug", e.target.value)}
                       autoCorrect="off"
                       autoCapitalize="off"
                       spellCheck={false}
-                      className="w-full px-3 py-1.5 bg-white border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
+                      placeholder="deco-vintage-platform"
+                      className={`w-full min-h-[48px] px-3 py-2 border border-[#6B7280] rounded-[8px] font-mono text-sm ${INPUT_FOCUS_CLASSES}`}
                     />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          slug: slugifyProjectTitle(prev.title)
+                        }))
+                      }
+                      className={`min-h-[48px] px-3 py-2 bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-[#6B7280] rounded-[8px] font-mono text-xs font-semibold cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                    >
+                      Auto
+                    </button>
                   </div>
+                  {fieldErrors.slug && (
+                    <p className="mt-1 text-xs text-[#B91C1C]">
+                      {fieldErrors.slug}
+                    </p>
+                  )}
+                </div>
 
-                  {coverUploadStatus.error && (
-                    <p className="text-xs text-[#B91C1C] font-medium">
-                      {coverUploadStatus.error}
+                <div className="sm:col-span-3">
+                  <label
+                    htmlFor="project-category-label-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                  >
+                    Etiqueta Categoría *
+                  </label>
+                  <input
+                    id="project-category-label-input"
+                    name="categoryLabel"
+                    type="text"
+                    required
+                    aria-invalid={Boolean(fieldErrors.categoryLabel)}
+                    value={formState.categoryLabel}
+                    onChange={(e) => {
+                      clearFieldError("categoryLabel");
+                      setFormState((prev) => ({
+                        ...prev,
+                        categoryLabel: e.target.value
+                      }));
+                    }}
+                    onBlur={(e) =>
+                      validateFieldOnBlur("categoryLabel", e.target.value)
+                    }
+                    placeholder="E-COMMERCE & CLOUD MEDIA ENGINE"
+                    className={`w-full min-h-[48px] px-3 py-2 border border-[#6B7280] rounded-[8px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                  />
+                  {fieldErrors.categoryLabel && (
+                    <p className="mt-1 text-xs text-[#B91C1C]">
+                      {fieldErrors.categoryLabel}
                     </p>
                   )}
                 </div>
               </div>
-            </div>
-          </fieldset>
 
-          {/* ================================================================ */}
-          {/* BLOQUE B — LAS 3 IMÁGENES EXCLUSIVAS DE LA VISTA DE DETALLE      */}
-          {/* ================================================================ */}
-          <fieldset className="bg-white border border-[#E5E7EB] rounded-[12px] p-6 sm:p-8 shadow-xs space-y-6">
-            <legend className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] px-2">
-              BLOQUE B // 3 IMÁGENES EXCLUSIVAS DE LA VISTA DE DETALLE (/sistemas/[slug])
-            </legend>
-
-            <p className="text-xs sm:text-sm text-[#4B5563]">
-              Estas <strong className="text-[#111827]">3 vistas técnicas (VIEW 01, VIEW 02, VIEW 03)</strong>{" "}
-              se renderizan dentro de la página de estudio de caso (
-              <code>01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA</code>) y son{" "}
-              <strong className="text-[#111827]">
-                independientes de la foto de la tarjeta de inicio
-              </strong>
-              .
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {normalizedGallerySlots.map((slotItem) => {
-                const slotNum = slotItem.slot;
-                const slotStatus = galleryUploadStatus[slotNum];
-                const hasUploadedSrc = slotItem.src.trim().length > 0;
-
-                return (
-                  <div
-                    key={slotNum}
-                    className="p-4 rounded-[10px] border border-[#D1D5DB] bg-[#F8F9FA] flex flex-col justify-between space-y-3"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold text-[#111827]">
-                          RANURA DETALLE // VIEW 0{slotNum}
-                        </span>
-                        <span
-                          className={`font-mono text-[10px] px-2 py-0.5 rounded font-semibold ${
-                            hasUploadedSrc
-                              ? "bg-[#ECFDF5] text-[#065F46] border border-[#6EE7B7]"
-                              : "bg-white text-[#6B7280] border border-[#D1D5DB]"
-                          }`}
-                        >
-                          {hasUploadedSrc ? "ACTIVA" : "VACÍA"}
-                        </span>
-                      </div>
-
-                      {/* Slot Image Preview */}
-                      <div className="aspect-16/10 w-full rounded-[6px] overflow-hidden border border-[#D1D5DB] bg-white flex items-center justify-center">
-                        {hasUploadedSrc ? (
-                          <img
-                            src={slotItem.src}
-                            alt={slotItem.alt || slotItem.label}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="font-mono text-[11px] text-[#6B7280] text-center px-2">
-                            VIEW 0{slotNum} · Lista para subir desde tu PC
-                          </span>
-                        )}
-                      </div>
-
-                      {/* File Input from PC */}
-                      <div>
-                        <label
-                          htmlFor={`gallery-file-slot-${slotNum}`}
-                          className="block font-mono text-[11px] font-semibold uppercase text-[#111827] mb-1"
-                        >
-                          Subir Foto VIEW 0{slotNum} desde PC
-                        </label>
-                        <input
-                          id={`gallery-file-slot-${slotNum}`}
-                          name={`galleryFileSlot_${slotNum}`}
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          onChange={(e) =>
-                            handleGallerySlotFileChange(slotNum, e)
-                          }
-                          className="block w-full text-[11px] text-[#374151] file:mr-2 file:py-1.5 file:px-2.5 file:rounded file:border-0 file:font-mono file:text-[11px] file:font-semibold file:bg-[#2563EB] file:text-white hover:file:bg-[#1D4ED8] cursor-pointer"
-                        />
-                        {slotStatus.uploading && (
-                          <p className="mt-1 font-mono text-[11px] text-[#2563EB]">
-                            Subiendo VIEW 0{slotNum}...
-                          </p>
-                        )}
-                        {slotStatus.error && (
-                          <p className="mt-1 text-[11px] text-[#B91C1C]">
-                            {slotStatus.error}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* URL / Path Input */}
-                      <div>
-                        <label
-                          htmlFor={`gallery-src-slot-${slotNum}`}
-                          className="block font-mono text-[10px] font-semibold uppercase text-[#4B5563] mb-0.5"
-                        >
-                          URL de Imagen VIEW 0{slotNum} (src)
-                        </label>
-                        <input
-                          id={`gallery-src-slot-${slotNum}`}
-                          name={`gallerySrcSlot_${slotNum}`}
-                          type="text"
-                          value={slotItem.src}
-                          onChange={(e) =>
-                            updateGallerySlotField(
-                              slotNum,
-                              "src",
-                              e.target.value
-                            )
-                          }
-                          autoCorrect="off"
-                          autoCapitalize="off"
-                          spellCheck={false}
-                          placeholder={`/api/assets/vista-detalle-0${slotNum}.webp`}
-                          className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-xs"
-                        />
-                      </div>
-
-                      {/* Label Input */}
-                      <div>
-                        <label
-                          htmlFor={`gallery-label-slot-${slotNum}`}
-                          className="block font-mono text-[10px] font-semibold uppercase text-[#4B5563] mb-0.5"
-                        >
-                          Etiqueta Técnica Superior (label)
-                        </label>
-                        <input
-                          id={`gallery-label-slot-${slotNum}`}
-                          name={`galleryLabelSlot_${slotNum}`}
-                          type="text"
-                          value={slotItem.label}
-                          onChange={(e) =>
-                            updateGallerySlotField(
-                              slotNum,
-                              "label",
-                              e.target.value
-                            )
-                          }
-                          className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-xs"
-                        />
-                      </div>
-
-                      {/* Caption Input */}
-                      <div>
-                        <label
-                          htmlFor={`gallery-caption-slot-${slotNum}`}
-                          className="block font-mono text-[10px] font-semibold uppercase text-[#4B5563] mb-0.5"
-                        >
-                          Pie de Foto Explicativo (caption)
-                        </label>
-                        <textarea
-                          id={`gallery-caption-slot-${slotNum}`}
-                          name={`galleryCaptionSlot_${slotNum}`}
-                          rows={2}
-                          value={slotItem.caption}
-                          onChange={(e) =>
-                            updateGallerySlotField(
-                              slotNum,
-                              "caption",
-                              e.target.value
-                            )
-                          }
-                          className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded text-xs"
-                        />
-                      </div>
-                    </div>
-
-                    {hasUploadedSrc && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateGallerySlotField(slotNum, "src", "")
-                        }
-                        className="w-full py-1.5 text-center font-mono text-[11px] text-[#B91C1C] hover:bg-[#FEF2F2] rounded border border-transparent hover:border-[#FCA5A5] cursor-pointer"
-                      >
-                        Limpiar Imagen VIEW 0{slotNum}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </fieldset>
-
-          {/* ================================================================ */}
-          {/* BLOQUE C — NARRATIVA ARQUITECTÓNICA Y DEPLOYMENT LEDGER          */}
-          {/* ================================================================ */}
-          <fieldset className="bg-white border border-[#E5E7EB] rounded-[12px] p-6 sm:p-8 shadow-xs space-y-5">
-            <legend className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] px-2">
-              BLOQUE C // NARRATIVA DEL CASO DE ESTUDIO Y DEPLOYMENT METADATA LEDGER
-            </legend>
-
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-              <div className="sm:col-span-8">
+              {/* Summary Description on Card */}
+              <div>
                 <label
-                  htmlFor="project-subtitle-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
+                  htmlFor="project-summary-textarea"
+                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
                 >
-                  Subtítulo Técnico en Vista de Detalle (subtitle) *
+                  Descripción de la Tarjeta (summary) *
                 </label>
-                <input
-                  id="project-subtitle-input"
-                  name="subtitle"
-                  type="text"
+                <textarea
+                  id="project-summary-textarea"
+                  name="summary"
+                  rows={3}
                   required
-                  value={formState.subtitle}
+                  aria-invalid={Boolean(fieldErrors.summary)}
+                  value={formState.summary}
                   onChange={(e) => {
-                    clearFieldError("subtitle");
+                    clearFieldError("summary");
                     setFormState((prev) => ({
                       ...prev,
-                      subtitle: e.target.value
+                      summary: e.target.value
                     }));
                   }}
-                  onBlur={(e) => validateFieldOnBlur("subtitle", e.target.value)}
-                  placeholder="Plataforma E-Commerce Full-Stack, Cotizador Dinámico & Pipeline Multimedia"
-                  className="w-full min-h-[44px] px-3 py-2 border border-[#D1D5DB] rounded-[6px] text-sm"
+                  onBlur={(e) => validateFieldOnBlur("summary", e.target.value)}
+                  placeholder="Resumen ejecutivo del sistema que se muestra en la tarjeta de vista preliminar..."
+                  className={`w-full px-3.5 py-2.5 border border-[#6B7280] rounded-[8px] text-sm resize-y ${INPUT_FOCUS_CLASSES}`}
                 />
-                {fieldErrors.subtitle && (
+                {fieldErrors.summary && (
                   <p className="mt-1 text-xs text-[#B91C1C]">
-                    {fieldErrors.subtitle}
+                    {fieldErrors.summary}
                   </p>
                 )}
               </div>
 
-              <div className="sm:col-span-4">
-                <label
-                  htmlFor="project-status-select"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  Estado Operativo (status)
-                </label>
-                <select
-                  id="project-status-select"
-                  name="status"
-                  value={formState.status || "PRODUCTION // ONLINE"}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      status: e.target.value as ProductionSystem["status"]
-                    }))
-                  }
-                  className="w-full min-h-[44px] px-3 py-2 bg-white border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
-                >
-                  <option value="PRODUCTION // ONLINE">
-                    PRODUCTION // ONLINE
-                  </option>
-                  <option value="PRODUCTION // VERIFIED">
-                    PRODUCTION // VERIFIED
-                  </option>
-                  <option value="ACTIVE // EDGE NODE">
-                    ACTIVE // EDGE NODE
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="project-narrative-textarea"
-                className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-              >
-                Narrativa Arquitectónica Profunda (architecturalNarrative)
-              </label>
-              <textarea
-                id="project-narrative-textarea"
-                name="architecturalNarrative"
-                rows={4}
-                value={formState.architecturalNarrative}
-                onChange={(e) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    architecturalNarrative: e.target.value
-                  }))
-                }
-                placeholder="Explica la arquitectura interna, decisiones de diseño y garantías en producción..."
-                className="w-full px-3.5 py-2.5 border border-[#D1D5DB] rounded-[6px] text-sm"
-              />
-            </div>
-
-            {/* Deployment Ledger 4 Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label
-                  htmlFor="ledger-arch-pattern-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  ARCHITECTURE PATTERN
-                </label>
-                <input
-                  id="ledger-arch-pattern-input"
-                  name="architecturePattern"
-                  type="text"
-                  value={formState.deploymentLedger.architecturePattern}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      deploymentLedger: {
-                        ...prev.deploymentLedger,
-                        architecturePattern: e.target.value
-                      }
-                    }))
-                  }
-                  className="w-full min-h-[42px] px-3 py-1.5 border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="ledger-commit-sha-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  COMMIT SHA / RELEASE
-                </label>
-                <input
-                  id="ledger-commit-sha-input"
-                  name="commitSha"
-                  type="text"
-                  value={formState.deploymentLedger.commitSha}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      deploymentLedger: {
-                        ...prev.deploymentLedger,
-                        commitSha: e.target.value
-                      }
-                    }))
-                  }
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  className="w-full min-h-[42px] px-3 py-1.5 border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="ledger-gate-status-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  GATE STATUS
-                </label>
-                <input
-                  id="ledger-gate-status-input"
-                  name="verificationGate"
-                  type="text"
-                  value={formState.deploymentLedger.verificationGate}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      deploymentLedger: {
-                        ...prev.deploymentLedger,
-                        verificationGate: e.target.value
-                      }
-                    }))
-                  }
-                  className="w-full min-h-[42px] px-3 py-1.5 border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="ledger-host-os-input"
-                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
-                >
-                  HOST OS / INFRASTRUCTURE
-                </label>
-                <input
-                  id="ledger-host-os-input"
-                  name="hostEnvironment"
-                  type="text"
-                  value={formState.deploymentLedger.hostEnvironment}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      deploymentLedger: {
-                        ...prev.deploymentLedger,
-                        hostEnvironment: e.target.value
-                      }
-                    }))
-                  }
-                  className="w-full min-h-[42px] px-3 py-1.5 border border-[#D1D5DB] rounded-[6px] font-mono text-xs"
-                />
-              </div>
-            </div>
-          </fieldset>
-
-          {/* ================================================================ */}
-          {/* BLOQUE D — BLUEPRINT TÉCNICO (PIPELINE, CÓDIGO Y DESAFÍOS)       */}
-          {/* ================================================================ */}
-          <fieldset className="bg-white border border-[#E5E7EB] rounded-[12px] p-6 sm:p-8 shadow-xs space-y-8">
-            <legend className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] px-2">
-              BLOQUE D // BLUEPRINT TÉCNICO (3 ETAPAS DEL PIPELINE, CÓDIGO Y 3 DESAFÍOS)
-            </legend>
-
-            {/* D.1 — 3 Pipeline Stages */}
-            <div className="space-y-4">
-              <h3 className="font-display text-base font-bold text-[#111827]">
-                1. Etapas del Pipeline de Producción (ETAPA 01, 02 y 03)
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {formState.pipelineStages.map((stage, idx) => (
-                  <div
-                    key={stage.stageNumber}
-                    className="p-4 rounded-[8px] border border-[#E5E7EB] bg-[#F8F9FA] space-y-2.5"
-                  >
-                    <span className="font-mono text-xs font-bold text-[#2563EB] block">
-                      {stage.stageNumber}
-                    </span>
-
-                    <div>
-                      <label
-                        htmlFor={`stage-title-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                      >
-                        Título de Etapa
-                      </label>
+              {/* Stack Pills Editor + Highlighted Blue Pill Selector */}
+              <div className="p-4 rounded-[8px] bg-[#F8F9FA] border border-[#D1D5DB] space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                  <div className="flex-1">
+                    <label
+                      htmlFor="new-stack-tag-input"
+                      className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                    >
+                      Pills de Stack Tecnológico (stackTags) *
+                    </label>
+                    <div className="flex items-center gap-2">
                       <input
-                        id={`stage-title-${idx}`}
-                        name={`stageTitle_${idx}`}
+                        id="new-stack-tag-input"
+                        name="newStackTag"
                         type="text"
-                        value={stage.title}
-                        onChange={(e) =>
-                          handleUpdatePipelineStage(idx, "title", e.target.value)
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded text-xs font-semibold"
+                        value={newStackTagInput}
+                        onChange={(e) => setNewStackTagInput(e.target.value)}
+                        placeholder="Ej. GOOGLE ADK, POSTGRESQL + PGVECTOR, DOCKER..."
+                        className={`w-full min-h-[44px] px-3 py-1.5 bg-white border border-[#6B7280] rounded-[6px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
                       />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`stage-slo-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
+                      <button
+                        type="button"
+                        onClick={handleAddStackTag}
+                        className={`min-h-[44px] px-4 py-1.5 bg-[#0A0A0A] hover:bg-[#1F2937] text-white font-mono text-xs font-semibold rounded-[6px] cursor-pointer whitespace-nowrap ${INPUT_FOCUS_CLASSES}`}
                       >
-                        Latencia / SLO
-                      </label>
-                      <input
-                        id={`stage-slo-${idx}`}
-                        name={`stageSlo_${idx}`}
-                        type="text"
-                        value={stage.latencyOrSlo}
-                        onChange={(e) =>
-                          handleUpdatePipelineStage(
-                            idx,
-                            "latencyOrSlo",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-xs"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`stage-desc-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                      >
-                        Descripción
-                      </label>
-                      <textarea
-                        id={`stage-desc-${idx}`}
-                        name={`stageDesc_${idx}`}
-                        rows={3}
-                        value={stage.description}
-                        onChange={(e) =>
-                          handleUpdatePipelineStage(
-                            idx,
-                            "description",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded text-xs"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`stage-invariants-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                      >
-                        Invariantes (separadas por coma)
-                      </label>
-                      <input
-                        id={`stage-invariants-${idx}`}
-                        name={`stageInvariants_${idx}`}
-                        type="text"
-                        value={stage.invariants.join(", ")}
-                        onChange={(e) =>
-                          handleUpdatePipelineStage(
-                            idx,
-                            "invariants",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-[11px]"
-                      />
+                        + Añadir Pill
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* D.2 — Code Inspector Tabs */}
-            <div className="space-y-4 pt-2 border-t border-[#E5E7EB]">
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-base font-bold text-[#111827]">
-                  2. Pestañas del Inspector Interactivo de Código (codeTabs)
-                </h3>
-                <button
-                  type="button"
-                  onClick={handleAddCodeTab}
-                  className="px-3 py-1.5 bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-[#D1D5DB] rounded-[6px] font-mono text-xs font-semibold cursor-pointer"
-                >
-                  + Añadir Pestaña de Código
-                </button>
-              </div>
+                  <div className="sm:w-64">
+                    <label
+                      htmlFor="highlighted-stack-tag-select"
+                      className="block font-mono text-xs font-semibold uppercase text-[#2563EB] mb-1.5"
+                    >
+                      Pill Destacado en Azul (highlightedStackTag)
+                    </label>
+                    <select
+                      id="highlighted-stack-tag-select"
+                      name="highlightedStackTag"
+                      value={formState.highlightedStackTag || ""}
+                      onChange={(e) =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          highlightedStackTag: e.target.value
+                        }))
+                      }
+                      className={`w-full min-h-[44px] px-3 py-1.5 bg-white border border-[#6B7280] rounded-[6px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                    >
+                      {formState.stackTags.map((tag) => (
+                        <option key={tag} value={tag}>
+                          {tag}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-              <div className="space-y-4">
-                {formState.codeTabs.map((tab, idx) => (
-                  <div
-                    key={`${tab.id}-${idx}`}
-                    className="p-4 rounded-[8px] border border-[#E5E7EB] bg-[#F8F9FA] space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-[#111827]">
-                        PESTAÑA DE CÓDIGO #{idx + 1}
-                      </span>
-                      {formState.codeTabs.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  {formState.stackTags.map((tag) => {
+                    const isHighlighted = formState.highlightedStackTag === tag;
+                    return (
+                      <span
+                        key={tag}
+                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-[6px] font-mono text-xs font-semibold border ${
+                          isHighlighted
+                            ? "bg-[#EFF6FF] border-[#2563EB] text-[#1D4ED8]"
+                            : "bg-white border-[#6B7280] text-[#111827]"
+                        }`}
+                      >
+                        {tag}
+                        {isHighlighted && (
+                          <span className="text-[10px] uppercase">(AZUL)</span>
+                        )}
                         <button
                           type="button"
-                          onClick={() => handleRemoveCodeTab(idx)}
-                          className="font-mono text-xs text-[#B91C1C] hover:underline cursor-pointer"
+                          aria-label={`Quitar tag ${tag}`}
+                          onClick={() => handleRemoveStackTag(tag)}
+                          className={`text-[#4B5563] hover:text-[#B91C1C] font-bold cursor-pointer ${INPUT_FOCUS_CLASSES}`}
                         >
-                          Eliminar pestaña
+                          ×
                         </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Architecture & Availability Specs + Live URL + Featured Toggle */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[0, 1].map((specIdx) => {
+                  const spec = formState.architectureSpecs[specIdx] ?? {
+                    label: specIdx === 0 ? "ARQUITECTURA" : "DISPONIBILIDAD",
+                    value: ""
+                  };
+                  return (
+                    <div
+                      key={specIdx}
+                      className="p-3.5 rounded-[8px] border border-[#D1D5DB] bg-[#F8F9FA] space-y-2"
+                    >
+                      <label
+                        htmlFor={`arch-spec-label-${specIdx}`}
+                        className="block font-mono text-[11px] font-semibold uppercase text-[#374151]"
+                      >
+                        Recuadro Métrica {specIdx + 1} (Etiqueta / Valor)
+                      </label>
+                      <input
+                        id={`arch-spec-label-${specIdx}`}
+                        name={`archSpecLabel_${specIdx}`}
+                        type="text"
+                        value={spec.label}
+                        onChange={(e) =>
+                          handleUpdateArchSpec(specIdx, "label", e.target.value)
+                        }
+                        className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                      />
+                      <input
+                        id={`arch-spec-value-${specIdx}`}
+                        name={`archSpecValue_${specIdx}`}
+                        type="text"
+                        aria-label={`Valor de especificación ${specIdx + 1}`}
+                        value={spec.value}
+                        onChange={(e) =>
+                          handleUpdateArchSpec(specIdx, "value", e.target.value)
+                        }
+                        className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded text-sm font-semibold ${INPUT_FOCUS_CLASSES}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                <div className="sm:col-span-8">
+                  <label
+                    htmlFor="project-live-url-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                  >
+                    URL del Sistema en Vivo (liveUrl — Botón &quot;PROBAR SISTEMA EN VIVO ↗&quot;) *
+                  </label>
+                  <input
+                    id="project-live-url-input"
+                    name="liveUrl"
+                    type="url"
+                    required
+                    aria-invalid={Boolean(fieldErrors.liveUrl)}
+                    value={formState.liveUrl}
+                    onChange={(e) => {
+                      clearFieldError("liveUrl");
+                      setFormState((prev) => ({
+                        ...prev,
+                        liveUrl: e.target.value
+                      }));
+                    }}
+                    onBlur={(e) => validateFieldOnBlur("liveUrl", e.target.value)}
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    placeholder="https://www.decovintage.online"
+                    className={`w-full min-h-[48px] px-3 py-2 border border-[#6B7280] rounded-[8px] font-mono text-sm ${INPUT_FOCUS_CLASSES}`}
+                  />
+                  {fieldErrors.liveUrl && (
+                    <p className="mt-1 text-xs text-[#B91C1C]">
+                      {fieldErrors.liveUrl}
+                    </p>
+                  )}
+                </div>
+
+                <div className="sm:col-span-4 pt-4">
+                  <label
+                    htmlFor="project-featured-checkbox"
+                    className="inline-flex items-center gap-2.5 cursor-pointer select-none"
+                  >
+                    <input
+                      id="project-featured-checkbox"
+                      name="featuredOnHome"
+                      type="checkbox"
+                      checked={formState.featuredOnHome ?? true}
+                      onChange={(e) =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          featuredOnHome: e.target.checked
+                        }))
+                      }
+                      className={`w-4 h-4 accent-[#2563EB] ${INPUT_FOCUS_CLASSES}`}
+                    />
+                    <span className="font-mono text-xs font-semibold text-[#111827]">
+                      Visible en Catálogo Público (featuredOnHome)
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Cover Image Uploader (Image #1 of 4: Card Preview Image) */}
+              <div className="p-5 rounded-[10px] border-2 border-dashed border-[#6B7280] bg-[#F8F9FA] space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#2563EB] block">
+                      IMAGEN 1 DE 4 // PORTADA DE LA TARJETA (previewImageSrc)
+                    </span>
+                    <p className="text-xs text-[#4B5563]">
+                      Esta imagen se muestra en la tarjeta resumen del proyecto
+                      (independiente de las 3 imágenes de detalle).
+                    </p>
+                  </div>
+                  {coverUploadStatus.uploading && (
+                    <span className="font-mono text-xs text-[#2563EB] font-semibold">
+                      Subiendo a /app/data/uploads...
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                  <div className="md:col-span-5">
+                    <div className="aspect-16/10 w-full rounded-[8px] overflow-hidden border border-[#6B7280] bg-white flex items-center justify-center">
+                      {formState.previewImageSrc ? (
+                        <img
+                          src={formState.previewImageSrc}
+                          alt={
+                            formState.previewImageAlt ||
+                            formState.title ||
+                            "Vista previa portada"
+                          }
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="font-mono text-xs text-[#4B5563]">
+                          Sin imagen de portada
+                        </span>
                       )}
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label
-                          htmlFor={`codetab-filename-${idx}`}
-                          className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                        >
-                          Archivo (filename)
-                        </label>
-                        <input
-                          id={`codetab-filename-${idx}`}
-                          name={`codeTabFilename_${idx}`}
-                          type="text"
-                          value={tab.filename}
-                          onChange={(e) =>
-                            handleUpdateCodeTab(idx, "filename", e.target.value)
-                          }
-                          autoCorrect="off"
-                          autoCapitalize="off"
-                          spellCheck={false}
-                          className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor={`codetab-layer-${idx}`}
-                          className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                        >
-                          Capa Arquitectónica (layer)
-                        </label>
-                        <input
-                          id={`codetab-layer-${idx}`}
-                          name={`codeTabLayer_${idx}`}
-                          type="text"
-                          value={tab.layer}
-                          onChange={(e) =>
-                            handleUpdateCodeTab(idx, "layer", e.target.value)
-                          }
-                          className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor={`codetab-lang-${idx}`}
-                          className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                        >
-                          Lenguaje (language)
-                        </label>
-                        <input
-                          id={`codetab-lang-${idx}`}
-                          name={`codeTabLang_${idx}`}
-                          type="text"
-                          value={tab.language}
-                          onChange={(e) =>
-                            handleUpdateCodeTab(idx, "language", e.target.value)
-                          }
-                          autoCorrect="off"
-                          autoCapitalize="off"
-                          spellCheck={false}
-                          className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-xs"
-                        />
-                      </div>
+                  <div className="md:col-span-7 space-y-3">
+                    <div>
+                      <label
+                        htmlFor="cover-image-file-input"
+                        className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
+                      >
+                        Subir Imagen de Portada desde tu PC (PNG, JPG, WEBP &lt;= 10 MB)
+                      </label>
+                      <input
+                        id="cover-image-file-input"
+                        name="coverImageFile"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={handleCoverFileChange}
+                        className={`block w-full text-xs text-[#374151] file:mr-3 file:py-2 file:px-3.5 file:rounded-[6px] file:border-0 file:font-mono file:text-xs file:font-semibold file:bg-[#0A0A0A] file:text-white hover:file:bg-[#1F2937] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                      />
                     </div>
 
                     <div>
                       <label
-                        htmlFor={`codetab-code-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
+                        htmlFor="cover-image-src-input"
+                        className="block font-mono text-[11px] font-semibold uppercase text-[#374151] mb-1"
                       >
-                        Fragmento de Código Fuente (code)
+                        Ruta o URL Activa de Portada (previewImageSrc)
                       </label>
-                      <textarea
-                        id={`codetab-code-${idx}`}
-                        name={`codeTabCode_${idx}`}
-                        rows={5}
-                        value={tab.code}
+                      <input
+                        id="cover-image-src-input"
+                        name="previewImageSrc"
+                        type="text"
+                        value={formState.previewImageSrc || ""}
                         onChange={(e) =>
-                          handleUpdateCodeTab(idx, "code", e.target.value)
+                          setFormState((prev) => ({
+                            ...prev,
+                            previewImageSrc: e.target.value
+                          }))
                         }
                         autoCorrect="off"
                         autoCapitalize="off"
                         spellCheck={false}
-                        className="w-full px-3 py-2 bg-[#0A0A0A] text-[#F8F9FA] border border-[#374151] rounded font-mono text-xs leading-relaxed"
+                        className={`w-full px-3 py-1.5 bg-white border border-[#6B7280] rounded-[6px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
                       />
                     </div>
+
+                    {coverUploadStatus.error && (
+                      <p className="text-xs text-[#B91C1C] font-medium">
+                        {coverUploadStatus.error}
+                      </p>
+                    )}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
+            </fieldset>
 
-            {/* D.3 — 3 Solved Engineering Challenges */}
-            <div className="space-y-4 pt-2 border-t border-[#E5E7EB]">
-              <h3 className="font-display text-base font-bold text-[#111827]">
-                3. Desafíos de Ingeniería Resueltos (01, 02 y 03)
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {formState.solvedChallenges.map((challenge, idx) => (
-                  <div
-                    key={challenge.number}
-                    className="p-4 rounded-[8px] border border-[#E5E7EB] bg-[#F8F9FA] space-y-2.5"
-                  >
-                    <span className="font-mono text-xs font-bold text-[#2563EB] block">
-                      DESAFÍO #{challenge.number}
-                    </span>
+            {/* ============================================================== */}
+            {/* BLOQUE B — LAS 3 IMÁGENES EXCLUSIVAS DE LA VISTA DE DETALLE    */}
+            {/* ============================================================== */}
+            <fieldset className="bg-white border border-[#D1D5DB] rounded-[12px] p-6 sm:p-8 shadow-xs space-y-6">
+              <legend className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] px-2">
+                BLOQUE B // 3 IMÁGENES EXCLUSIVAS DE LA VISTA DE DETALLE (/sistemas/[slug])
+              </legend>
 
-                    <div>
-                      <label
-                        htmlFor={`challenge-title-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                      >
-                        Título del Desafío
-                      </label>
-                      <input
-                        id={`challenge-title-${idx}`}
-                        name={`challengeTitle_${idx}`}
-                        type="text"
-                        value={challenge.title}
-                        onChange={(e) =>
-                          handleUpdateSolvedChallenge(
-                            idx,
-                            "title",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded text-xs font-semibold"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`challenge-problem-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                      >
-                        Problema (problem)
-                      </label>
-                      <textarea
-                        id={`challenge-problem-${idx}`}
-                        name={`challengeProblem_${idx}`}
-                        rows={2}
-                        value={challenge.problem}
-                        onChange={(e) =>
-                          handleUpdateSolvedChallenge(
-                            idx,
-                            "problem",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded text-xs"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`challenge-solution-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                      >
-                        Solución de Ingeniería (solution)
-                      </label>
-                      <textarea
-                        id={`challenge-solution-${idx}`}
-                        name={`challengeSolution_${idx}`}
-                        rows={2}
-                        value={challenge.solution}
-                        onChange={(e) =>
-                          handleUpdateSolvedChallenge(
-                            idx,
-                            "solution",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded text-xs"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`challenge-impact-${idx}`}
-                        className="block font-mono text-[10px] uppercase text-[#4B5563]"
-                      >
-                        Métrica de Impacto (impactMetric)
-                      </label>
-                      <input
-                        id={`challenge-impact-${idx}`}
-                        name={`challengeImpact_${idx}`}
-                        type="text"
-                        value={challenge.impactMetric}
-                        onChange={(e) =>
-                          handleUpdateSolvedChallenge(
-                            idx,
-                            "impactMetric",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-[#D1D5DB] rounded font-mono text-xs"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Submit Bar */}
-            <div className="pt-4 border-t border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="text-xs text-[#4B5563] font-mono">
-                Destino:{" "}
+              <p className="text-xs sm:text-sm text-[#4B5563]">
+                Estas{" "}
                 <strong className="text-[#111827]">
-                  {sections[formState.catalogSection].heading}
+                  3 vistas técnicas (VIEW 01, VIEW 02, VIEW 03)
                 </strong>{" "}
-                · Ruta: <code>/sistemas/{formState.slug || "nuevo"}</code>
+                se renderizan dentro de la página de estudio de caso (
+                <code>01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA</code>) y son{" "}
+                <strong className="text-[#111827]">
+                  independientes de la foto de la tarjeta de inicio
+                </strong>
+                .
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {normalizedGallerySlots.map((slotItem) => {
+                  const slotNum = slotItem.slot;
+                  const slotStatus = galleryUploadStatus[slotNum];
+                  const hasUploadedSrc = slotItem.src.trim().length > 0;
+
+                  return (
+                    <div
+                      key={slotNum}
+                      className="p-4 rounded-[10px] border border-[#D1D5DB] bg-[#F8F9FA] flex flex-col justify-between space-y-3"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-bold text-[#111827]">
+                            RANURA DETALLE // VIEW 0{slotNum}
+                          </span>
+                          <span
+                            className={`font-mono text-[10px] px-2 py-0.5 rounded font-semibold ${
+                              hasUploadedSrc
+                                ? "bg-[#ECFDF5] text-[#065F46] border border-[#059669]"
+                                : "bg-white text-[#4B5563] border border-[#6B7280]"
+                            }`}
+                          >
+                            {hasUploadedSrc ? "ACTIVA" : "VACÍA"}
+                          </span>
+                        </div>
+
+                        {/* Slot Image Preview */}
+                        <div className="aspect-16/10 w-full rounded-[6px] overflow-hidden border border-[#6B7280] bg-white flex items-center justify-center">
+                          {hasUploadedSrc ? (
+                            <img
+                              src={slotItem.src}
+                              alt={slotItem.alt || slotItem.label}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="font-mono text-[11px] text-[#4B5563] text-center px-2">
+                              VIEW 0{slotNum} · Lista para subir desde tu PC
+                            </span>
+                          )}
+                        </div>
+
+                        {/* File Input from PC */}
+                        <div>
+                          <label
+                            htmlFor={`gallery-file-slot-${slotNum}`}
+                            className="block font-mono text-[11px] font-semibold uppercase text-[#111827] mb-1"
+                          >
+                            Subir Foto VIEW 0{slotNum} desde PC
+                          </label>
+                          <input
+                            id={`gallery-file-slot-${slotNum}`}
+                            name={`galleryFileSlot_${slotNum}`}
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            onChange={(e) =>
+                              handleGallerySlotFileChange(slotNum, e)
+                            }
+                            className={`block w-full text-[11px] text-[#374151] file:mr-2 file:py-1.5 file:px-2.5 file:rounded file:border-0 file:font-mono file:text-[11px] file:font-semibold file:bg-[#2563EB] file:text-white hover:file:bg-[#1D4ED8] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                          />
+                          {slotStatus.uploading && (
+                            <p className="mt-1 font-mono text-[11px] text-[#2563EB]">
+                              Subiendo VIEW 0{slotNum}...
+                            </p>
+                          )}
+                          {slotStatus.error && (
+                            <p className="mt-1 text-[11px] text-[#B91C1C]">
+                              {slotStatus.error}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* URL / Path Input */}
+                        <div>
+                          <label
+                            htmlFor={`gallery-src-slot-${slotNum}`}
+                            className="block font-mono text-[10px] font-semibold uppercase text-[#374151] mb-0.5"
+                          >
+                            URL de Imagen VIEW 0{slotNum} (src)
+                          </label>
+                          <input
+                            id={`gallery-src-slot-${slotNum}`}
+                            name={`gallerySrcSlot_${slotNum}`}
+                            type="text"
+                            value={slotItem.src}
+                            onChange={(e) =>
+                              updateGallerySlotField(
+                                slotNum,
+                                "src",
+                                e.target.value
+                              )
+                            }
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            placeholder={`/api/assets/vista-detalle-0${slotNum}.webp`}
+                            className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                          />
+                        </div>
+
+                        {/* Label Input */}
+                        <div>
+                          <label
+                            htmlFor={`gallery-label-slot-${slotNum}`}
+                            className="block font-mono text-[10px] font-semibold uppercase text-[#374151] mb-0.5"
+                          >
+                            Etiqueta Técnica Superior (label)
+                          </label>
+                          <input
+                            id={`gallery-label-slot-${slotNum}`}
+                            name={`galleryLabelSlot_${slotNum}`}
+                            type="text"
+                            value={slotItem.label}
+                            onChange={(e) =>
+                              updateGallerySlotField(
+                                slotNum,
+                                "label",
+                                e.target.value
+                              )
+                            }
+                            className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                          />
+                        </div>
+
+                        {/* Caption Input */}
+                        <div>
+                          <label
+                            htmlFor={`gallery-caption-slot-${slotNum}`}
+                            className="block font-mono text-[10px] font-semibold uppercase text-[#374151] mb-0.5"
+                          >
+                            Pie de Foto Explicativo (caption)
+                          </label>
+                          <textarea
+                            id={`gallery-caption-slot-${slotNum}`}
+                            name={`galleryCaptionSlot_${slotNum}`}
+                            rows={2}
+                            value={slotItem.caption}
+                            onChange={(e) =>
+                              updateGallerySlotField(
+                                slotNum,
+                                "caption",
+                                e.target.value
+                              )
+                            }
+                            className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded text-xs resize-y ${INPUT_FOCUS_CLASSES}`}
+                          />
+                        </div>
+                      </div>
+
+                      {hasUploadedSrc && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateGallerySlotField(slotNum, "src", "")
+                          }
+                          className={`w-full py-1.5 text-center font-mono text-[11px] text-[#991B1B] hover:bg-[#FEF2F2] rounded border border-transparent hover:border-[#B91C1C] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                        >
+                          Limpiar Imagen VIEW 0{slotNum}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            {/* ============================================================== */}
+            {/* BLOQUE C — NARRATIVA ARQUITECTÓNICA Y DEPLOYMENT LEDGER        */}
+            {/* ============================================================== */}
+            <fieldset className="bg-white border border-[#D1D5DB] rounded-[12px] p-6 sm:p-8 shadow-xs space-y-5">
+              <legend className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] px-2">
+                BLOQUE C // NARRATIVA DEL CASO DE ESTUDIO Y DEPLOYMENT METADATA LEDGER
+              </legend>
+
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                <div className="sm:col-span-8">
+                  <label
+                    htmlFor="project-subtitle-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                  >
+                    Subtítulo Técnico en Vista de Detalle (subtitle) *
+                  </label>
+                  <input
+                    id="project-subtitle-input"
+                    name="subtitle"
+                    type="text"
+                    required
+                    aria-invalid={Boolean(fieldErrors.subtitle)}
+                    value={formState.subtitle}
+                    onChange={(e) => {
+                      clearFieldError("subtitle");
+                      setFormState((prev) => ({
+                        ...prev,
+                        subtitle: e.target.value
+                      }));
+                    }}
+                    onBlur={(e) => validateFieldOnBlur("subtitle", e.target.value)}
+                    placeholder="Plataforma E-Commerce Full-Stack, Cotizador Dinámico & Pipeline Multimedia"
+                    className={`w-full min-h-[48px] px-3 py-2 border border-[#6B7280] rounded-[8px] text-sm ${INPUT_FOCUS_CLASSES}`}
+                  />
+                  {fieldErrors.subtitle && (
+                    <p className="mt-1 text-xs text-[#B91C1C]">
+                      {fieldErrors.subtitle}
+                    </p>
+                  )}
+                </div>
+
+                <div className="sm:col-span-4">
+                  <label
+                    htmlFor="project-status-select"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                  >
+                    Estado Operativo (status)
+                  </label>
+                  <select
+                    id="project-status-select"
+                    name="status"
+                    value={formState.status || "PRODUCTION // ONLINE"}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        status: e.target.value as ProductionSystem["status"]
+                      }))
+                    }
+                    className={`w-full min-h-[48px] px-3 py-2 bg-white border border-[#6B7280] rounded-[8px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                  >
+                    <option value="PRODUCTION // ONLINE">
+                      PRODUCTION // ONLINE
+                    </option>
+                    <option value="PRODUCTION // VERIFIED">
+                      PRODUCTION // VERIFIED
+                    </option>
+                    <option value="ACTIVE // EDGE NODE">
+                      ACTIVE // EDGE NODE
+                    </option>
+                  </select>
+                </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={statusBanner.type === "loading"}
-                className="min-h-[48px] px-6 py-3 bg-[#0A0A0A] hover:bg-[#1F2937] disabled:opacity-60 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider rounded-[10px] transition-colors cursor-pointer"
-              >
-                {statusBanner.type === "loading"
-                  ? "Guardando en PostgreSQL..."
-                  : isEditingExisting
-                    ? "Guardar Cambios y Publicar Proyecto"
-                    : "Crear y Publicar Nuevo Proyecto"}
-              </button>
-            </div>
-          </fieldset>
-        </form>
-      </div>
+              <div>
+                <label
+                  htmlFor="project-narrative-textarea"
+                  className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+                >
+                  Narrativa Arquitectónica Profunda (architecturalNarrative)
+                </label>
+                <textarea
+                  id="project-narrative-textarea"
+                  name="architecturalNarrative"
+                  rows={4}
+                  value={formState.architecturalNarrative}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      architecturalNarrative: e.target.value
+                    }))
+                  }
+                  placeholder="Explica la arquitectura interna, decisiones de diseño y garantías en producción..."
+                  className={`w-full px-3.5 py-2.5 border border-[#6B7280] rounded-[8px] text-sm resize-y ${INPUT_FOCUS_CLASSES}`}
+                />
+              </div>
+
+              {/* Deployment Ledger 4 Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label
+                    htmlFor="ledger-arch-pattern-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
+                  >
+                    ARCHITECTURE PATTERN
+                  </label>
+                  <input
+                    id="ledger-arch-pattern-input"
+                    name="architecturePattern"
+                    type="text"
+                    value={formState.deploymentLedger.architecturePattern}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        deploymentLedger: {
+                          ...prev.deploymentLedger,
+                          architecturePattern: e.target.value
+                        }
+                      }))
+                    }
+                    className={`w-full min-h-[44px] px-3 py-1.5 border border-[#6B7280] rounded-[6px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="ledger-commit-sha-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
+                  >
+                    COMMIT SHA / RELEASE
+                  </label>
+                  <input
+                    id="ledger-commit-sha-input"
+                    name="commitSha"
+                    type="text"
+                    value={formState.deploymentLedger.commitSha}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        deploymentLedger: {
+                          ...prev.deploymentLedger,
+                          commitSha: e.target.value
+                        }
+                      }))
+                    }
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    className={`w-full min-h-[44px] px-3 py-1.5 border border-[#6B7280] rounded-[6px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="ledger-gate-status-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
+                  >
+                    GATE STATUS
+                  </label>
+                  <input
+                    id="ledger-gate-status-input"
+                    name="verificationGate"
+                    type="text"
+                    value={formState.deploymentLedger.verificationGate}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        deploymentLedger: {
+                          ...prev.deploymentLedger,
+                          verificationGate: e.target.value
+                        }
+                      }))
+                    }
+                    className={`w-full min-h-[44px] px-3 py-1.5 border border-[#6B7280] rounded-[6px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="ledger-host-os-input"
+                    className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
+                  >
+                    HOST OS / INFRASTRUCTURE
+                  </label>
+                  <input
+                    id="ledger-host-os-input"
+                    name="hostEnvironment"
+                    type="text"
+                    value={formState.deploymentLedger.hostEnvironment}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        deploymentLedger: {
+                          ...prev.deploymentLedger,
+                          hostEnvironment: e.target.value
+                        }
+                      }))
+                    }
+                    className={`w-full min-h-[44px] px-3 py-1.5 border border-[#6B7280] rounded-[6px] font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            {/* ============================================================== */}
+            {/* BLOQUE D — BLUEPRINT TÉCNICO (PIPELINE, CÓDIGO Y DESAFÍOS)     */}
+            {/* ============================================================== */}
+            <fieldset className="bg-white border border-[#D1D5DB] rounded-[12px] p-6 sm:p-8 shadow-xs space-y-8">
+              <legend className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] px-2">
+                BLOQUE D // BLUEPRINT TÉCNICO (3 ETAPAS DEL PIPELINE, CÓDIGO Y 3 DESAFÍOS)
+              </legend>
+
+              {/* D.1 — 3 Pipeline Stages */}
+              <div className="space-y-4">
+                <h3 className="font-display text-base font-bold text-[#111827]">
+                  1. Etapas del Pipeline de Producción (ETAPA 01, 02 y 03)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {formState.pipelineStages.map((stage, idx) => (
+                    <div
+                      key={stage.stageNumber}
+                      className="p-4 rounded-[8px] border border-[#D1D5DB] bg-[#F8F9FA] space-y-2.5"
+                    >
+                      <span className="font-mono text-xs font-bold text-[#2563EB] block">
+                        {stage.stageNumber}
+                      </span>
+
+                      <div>
+                        <label
+                          htmlFor={`stage-title-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Título de Etapa
+                        </label>
+                        <input
+                          id={`stage-title-${idx}`}
+                          name={`stageTitle_${idx}`}
+                          type="text"
+                          value={stage.title}
+                          onChange={(e) =>
+                            handleUpdatePipelineStage(idx, "title", e.target.value)
+                          }
+                          className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded text-xs font-semibold ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`stage-slo-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Latencia / SLO
+                        </label>
+                        <input
+                          id={`stage-slo-${idx}`}
+                          name={`stageSlo_${idx}`}
+                          type="text"
+                          value={stage.latencyOrSlo}
+                          onChange={(e) =>
+                            handleUpdatePipelineStage(
+                              idx,
+                              "latencyOrSlo",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`stage-desc-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Descripción
+                        </label>
+                        <textarea
+                          id={`stage-desc-${idx}`}
+                          name={`stageDesc_${idx}`}
+                          rows={3}
+                          value={stage.description}
+                          onChange={(e) =>
+                            handleUpdatePipelineStage(
+                              idx,
+                              "description",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded text-xs resize-y ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`stage-invariants-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Invariantes (separadas por coma)
+                        </label>
+                        <input
+                          id={`stage-invariants-${idx}`}
+                          name={`stageInvariants_${idx}`}
+                          type="text"
+                          value={stage.invariants.join(", ")}
+                          onChange={(e) =>
+                            handleUpdatePipelineStage(
+                              idx,
+                              "invariants",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-[11px] ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* D.2 — Code Inspector Tabs */}
+              <div className="space-y-4 pt-2 border-t border-[#E5E7EB]">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-base font-bold text-[#111827]">
+                    2. Pestañas del Inspector Interactivo de Código (codeTabs)
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={handleAddCodeTab}
+                    className={`px-3 py-1.5 bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-[#6B7280] rounded-[6px] font-mono text-xs font-semibold cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                  >
+                    + Añadir Pestaña de Código
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {formState.codeTabs.map((tab, idx) => (
+                    <div
+                      key={`${tab.id}-${idx}`}
+                      className="p-4 rounded-[8px] border border-[#D1D5DB] bg-[#F8F9FA] space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-[#111827]">
+                          PESTAÑA DE CÓDIGO #{idx + 1}
+                        </span>
+                        {formState.codeTabs.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCodeTab(idx)}
+                            className={`font-mono text-xs text-[#991B1B] hover:underline cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                          >
+                            Eliminar pestaña
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label
+                            htmlFor={`codetab-filename-${idx}`}
+                            className="block font-mono text-[10px] uppercase text-[#374151]"
+                          >
+                            Archivo (filename)
+                          </label>
+                          <input
+                            id={`codetab-filename-${idx}`}
+                            name={`codeTabFilename_${idx}`}
+                            type="text"
+                            value={tab.filename}
+                            onChange={(e) =>
+                              handleUpdateCodeTab(idx, "filename", e.target.value)
+                            }
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor={`codetab-layer-${idx}`}
+                            className="block font-mono text-[10px] uppercase text-[#374151]"
+                          >
+                            Capa Arquitectónica (layer)
+                          </label>
+                          <input
+                            id={`codetab-layer-${idx}`}
+                            name={`codeTabLayer_${idx}`}
+                            type="text"
+                            value={tab.layer}
+                            onChange={(e) =>
+                              handleUpdateCodeTab(idx, "layer", e.target.value)
+                            }
+                            className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor={`codetab-lang-${idx}`}
+                            className="block font-mono text-[10px] uppercase text-[#374151]"
+                          >
+                            Lenguaje (language)
+                          </label>
+                          <input
+                            id={`codetab-lang-${idx}`}
+                            name={`codeTabLang_${idx}`}
+                            type="text"
+                            value={tab.language}
+                            onChange={(e) =>
+                              handleUpdateCodeTab(idx, "language", e.target.value)
+                            }
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`codetab-code-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Fragmento de Código Fuente (code)
+                        </label>
+                        <textarea
+                          id={`codetab-code-${idx}`}
+                          name={`codeTabCode_${idx}`}
+                          rows={5}
+                          value={tab.code}
+                          onChange={(e) =>
+                            handleUpdateCodeTab(idx, "code", e.target.value)
+                          }
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          className={`w-full px-3 py-2 bg-[#0A0A0A] text-[#F8F9FA] border border-[#374151] rounded font-mono text-xs leading-relaxed resize-y ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* D.3 — 3 Solved Engineering Challenges */}
+              <div className="space-y-4 pt-2 border-t border-[#E5E7EB]">
+                <h3 className="font-display text-base font-bold text-[#111827]">
+                  3. Desafíos de Ingeniería Resueltos (01, 02 y 03)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {formState.solvedChallenges.map((challenge, idx) => (
+                    <div
+                      key={challenge.number}
+                      className="p-4 rounded-[8px] border border-[#D1D5DB] bg-[#F8F9FA] space-y-2.5"
+                    >
+                      <span className="font-mono text-xs font-bold text-[#2563EB] block">
+                        DESAFÍO #{challenge.number}
+                      </span>
+
+                      <div>
+                        <label
+                          htmlFor={`challenge-title-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Título del Desafío
+                        </label>
+                        <input
+                          id={`challenge-title-${idx}`}
+                          name={`challengeTitle_${idx}`}
+                          type="text"
+                          value={challenge.title}
+                          onChange={(e) =>
+                            handleUpdateSolvedChallenge(
+                              idx,
+                              "title",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded text-xs font-semibold ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`challenge-problem-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Problema (problem)
+                        </label>
+                        <textarea
+                          id={`challenge-problem-${idx}`}
+                          name={`challengeProblem_${idx}`}
+                          rows={2}
+                          value={challenge.problem}
+                          onChange={(e) =>
+                            handleUpdateSolvedChallenge(
+                              idx,
+                              "problem",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded text-xs resize-y ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`challenge-solution-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Solución de Ingeniería (solution)
+                        </label>
+                        <textarea
+                          id={`challenge-solution-${idx}`}
+                          name={`challengeSolution_${idx}`}
+                          rows={2}
+                          value={challenge.solution}
+                          onChange={(e) =>
+                            handleUpdateSolvedChallenge(
+                              idx,
+                              "solution",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded text-xs resize-y ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`challenge-impact-${idx}`}
+                          className="block font-mono text-[10px] uppercase text-[#374151]"
+                        >
+                          Métrica de Impacto (impactMetric)
+                        </label>
+                        <input
+                          id={`challenge-impact-${idx}`}
+                          name={`challengeImpact_${idx}`}
+                          type="text"
+                          value={challenge.impactMetric}
+                          onChange={(e) =>
+                            handleUpdateSolvedChallenge(
+                              idx,
+                              "impactMetric",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-2.5 py-1.5 bg-white border border-[#6B7280] rounded font-mono text-xs ${INPUT_FOCUS_CLASSES}`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Bar */}
+              <div className="pt-4 border-t border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="text-xs text-[#4B5563] font-mono">
+                  Destino:{" "}
+                  <strong className="text-[#111827]">
+                    {sections[formState.catalogSection].heading}
+                  </strong>{" "}
+                  · Ruta: <code>/sistemas/{formState.slug || "nuevo"}</code>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleReturnToListView}
+                    className={`min-h-[48px] px-5 py-3 bg-white hover:bg-[#F3F4F6] text-[#111827] border border-[#6B7280] font-mono text-xs sm:text-sm font-semibold uppercase tracking-wider rounded-[10px] transition-colors cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                  >
+                    Cancelar y Volver
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={statusBanner.type === "loading"}
+                    className={`min-h-[48px] px-6 py-3 bg-[#0A0A0A] hover:bg-[#1F2937] disabled:opacity-60 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider rounded-[10px] transition-colors cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+                  >
+                    {statusBanner.type === "loading"
+                      ? "Guardando en PostgreSQL..."
+                      : isEditingExisting
+                        ? "Guardar Cambios y Publicar Proyecto"
+                        : "Crear y Publicar Nuevo Proyecto"}
+                  </button>
+                </div>
+              </div>
+            </fieldset>
+          </form>
+        </section>
+      )}
     </div>
   );
 }

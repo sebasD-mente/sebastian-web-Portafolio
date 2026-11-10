@@ -295,6 +295,81 @@ export async function deleteCatalogSystemBySlugAsync(
   return asyncRepo.deleteSystemBySlug(slug);
 }
 
+export function upgradeVersionBadgeForProduction(
+  rawBadge: string | undefined
+): string {
+  const trimmed = typeof rawBadge === "string" ? rawBadge.trim() : "";
+  if (!trimmed) {
+    return "v1.0.0 PRODUCTION";
+  }
+  return trimmed.replace(/\b(?:IN\s+BUILD|AI\s+BUILD)\b/gi, "PRODUCTION");
+}
+
+export function buildPromotedToProductionInput(
+  system: ProductionSystem | ProductionSystemUpsertInput
+): ProductionSystemUpsertInput {
+  return {
+    id: system.id,
+    order: system.order,
+    slug: system.slug,
+    title: system.title,
+    subtitle: system.subtitle,
+    catalogSection: "production-systems",
+    category: system.category,
+    categoryLabel: system.categoryLabel,
+    projectHeaderLabel: system.projectHeaderLabel,
+    versionBadge: upgradeVersionBadgeForProduction(system.versionBadge),
+    previewImageSrc: system.previewImageSrc,
+    previewImageAlt: system.previewImageAlt,
+    highlightedStackTag: system.highlightedStackTag,
+    featuredOnHome: true,
+    layoutVariant: system.layoutVariant,
+    status: system.status ?? "PRODUCTION // ONLINE",
+    liveMetricPill: system.liveMetricPill,
+    summary: system.summary,
+    architecturalNarrative: system.architecturalNarrative,
+    stackTags: [...system.stackTags],
+    metrics: system.metrics ? system.metrics.map((m) => ({ ...m })) : undefined,
+    architectureSpecs: system.architectureSpecs.map((s) => ({ ...s })),
+    deploymentLedger: { ...system.deploymentLedger },
+    terminalPreviewLines: system.terminalPreviewLines
+      ? [...system.terminalPreviewLines]
+      : undefined,
+    liveUrl: system.liveUrl,
+    detailHref: system.detailHref ?? `/sistemas/${system.slug}`,
+    galleryImages: normalizeSystemGalleryImages(
+      system.galleryImages,
+      system.title
+    ),
+    pipelineStages: system.pipelineStages.map((st) => ({
+      ...st,
+      invariants: [...st.invariants]
+    })),
+    codeTabs: system.codeTabs.map((t) => ({ ...t })),
+    solvedChallenges: system.solvedChallenges.map((c) => ({ ...c })),
+    ragKnowledgeDocument: system.ragKnowledgeDocument
+  };
+}
+
+export async function promoteCatalogSystemToProductionAsync(
+  slug: string,
+  asyncRepo: AsyncCatalogRepository = defaultPostgresCatalogRepository
+): Promise<ProductionSystem | null> {
+  const normalizedSlug =
+    typeof slug === "string" ? slug.trim().toLowerCase() : "";
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  const existing = await asyncRepo.getSystemBySlug(normalizedSlug);
+  if (!existing) {
+    return null;
+  }
+
+  const promotedInput = buildPromotedToProductionInput(existing);
+  return asyncRepo.upsertSystem(promotedInput);
+}
+
 export function getDefaultCatalogUploadsDir(overrideDir?: string): string {
   if (typeof overrideDir === "string" && overrideDir.trim().length > 0) {
     return overrideDir.trim();
