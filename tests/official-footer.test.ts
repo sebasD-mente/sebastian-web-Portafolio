@@ -53,18 +53,33 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
 
   it("expone OfficialFooterData en getSiteFoundationSnapshot().footer y parametriza las 4 URLs en .env.example y site.config.ts con sanitización de esquema", () => {
     const envExample = readRepoFile(".env.example");
-    expect(envExample).toContain("NEXT_PUBLIC_SOCIAL_LINKEDIN_URL=");
-    expect(envExample).toContain("NEXT_PUBLIC_SOCIAL_FACEBOOK_URL=");
-    expect(envExample).toContain("NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL=");
-    expect(envExample).toContain("NEXT_PUBLIC_SOCIAL_WHATSAPP_URL=");
+    expect(envExample).toContain(
+      'NEXT_PUBLIC_SOCIAL_LINKEDIN_URL="https://www.linkedin.com/in/sebastian-jimenez-dekolabs"'
+    );
+    expect(envExample).toContain(
+      'NEXT_PUBLIC_SOCIAL_FACEBOOK_URL="https://www.facebook.com/sebastian.jimenez.561437"'
+    );
+    expect(envExample).toContain(
+      'NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL="https://www.instagram.com/sebastian.1969c/"'
+    );
+    expect(envExample).toContain(
+      'NEXT_PUBLIC_SOCIAL_WHATSAPP_URL="https://wa.me/50240275763"'
+    );
+
+    expect(DEFAULT_SOCIAL_LINKS_URLS).toEqual({
+      linkedin: "https://www.linkedin.com/in/sebastian-jimenez-dekolabs",
+      facebook: "https://www.facebook.com/sebastian.jimenez.561437",
+      instagram: "https://www.instagram.com/sebastian.1969c/",
+      whatsapp: "https://wa.me/50240275763"
+    });
 
     const snapshot = getSiteFoundationSnapshot();
     expect(snapshot.footer.copyrightYear).toBe(2026);
-    expect(snapshot.footer.authorCredit).toBe("Creado por Sebastian Jimenez 2026");
+    expect(snapshot.footer.authorCredit).toBe("Creado por Sebastián Jiménez");
     expect(snapshot.footer.copyrightNotice).toBe(OFFICIAL_COPYRIGHT_NOTICE);
     expect(snapshot.footer.copyrightNotice).toContain(OFFICIAL_AUTHOR_CREDIT);
-    expect(snapshot.footer.copyrightNotice).toContain(
-      "Creado por Sebastian Jimenez 2026"
+    expect(snapshot.footer.copyrightNotice).toBe(
+      "© 2026 · Creado por Sebastián Jiménez"
     );
 
     expect(snapshot.footer.socialLinks.map((item) => item.id)).toEqual([
@@ -131,8 +146,10 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
     expect(footerHtml).toContain(
       'aria-label="Redes sociales y contacto directo"'
     );
-    expect(footerHtml).toContain("Creado por Sebastian Jimenez 2026");
-    expect(footerHtml).toContain("© 2026 · Creado por Sebastian Jimenez 2026");
+    expect(footerHtml).toContain("Creado por Sebastián Jiménez");
+    expect(footerHtml).toContain("© 2026 · Creado por Sebastián Jiménez");
+    expect(footerHtml).not.toContain("Jimenez 2026");
+    expect(footerHtml).not.toContain("Jiménez 2026");
 
     for (const expected of [
       {
@@ -183,7 +200,8 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
         children: React.createElement("section", null, "Vista de Prueba")
       })
     );
-    expect(fallbackShellHtml).toContain("Creado por Sebastian Jimenez 2026");
+    expect(fallbackShellHtml).toContain("Creado por Sebastián Jiménez");
+    expect(fallbackShellHtml).toContain("© 2026 · Creado por Sebastián Jiménez");
     expect(fallbackShellHtml.match(/<footer\b/g) ?? []).toHaveLength(1);
 
     // 2. Páginas públicas principales del portafolio: /, /proyectos-ia y /sistemas/[slug]
@@ -196,11 +214,19 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
     );
 
     for (const pageHtml of [homeHtml, aiProjectsHtml, detailHtml]) {
-      expect(pageHtml).toContain("Creado por Sebastian Jimenez 2026");
+      expect(pageHtml).toContain("Creado por Sebastián Jiménez");
+      expect(pageHtml).toContain("© 2026 · Creado por Sebastián Jiménez");
       expect(pageHtml).toContain('data-social-platform="linkedin"');
       expect(pageHtml).toContain('data-social-platform="facebook"');
       expect(pageHtml).toContain('data-social-platform="instagram"');
       expect(pageHtml).toContain('data-social-platform="whatsapp"');
+      expect(pageHtml).toContain('href="https://wa.me/50240275763"');
+      expect(pageHtml).toContain(
+        'href="https://www.instagram.com/sebastian.1969c/"'
+      );
+      expect(pageHtml).toContain(
+        'href="https://www.facebook.com/sebastian.jimenez.561437"'
+      );
       expect(pageHtml.match(/<footer\b/g) ?? []).toHaveLength(1);
     }
   });

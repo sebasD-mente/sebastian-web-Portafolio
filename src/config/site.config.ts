@@ -217,13 +217,13 @@ export const SITE_NAVIGATION: NavigationItem[] = [
   {
     id: "stack",
     code: "02",
-    label: "STACK TECNOLOGICO",
+    label: "STACK TECNOLÓGICO",
     href: "/#stack-tecnologico"
   },
   {
     id: "mas-proyectos",
     code: "03",
-    label: "MAS PROYECTOS DE IA",
+    label: "MÁS PROYECTOS DE IA",
     href: "/proyectos-ia"
   }
 ];
@@ -317,15 +317,15 @@ export function getAmbientTelemetryDefaults(): AmbientTelemetryStatus {
 }
 
 export const OFFICIAL_COPYRIGHT_YEAR = 2026;
-export const OFFICIAL_AUTHOR_CREDIT = "Creado por Sebastian Jimenez 2026";
+export const OFFICIAL_AUTHOR_CREDIT = "Creado por Sebastián Jiménez";
 export const OFFICIAL_COPYRIGHT_NOTICE =
-  "© 2026 · Creado por Sebastian Jimenez 2026";
+  "© 2026 · Creado por Sebastián Jiménez";
 
 export const DEFAULT_SOCIAL_LINKS_URLS: Record<SocialPlatformId, string> = {
   linkedin: "https://www.linkedin.com/in/sebastian-jimenez-dekolabs",
-  facebook: "https://www.facebook.com/dekolabs",
-  instagram: "https://www.instagram.com/dekolabs",
-  whatsapp: "https://wa.me/573000000000"
+  facebook: "https://www.facebook.com/sebastian.jimenez.561437",
+  instagram: "https://www.instagram.com/sebastian.1969c/",
+  whatsapp: "https://wa.me/50240275763"
 };
 
 export function resolveSafeSocialUrl(

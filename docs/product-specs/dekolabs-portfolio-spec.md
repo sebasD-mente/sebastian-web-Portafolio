@@ -303,11 +303,50 @@ Se reorganiza la experiencia de `/admin/proyectos` (`src/ui/components/CatalogAd
 
 ### 8.4 Pie de Página Oficial (`OfficialFooter`) con Copyright y Botones de Redes Sociales (`feat-015`)
 - **Componente Global `src/ui/components/OfficialFooter.tsx` integrado en `AppShell.tsx`**:
-  - **Copyright Oficial Exacto**: Incluye de forma visible y literal la leyenda oficial:
-    > **`© 2026 · Creado por Sebastian Jimenez 2026`**
+  - **Copyright Oficial**: Incluye de forma visible la leyenda oficial con ortografía corregida (`feat-017`):
+    > **`© 2026 · Creado por Sebastián Jiménez`**
   - **Sección de Redes Sociales y Contacto Directo**: Botones estilizados bajo estética *Atelier Monolith* con iconografía vectorial SVG accesible (`target="_blank"`, `rel="noopener noreferrer"`) para las 4 plataformas solicitadas:
-    1. **LinkedIn**
-    2. **Facebook**
-    3. **Instagram**
-    4. **WhatsApp**
-  - **Configuración Desacoplada en 6 Capas**: Las URLs de las 4 redes quedan parametrizadas en `src/config/site.config.ts` y `.env.example` (`NEXT_PUBLIC_SOCIAL_LINKEDIN_URL`, `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL`, `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL`, `NEXT_PUBLIC_SOCIAL_WHATSAPP_URL`), fluyendo por `src/repo/site.repo.ts` y `src/service/site.service.ts` hacia `AppShell.tsx` y `OfficialFooter.tsx` para que Sebastián actualice sus enlaces reales en cualquier momento sin tocar componentes visuales.
+    1. **LinkedIn** (`https://www.linkedin.com/in/sebastian-jimenez-dekolabs`)
+    2. **Facebook** (`https://www.facebook.com/sebastian.jimenez.561437`)
+    3. **Instagram** (`https://www.instagram.com/sebastian.1969c/`)
+    4. **WhatsApp** (`https://wa.me/50240275763` — `+502 40275763`)
+  - **Configuración Desacoplada en 6 Capas**: Las URLs de las 4 redes quedan parametrizadas en `src/config/site.config.ts` y `.env.example` (`NEXT_PUBLIC_SOCIAL_LINKEDIN_URL`, `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL`, `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL`, `NEXT_PUBLIC_SOCIAL_WHATSAPP_URL`), fluyendo por `src/repo/site.repo.ts` y `src/service/site.service.ts` hacia `AppShell.tsx` y `OfficialFooter.tsx`.
+
+---
+
+## 9. Pulido Post-Despliegue en Producción v2.4 (`feat-017` a `feat-019`) — Enlaces Reales de Redes, Ortografía, Desduplicación Quirúrgica en Detalle y Sección `#stack-tecnologico` en Construcción
+
+Tras la auditoría en vivo sobre `https://dekolabs.org/`, se declaran **3 tareas secuenciales quirúrgicas (`feat-017 -> feat-018 -> feat-019`)** para ejecución inmediata por cualquier agente bajo el arnés, dejando explícitamente reservado para la siguiente fase de codiseño con Sebastián el **Monitor Real del Servidor (`KERNEL & HOME LAB TELEMETRY`)** y el **`favicon.ico` personalizado**.
+
+### 9.1 Enlaces Reales de Contacto (WhatsApp, Instagram, Facebook), Pulido Ortográfico y Metadatos OpenGraph / Títulos (`feat-017`)
+1. **Enlaces Oficiales Reales por Defecto en `src/config/site.config.ts` (`DEFAULT_SOCIAL_LINKS_URLS`) y `.env.example`**:
+   - **WhatsApp (`+502 40275763`)**: `https://wa.me/50240275763`
+   - **Instagram**: `https://www.instagram.com/sebastian.1969c/`
+   - **Facebook**: `https://www.facebook.com/sebastian.jimenez.561437`
+   - **LinkedIn**: `https://www.linkedin.com/in/sebastian-jimenez-dekolabs`
+2. **Corrección Ortográfica en Navegación y Pie de Página (`src/config/site.config.ts` y `src/ui/components/AppShell.tsx`)**:
+   - En `SITE_NAVIGATION` (`src/config/site.config.ts`) y `renderTwoLineNavLabel` (`src/ui/components/AppShell.tsx`), corregir las tildes de los ítems `02` y `03`:
+     - `"STACK TECNOLÓGICO"` (en dos líneas: `STACK` / `TECNOLÓGICO`)
+     - `"MÁS PROYECTOS DE IA"` (en dos líneas: `MÁS PROYECTOS` / `DE IA`)
+   - En `src/config/site.config.ts`, corregir la leyenda de copyright eliminando la repetición del año `2026` y agregando las tildes en el nombre de Sebastián:
+     - `OFFICIAL_AUTHOR_CREDIT = "Creado por Sebastián Jiménez"`
+     - `OFFICIAL_COPYRIGHT_NOTICE = "© 2026 · Creado por Sebastián Jiménez"`
+3. **Eliminación de Títulos `<title>` Duplicados e Inyección de `og:image` (`src/app/layout.tsx`, `src/app/proyectos-ia/page.tsx`, `src/app/sistemas/[slug]/page.tsx`)**:
+   - Evitar que las subpáginas concatenen manualmente `| Sebastián — dekolabs.org` sobre el `title.template` de `src/app/layout.tsx`:
+     - En `src/app/proyectos-ia/page.tsx`: `title: "Más Proyectos de IA — Google ADK & Sistemas RAG"`
+     - En `src/app/sistemas/[slug]/page.tsx`: `title: deepDive.system.title` (y `"Sistema No Encontrado"` en 404)
+   - Añadir `openGraph.images` y `twitter.images` apuntando a `/assets/deco-vintage-preview.png` en `src/app/layout.tsx` (y a `deepDive.system.previewImageSrc` en `src/app/sistemas/[slug]/page.tsx`) para previsualización social en WhatsApp y LinkedIn.
+
+### 9.2 Corrección Quirúrgica en `/sistemas/[slug]`: Párrafo Inicial Sin Duplicación y Navegación Inferior Sin Autoreferencia (`feat-018`)
+1. **Desduplicación del Resumen Inicial en `deco-vintage-platform` (`src/repo/systems.repo.ts`, `src/service/systems.service.ts`, `src/ui/components/SystemDetailView.tsx`)**:
+   - En `src/repo/systems.repo.ts`, el campo `summary` de `deco-vintage-platform` no debe repetir la primera oración idéntica a `subtitle`, sino iniciar directamente con el cuerpo técnico complementario (*"Diseñada con procesamiento de imágenes en memoria mediante semáforos de concurrencia libvips, persistencia relacional con paginación por cursores, motor autoritativo de cotizaciones a medida e inyección SSR dinámica para indexación social en tiempo real."*).
+   - Además, crear e invocar una función pura `deduplicateSystemSummary(subtitle: string, summary: string): string` en `src/service/systems.service.ts` (y aplicarla en `getProductionSystemDeepDiveBySlug`, `getProductionSystemDeepDiveBySlugAsync` y `SystemDetailView.tsx`) para que, si un registro proveniente de PostgreSQL (`dekolabs-db`) aún conserva el prefijo repetido de `subtitle` dentro de `summary`, se recorte limpiamente en tiempo de lectura sin mostrar dos párrafos idénticos seguidos.
+2. **Ocultación de Tarjetas `SISTEMA ANTERIOR` / `SIGUIENTE SISTEMA` Autoreferenciadas (`src/ui/components/SystemDetailView.tsx`)**:
+   - Cuando el catálogo cuenta con un único sistema (o cuando `previousSystem.slug === system.slug`), `SystemDetailView.tsx` **NO debe renderizar** las dos tarjetas que se apuntan a sí mismas (`← SISTEMA ANTERIOR (01): DECO VINTAGE PLATFORM` y `SIGUIENTE SISTEMA (01) →: DECO VINTAGE PLATFORM`).
+   - En su lugar, cuando `previousSystem.slug === system.slug`, renderiza una banda limpia de retorno y conversión con `← VOLVER A SISTEMAS EN PRODUCCIÓN` (`href="/#proyectos-destacados"`) y `SOLICITAR IMPLEMENTACIÓN SIMILAR →` (`href="/#contacto"`). Si existen 2 o más sistemas distintos en el catálogo (`previousSystem.slug !== system.slug`), se muestran las tarjetas de navegación secuencial.
+
+### 9.3 Sección `#stack-tecnologico` ("En Construcción") en la Página de Inicio (`/`) (`feat-019`)
+1. **Componente `src/ui/components/TechStackSection.tsx` integrado en `src/app/page.tsx`**:
+   - Añadir la sección semántica `<section id="stack-tecnologico" aria-labelledby="tech-stack-heading">` en la página de inicio (`/`) debajo de `ProductionSystemsSection` (`#proyectos-destacados`).
+   - Diseñada bajo estética suiza *Atelier Monolith* con encabezado `02 // ARQUITECTURA & HERRAMIENTAS`, título `STACK TECNOLÓGICO`, badge visible **`SECCIÓN EN CONSTRUCCIÓN`** y tarjeta informativa sobria indicando que el mapa detallado de tecnologías, agentes autónomos (Google ADK, MCP), pipelines RAG (`PostgreSQL + pgvector`) e infraestructura Linux Home Lab se encuentra actualmente en construcción y curaduría técnica.
+   - Garantiza que el botón **`STACK TECNOLÓGICO`** (`href="/#stack-tecnologico"`) de la barra de navegación superior funcione en todas las páginas sin enlaces muertos.

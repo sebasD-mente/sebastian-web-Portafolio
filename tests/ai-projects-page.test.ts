@@ -13,10 +13,12 @@ vi.mock("next/cache", () => ({
 }));
 
 import HomePage, { dynamic as homeDynamic } from "@/app/page";
+import { metadata as rootMetadata } from "@/app/layout";
 import AiProjectsPage, {
   dynamic as aiProjectsDynamic,
   metadata as aiProjectsMetadata
 } from "@/app/proyectos-ia/page";
+import { generateMetadata as generateSystemDetailMetadata } from "@/app/sistemas/[slug]/page";
 import { createPostgresCatalogRepository } from "@/repo/postgres-catalog.repo";
 import { createProductionSystemsRepository } from "@/repo/systems.repo";
 import {
@@ -101,13 +103,13 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
       {
         id: "stack",
         code: "02",
-        label: "STACK TECNOLOGICO",
+        label: "STACK TECNOLÓGICO",
         href: "/#stack-tecnologico"
       },
       {
         id: "mas-proyectos",
         code: "03",
-        label: "MAS PROYECTOS DE IA",
+        label: "MÁS PROYECTOS DE IA",
         href: "/proyectos-ia"
       }
     ]);
@@ -128,6 +130,8 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
     expect(homeShellHtml).toContain('href="/#proyectos-destacados"');
     expect(homeShellHtml).toContain('href="/#stack-tecnologico"');
     expect(homeShellHtml).toContain('href="/#contacto"');
+    expect(homeShellHtml).toContain("TECNOLÓGICO");
+    expect(homeShellHtml).toContain("MÁS PROYECTOS");
     expect(homeShellHtml).not.toContain('aria-current="page"');
 
     const aiShellHtml = renderToStaticMarkup(
@@ -147,8 +151,33 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
 
   it("renderiza la página pública /proyectos-ia con estado vacío sobrio y con tarjetas Atelier Monolith jerarquizadas (h1 -> h2)", async () => {
     expect(aiProjectsDynamic).toBe("force-dynamic");
-    expect(aiProjectsMetadata.title).toContain("Más Proyectos de IA");
+    expect(aiProjectsMetadata.title).toBe(
+      "Más Proyectos de IA — Google ADK & Sistemas RAG"
+    );
+    expect(String(aiProjectsMetadata.title)).not.toContain("dekolabs.org");
     expect(aiProjectsMetadata.alternates?.canonical).toBe("/proyectos-ia");
+
+    // Verificación de metadatos OpenGraph y títulos sin duplicación en layout y /sistemas/[slug]
+    expect(JSON.stringify(rootMetadata.openGraph?.images)).toContain(
+      "/assets/deco-vintage-preview.png"
+    );
+    expect(JSON.stringify(rootMetadata.twitter?.images)).toContain(
+      "/assets/deco-vintage-preview.png"
+    );
+
+    const detailMeta = await generateSystemDetailMetadata({
+      params: Promise.resolve({ slug: "deco-vintage-platform" })
+    });
+    expect(detailMeta.title).toBe("DECO VINTAGE PLATFORM");
+    expect(String(detailMeta.title)).not.toContain("dekolabs.org");
+    expect(JSON.stringify(detailMeta.openGraph?.images)).toContain(
+      "/assets/deco-vintage-preview.png"
+    );
+
+    const notFoundMeta = await generateSystemDetailMetadata({
+      params: Promise.resolve({ slug: "sistema-inexistente" })
+    });
+    expect(notFoundMeta.title).toBe("Sistema No Encontrado");
 
     // 1. Estado inicial sin proyectos de IA publicados en producción -> estado vacío sobrio
     const emptyPageElement = await AiProjectsPage();

@@ -25,12 +25,21 @@ export const metadata: Metadata = {
     url: siteMeta.canonicalUrl,
     siteName: `${siteMeta.name} // ${siteMeta.domain}`,
     title: siteMeta.headlineTitle,
-    description: siteMeta.summary
+    description: siteMeta.summary,
+    images: [
+      {
+        url: "/assets/deco-vintage-preview.png",
+        width: 1200,
+        height: 630,
+        alt: siteMeta.headlineTitle
+      }
+    ]
   },
   twitter: {
     card: "summary_large_image",
     title: siteMeta.headlineTitle,
-    description: siteMeta.summary
+    description: siteMeta.summary,
+    images: ["/assets/deco-vintage-preview.png"]
   },
   robots: {
     index: true,

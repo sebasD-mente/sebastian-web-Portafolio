@@ -44,18 +44,24 @@ function renderTwoLineNavLabel(label: string): React.ReactNode {
       </>
     );
   }
-  if (normalized === "STACK TECNOLOGICO") {
+  if (
+    normalized === "STACK TECNOLÓGICO" ||
+    normalized === "STACK TECNOLOGICO"
+  ) {
     return (
       <>
         <span className="block">STACK</span>
-        <span className="block">TECNOLOGICO</span>
+        <span className="block">TECNOLÓGICO</span>
       </>
     );
   }
-  if (normalized === "MAS PROYECTOS DE IA") {
+  if (
+    normalized === "MÁS PROYECTOS DE IA" ||
+    normalized === "MAS PROYECTOS DE IA"
+  ) {
     return (
       <>
-        <span className="block">MAS PROYECTOS</span>
+        <span className="block">MÁS PROYECTOS</span>
         <span className="block">DE IA</span>
       </>
     );

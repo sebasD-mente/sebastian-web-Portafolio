@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-10 15:18
-**Session ID:** sesion-024 (Implementación y Verificación Completa de `feat-016`: Depuración Pre-Push de Datos de Prueba en el Catálogo Base — Conservando Únicamente Deco Vintage Platform)
-**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-016` en `"done"`, repositorio libre de proyectos ficticios y listo para `git push`)
+**Last Updated:** 2026-11-10 17:12
+**Session ID:** sesion-026 (Implementación y Verificación de `feat-017` al 100/100)
+**Active Feature:** Ninguna (`WIP = 0` tras completar `feat-017`; `feat-018` lista como siguiente tarea secuencial `P0`)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -12,48 +12,46 @@
 
 ### What's Done
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y certificación de **Universal Chameleon Harness v2.1** (`Overall: 100/100`, `0 CRLF`, `0 UTF-8 BOM`).
-- [x] **`feat-001` a `feat-015` completadas y cerradas en `"done"` (`100/100`)**.
-- [x] **`feat-016` completada y verificada en `"done"` (`sesion-024`)**:
-  - **Depuración del Catálogo Semilla (`src/repo/systems.repo.ts`)**: Eliminados por completo los 3 proyectos ficticios de demostración (`sys-02`: `aegis-autonomous-data-fabric`, `sys-03`: `chameleon-agentic-harness`, `sys-04`: `monolith-homelab-cloud-edge`), dejando exclusivamente `sys-01` (`deco-vintage-platform` — **DECO VINTAGE PLATFORM**) como único proyecto real pre-cargado de fábrica.
-  - **Sincronización de Suites de Prueba (`53/53 PASS`)**: Actualizadas `tests/systems.service.test.ts`, `tests/system-detail.test.ts`, `tests/deployment-config.test.ts`, `tests/postgres-catalog-and-gallery.test.ts` y `tests/admin-api-and-uploads.test.ts` para verificar que el catálogo base, el `sitemap.xml` y el panel `/admin/proyectos` contienen de fábrica únicamente el proyecto real `DECO VINTAGE PLATFORM`.
+- [x] **`feat-001` a `feat-016` completadas, cerradas en `"done"` (`100/100`) y publicadas en GitHub (`c1474c4`) y en `https://dekolabs.org/`**.
+- [x] **`feat-017` (`done`, `P0`) — Enlaces Reales de Contacto (WhatsApp +502 40275763, Instagram, Facebook), Corrección Ortográfica (Navegación y Copyright 'Sebastián Jiménez') y Metadatos OpenGraph / Títulos sin Duplicación**:
+  - Actualizados en `src/config/site.config.ts` (`DEFAULT_SOCIAL_LINKS_URLS`) y `.env.example` los enlaces reales de Sebastián: WhatsApp (`https://wa.me/50240275763`), Instagram (`https://www.instagram.com/sebastian.1969c/`), Facebook (`https://www.facebook.com/sebastian.jimenez.561437`) y LinkedIn (`https://www.linkedin.com/in/sebastian-jimenez-dekolabs`).
+  - Corregidas las tildes en `SITE_NAVIGATION` (`src/config/site.config.ts`) y en `renderTwoLineNavLabel` (`src/ui/components/AppShell.tsx`) para mostrar `STACK TECNOLÓGICO` y `MÁS PROYECTOS DE IA`.
+  - Corregidos `OFFICIAL_AUTHOR_CREDIT = "Creado por Sebastián Jiménez"` y `OFFICIAL_COPYRIGHT_NOTICE = "© 2026 · Creado por Sebastián Jiménez"` en `src/config/site.config.ts`.
+  - Eliminada la duplicación del sufijo en `<title>` de `src/app/proyectos-ia/page.tsx` y `src/app/sistemas/[slug]/page.tsx`, e inyectados `openGraph.images` y `twitter.images` en `src/app/layout.tsx` y `src/app/sistemas/[slug]/page.tsx`.
+  - Sincronizadas y verificadas las suites `tests/official-footer.test.ts`, `tests/site.service.test.ts` y `tests/ai-projects-page.test.ts` (`53/53` tests PASS en 13 suites).
 
 ### What's In Progress
-- Ninguna tarea en curso (`WIP = 0`).
+- Ninguna tarea en curso (`WIP = 0` tras cerrar `feat-017`).
 
 ### What's Next
-1. Todas las tareas planificadas (`feat-001` a `feat-015`) están en `"done"` al `100/100`. El repositorio queda listo para publicación en GitHub, ajuste de las URLs reales de redes sociales en `.env` y despliegue `docker compose up -d --build` en el Ubuntu Linux Home Lab (o registro de nuevas tareas secuenciales futuras si Sebastián lo solicita).
+1. **Iniciar `feat-018` (`WIP = 1`)**: Corrección quirúrgica en `/sistemas/[slug]` eliminando la primera oración duplicada entre `subtitle` y `summary` (`deduplicateSystemSummary` en memoria y PostgreSQL) y ocultando los botones `SISTEMA ANTERIOR` / `SIGUIENTE SISTEMA` cuando se apuntan a sí mismos en catálogos de 1 solo sistema.
+2. **Continuar con `feat-019` (`WIP = 1`)**: Creación e integración de `<TechStackSection />` (`id="stack-tecnologico"`) en estado **"EN CONSTRUCCIÓN"** dentro de `src/app/page.tsx`.
+3. **En paralelo (Fase 2 de Codiseño con Sebastián)**: Diseñar el monitor real del servidor Home Lab (`KERNEL & HOME LAB TELEMETRY`) y recibir el `favicon.ico` diseñado por Sebastián.
 
 ## Blockers / Risks
 - Ninguno activo.
 
 ## Decisions Made
-- **Validación de Esquema `http:` / `https:` en `resolveSafeSocialUrl` (`feat-015`)**:
-  - Context: Las URLs de LinkedIn, Facebook, Instagram y WhatsApp provienen de variables de entorno `NEXT_PUBLIC_SOCIAL_*` que se inyectan en atributos `href` de enlaces `<a>` públicos.
+- **Compatibilidad Defensiva en `renderTwoLineNavLabel` (`src/ui/components/AppShell.tsx`)**:
+  - Context: Al actualizar `SITE_NAVIGATION` con tildes (`"STACK TECNOLÓGICO"` y `"MÁS PROYECTOS DE IA"`), `renderTwoLineNavLabel` debía reconocer las etiquetas acentuadas sin romper eventuales llamadas con texto sin tilde.
   - Alternatives considered:
-    1. *Interpolar directamente el string crudo de `process.env` en `href`*: Descartado porque una variable mal configurada o vacía produciría enlaces rotos o permitiría esquemas `javascript:` / `data:`.
-    2. *Validar con `new URL(candidate)` exigiendo protocolo `https:` o `http:` y aplicar fallback seguro a `DEFAULT_SOCIAL_LINKS_URLS`*: Elegida por robustez `Fail-Safe` y cero dependencias adicionales.
-- **Fallback Opcional en `AppShell` vía `getOfficialFooterSnapshot()` + Ancla `#contacto` en `<footer>` (`feat-015`)**:
-  - Context: Los botones `CONTRATAR / HABLEMOS` del Header y `Solicitar Implementación Similar →` de `/sistemas/[slug]` apuntan a `/#contacto`, y existen tests previos que renderizan `<AppShell>` sin pasar `footer`.
-  - Alternatives considered:
-    1. *Hacer `footer` obligatorio en `AppShellProps`*: Descartado porque rompería compatibilidad hacia atrás con renders aislados en suites existentes (`tests/ai-projects-page.test.ts`).
-    2. *Pasar `footer={siteSnapshot.footer}` explícitamente en las páginas públicas y resolver `footer ?? getOfficialFooterSnapshot()` en `AppShell.tsx` (Capa 6 `UI` -> Capa 4 `Service`), asignando `id="contacto"` al `<footer>`*: Elegida porque respeta las 6 capas, conecta de forma natural los CTAs `/#contacto` con los canales directos (LinkedIn/WhatsApp/Instagram/Facebook) y preserva 100% de compatibilidad en pruebas.
+    1. *Aceptar únicamente la variante con tilde en `renderTwoLineNavLabel`*: Descartado por menor resiliencia ante props personalizadas.
+    2. *Soportar tanto las variantes con tilde (`"STACK TECNOLÓGICO"`, `"MÁS PROYECTOS DE IA"`) como sin tilde, renderizando siempre las dos líneas con ortografía correcta (`TECNOLÓGICO` y `MÁS PROYECTOS`)*: Elegida por robustez y limpieza.
 
 ## Files Modified This Session
-- `.env.example` - Añadidas variables `NEXT_PUBLIC_SOCIAL_LINKEDIN_URL`, `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL`, `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL` y `NEXT_PUBLIC_SOCIAL_WHATSAPP_URL`
-- `src/types/portfolio.ts` - Definidos `SocialPlatformId`, `SocialLinkItem`, `OfficialFooterData`, `SocialLinksEnvOverrides` y ampliados `SiteFoundationSnapshot` / `SiteConfigProvider`
-- `src/config/site.config.ts` - Añadidos `OFFICIAL_AUTHOR_CREDIT`, `OFFICIAL_COPYRIGHT_NOTICE`, `DEFAULT_SOCIAL_LINKS_URLS`, `resolveSafeSocialUrl` y `getOfficialFooterConfig`
-- `src/repo/site.repo.ts` - Implementado `getOfficialFooter()` en `createSiteRepository`
-- `src/service/site.service.ts` - Expuestos `footer` en `getSiteFoundationSnapshot()` y helper `getOfficialFooterSnapshot()`
-- `src/ui/components/OfficialFooter.tsx` - Nuevo componente global de pie de página oficial *Atelier Monolith* con 4 redes sociales SVG y copyright 2026
-- `src/ui/components/AppShell.tsx` - Integración global de `OfficialFooter` al cierre del layout con prop opcional `footer`
-- `src/app/page.tsx`, `src/app/proyectos-ia/page.tsx`, `src/app/sistemas/[slug]/page.tsx` - Paso explícito de `footer={siteSnapshot.footer}` a `AppShell`
-- `tests/official-footer.test.ts`, `tests/harness-deprecation-dag.test.ts` - Nueva suite de pruebas unitarias/SSR y actualización de componentes activos (`53/53 PASS`)
-- `feature_list.json`, `sprint-contract.md`, `progress.md`, `session-handoff.md` - Cierre documental del turno
+- `.env.example` - Enlaces oficiales por defecto de WhatsApp, Instagram, Facebook y LinkedIn
+- `src/config/site.config.ts` - `DEFAULT_SOCIAL_LINKS_URLS`, tildes en `SITE_NAVIGATION` y copyright `"© 2026 · Creado por Sebastián Jiménez"`
+- `src/ui/components/AppShell.tsx` - Tildes en `renderTwoLineNavLabel` (`TECNOLÓGICO`, `MÁS PROYECTOS`)
+- `src/app/layout.tsx` - `openGraph.images` y `twitter.images` (`/assets/deco-vintage-preview.png`)
+- `src/app/proyectos-ia/page.tsx` - `<title>` sin duplicar sufijo del template
+- `src/app/sistemas/[slug]/page.tsx` - `<title>` sin duplicar sufijo del template + `openGraph.images` y `twitter.images`
+- `tests/official-footer.test.ts`, `tests/site.service.test.ts`, `tests/ai-projects-page.test.ts` - Aserciones sincronizadas con `feat-017`
+- `feature_list.json`, `sprint-contract.md`, `progress.md`, `session-handoff.md` - Cierre de `feat-017` (`100/100`)
 
 ## Verification Evidence
-- [x] Tests pass: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE - 3 Puertas aditivas superadas, vitest 53/53 PASS en 13 suites incluyendo tests/official-footer.test.ts, next build standalone OK y 0 CRLF)`
+- [x] Full 3-Gate Verification (`init.sh`): `bash ./init.sh` -> `Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 53/53 tests PASS en 13 suites, next build standalone OK)`
 - [x] Architecture & Red-Pen check: `bash scripts/check-architecture.sh` -> `OK: Límites arquitectónicos, invariantes de 6 capas, Auto-Memoria, Seguridad e higiene estructural verificados sin violaciones.`
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `command and output verified: Overall: 100/100 (25/25 checks PASS)`
 
 ## Notes for Next Session
-- Las 15 entregas (`feat-001` a `feat-015`) se encuentran en `"done"` (`WIP = 0`, `100/100`). Si se solicitan mejoras nuevas (p. ej. fase de Agente RAG en vivo sobre `pgvector`), registrarlas primero como `feat-016` en `feature_list.json` respetando `WIP = 1`.
+- Activar **`feat-018`** (`"status": "in-progress"`, `WIP = 1`) y luego **`feat-019`**, manteniendo intactos `HERO_TELEMETRY_CARD` y `favicon.ico`.

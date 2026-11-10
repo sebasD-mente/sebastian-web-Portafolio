@@ -29,15 +29,36 @@ export async function generateMetadata({
 
   if (!deepDive) {
     return {
-      title: "Sistema No Encontrado | Sebastián — dekolabs.org"
+      title: "Sistema No Encontrado"
     };
   }
 
+  const previewImageSrc =
+    deepDive.system.previewImageSrc ?? "/assets/deco-vintage-preview.png";
+  const previewImageAlt =
+    deepDive.system.previewImageAlt ?? deepDive.system.title;
+
   return {
-    title: `${deepDive.system.title} | Sebastián — dekolabs.org`,
+    title: deepDive.system.title,
     description: deepDive.system.summary,
     alternates: {
       canonical: deepDive.system.liveUrl
+    },
+    openGraph: {
+      title: deepDive.system.title,
+      description: deepDive.system.summary,
+      images: [
+        {
+          url: previewImageSrc,
+          alt: previewImageAlt
+        }
+      ]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: deepDive.system.title,
+      description: deepDive.system.summary,
+      images: [previewImageSrc]
     }
   };
 }

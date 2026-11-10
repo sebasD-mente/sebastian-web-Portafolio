@@ -12,7 +12,7 @@ import { AppShell } from "@/ui/components/AppShell";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Más Proyectos de IA — Google ADK & Sistemas RAG | Sebastián J — dekolabs.org",
+  title: "Más Proyectos de IA — Google ADK & Sistemas RAG",
   description:
     "Agentes autónomos con Google ADK, pipelines RAG sobre PostgreSQL + pgvector y sistemas de inteligencia artificial en construcción por Sebastián en dekolabs.org.",
   alternates: {
