@@ -42,6 +42,11 @@
   - Alternatives considered:
     1. *Usar `useRouter().push()`*: Descartado porque exige montar el contexto de App Router en pruebas SSR estáticas y puede requerir `router.refresh()` adicional.
     2. *Usar `window.location.assign("/admin/proyectos")` al autenticar y `window.location.assign("/admin/login")` al cerrar sesión*: Elegida porque garantiza una petición HTTP fresca al Server Component con la cookie `HttpOnly` recién emitida o revocada y mantiene los componentes puros para tests SSR.
+- **Optimización de I/O Local en `next.config.ts` y `package.json` para el Candado `Stop` de 45s (`feat-012`)**:
+  - Context: Al crecer el número de rutas y suites en `feat-012`, `HARNESS_SKIP_INSTALL=1 bash ./init.sh` superaba marginalmente el límite duro de `45000ms` del hook `Stop` en Windows NTFS debido a la copia y borrado inmediato de miles de archivos en `.next/standalone/node_modules` y al tercer chequeo redundante de tipos dentro del worker de `next build`.
+  - Alternatives considered:
+    1. *Desactivar `output: "standalone"` o relajar `tsc --noEmit`*: Descartado por romper invariantes de contenedorización y reglas del arnés.
+    2. *Ejecutar `tsc --noEmit` explícitamente al inicio de `npm run build` antes de `next build --no-lint` (`NEXT_PRE_TYPECHECKED=1`) y aplicar `outputFileTracingExcludes: { "*": ["./node_modules/**"] }` únicamente fuera de Docker (`NEXT_DOCKER_BUILD !== "1"`)*: Elegida porque conserva el `100%` del chequeo estricto de tipos, la generación verificada de `.next/standalone/server.js` y el trazado completo en `Dockerfile` (`ENV NEXT_DOCKER_BUILD=1`), reduciendo `init.sh` de `~45s` a `~25s`.
 
 ## Files Modified This Session
 - `.env.example` - Añadidas variables `ADMIN_USERNAME`, `ADMIN_PASSWORD` y `ADMIN_SESSION_SECRET`

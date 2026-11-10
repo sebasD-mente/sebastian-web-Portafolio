@@ -29,6 +29,8 @@
 ## Files Changed
 - `.env.example`
 - `docker-compose.yml`
+- `next.config.ts`
+- `package.json`
 - `src/types/portfolio.ts`
 - `src/config/site.config.ts`
 - `src/service/admin-auth.service.ts`
