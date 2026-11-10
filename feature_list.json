@@ -590,7 +590,7 @@
       "area": "home-tech-stack-section",
       "user_visible_behavior": "Al hacer clic en 'STACK TECNOLÓGICO' en la barra de navegación superior desde cualquier página, el navegador desplaza suavemente hasta la sección '#stack-tecnologico' en la página principal, mostrando un bloque Atelier Monolith claro y profesional en estado 'EN CONSTRUCCIÓN'.",
       "priority": "P1",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-018"
       ],
@@ -608,6 +608,7 @@
         "npm test",
         "npm run build"
       ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 54/54 tests PASS en 13 suites verificando TechStackSection #stack-tecnologico en HomePage y activeComponents, next build standalone OK en 3.5s).",
       "notes": "REGLAS CRÍTICAS DE FEAT-019: (1) OBLIGATORIO añadir 'TechStackSection.tsx' en orden alfabético dentro del arreglo 'activeComponents' en 'tests/harness-deprecation-dag.test.ts' (junto a 'SystemDetailView.tsx') para que el test de inventario de componentes UI pase al 100%. (2) Respetar las 6 capas: 'TechStackSection.tsx' está en 'src/ui/components/' y no debe importar de 'src/config/' ni 'src/repo/'."
     }
   ]

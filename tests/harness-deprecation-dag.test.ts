@@ -41,6 +41,7 @@ describe('Event-Sourced Pass-State Gating & DAG Deprecation (feat-008)', () => {
       'OfficialFooter.tsx',
       'ProductionSystemsSection.tsx',
       'SystemDetailView.tsx',
+      'TechStackSection.tsx',
     ]);
   });
 

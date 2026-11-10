@@ -43,6 +43,7 @@ import {
   createBlankProjectDraft
 } from "@/ui/components/CatalogAdminView";
 import { ProductionSystemsSection } from "@/ui/components/ProductionSystemsSection";
+import { TechStackSection } from "@/ui/components/TechStackSection";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 
@@ -86,8 +87,21 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
     expect(homeHtml).toContain('id="proyectos-destacados"');
     expect(homeHtml).toContain("SISTEMAS EN PRODUCCIÓN");
     expect(homeHtml).toContain("DECO VINTAGE PLATFORM");
+    expect(homeHtml).toContain('id="stack-tecnologico"');
+    expect(homeHtml).toContain("02 // ARQUITECTURA &amp; HERRAMIENTAS");
+    expect(homeHtml).toContain("STACK TECNOLÓGICO");
+    expect(homeHtml).toContain("SECCIÓN EN CONSTRUCCIÓN");
     expect(homeHtml).not.toContain('id="mas-proyectos-ia"');
     expect(homeHtml).not.toContain("MÁS PROYECTOS DE IA");
+
+    const techStackHtml = renderToStaticMarkup(
+      React.createElement(TechStackSection)
+    );
+    expect(techStackHtml).toContain('id="stack-tecnologico"');
+    expect(techStackHtml).toContain('aria-labelledby="tech-stack-heading"');
+    expect(techStackHtml).toContain("02 // ARQUITECTURA &amp; HERRAMIENTAS");
+    expect(techStackHtml).toContain("STACK TECNOLÓGICO");
+    expect(techStackHtml).toContain("SECCIÓN EN CONSTRUCCIÓN");
   });
 
   it("actualiza la navegación global hacia /proyectos-ia y /#... manteniendo los labels oficiales e indicando aria-current=\"page\"", () => {
@@ -352,6 +366,7 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
       "src/app/proyectos-ia/page.tsx",
       "src/ui/components/AppShell.tsx",
       "src/ui/components/ProductionSystemsSection.tsx",
+      "src/ui/components/TechStackSection.tsx",
       "src/ui/components/AiProjectsCatalogView.tsx"
     ]) {
       const content = readRepoFile(relPath);

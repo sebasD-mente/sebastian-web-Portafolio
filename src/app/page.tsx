@@ -8,6 +8,7 @@ import {
 import { AppShell } from "@/ui/components/AppShell";
 import { HeroSection } from "@/ui/components/HeroSection";
 import { ProductionSystemsSection } from "@/ui/components/ProductionSystemsSection";
+import { TechStackSection } from "@/ui/components/TechStackSection";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,9 @@ export default async function HomePage() {
 
       {/* 2. Catálogo Exclusivo de Sistemas en Producción (#proyectos-destacados) */}
       <ProductionSystemsSection systems={productionSystems} />
+
+      {/* 3. Sección de Stack Tecnológico en Construcción (#stack-tecnologico) */}
+      <TechStackSection />
     </AppShell>
   );
 }
