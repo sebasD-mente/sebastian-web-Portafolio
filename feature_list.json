@@ -352,6 +352,145 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 39/39 tests PASS en 10 suites incluyendo tests/catalog-admin-ui.test.ts, next build standalone OK con ruta /admin/proyectos).",
       "notes": "REGLAS CRÍTICAS DE FEAT-011: (1) 'src/app/admin/proyectos/page.tsx' y 'src/ui/components/CatalogAdminView.tsx' están en la capa UI y solo pueden importar de 'src/service/', 'src/runtime/', 'src/ui/' y 'src/types/' (prohibido importar de 'src/config/' o 'src/repo/'). (2) Garantizar que el formulario permita tanto editar 'DECO VINTAGE PLATFORM' (para que Sebastián le suba sus 3 imágenes de detalle en producción) como crear nuevos proyectos en 'SISTEMAS EN PRODUCCIÓN' o en 'MÁS PROYECTOS DE IA'. (3) Mantener estética suiza limpia Atelier Monolith, sin saturación visual y con feedback claro de subida de cada una de las 4 imágenes (1 de tarjeta + 3 de detalle)."
+    },
+    {
+      "id": "feat-012",
+      "name": "Sistema Profesional de Login (/admin/login) con Sesión Firmada HttpOnly, Límite Anti-Fuerza Bruta y Cierre de Sesión",
+      "description": "Implementar el sistema profesional y seguro de autenticación de administrador único (Sección 8.1 de docs/product-specs/dekolabs-portfolio-spec.md) reemplazando el antiguo campo suelto ADMIN_ACCESS_KEY de la cabecera de '/admin/proyectos' y respetando las 6 capas (Types -> Config -> Repo -> Service -> Runtime -> UI): (1) Declarar en '.env.example', 'docker-compose.yml' y 'src/config/site.config.ts' las variables 'ADMIN_USERNAME', 'ADMIN_PASSWORD' y 'ADMIN_SESSION_SECRET' con política Fail-Closed en producción y cero dependencias npm externas; (2) Implementar en 'src/types/portfolio.ts' y 'src/service/admin-auth.service.ts' la verificación en tiempo constante ('node:crypto' scryptSync / timingSafeEqual), la firma/verificación HMAC-SHA256 de tokens de sesión con expiración ('sub', 'iat', 'exp') y el evaluador de rate-limit por IP contra ataques de fuerza bruta; (3) Crear 'src/runtime/admin-auth.handler.ts' y los Route Handlers 'src/app/api/admin/auth/login/route.ts' y 'src/app/api/admin/auth/logout/route.ts' emitiendo cookie 'dekolabs_admin_session' ('HttpOnly; SameSite=Strict; Path=/; Max-Age=43200' + 'Secure' en producción), '429 Too Many Requests' al exceder intentos fallidos y logs 'RuntimeLogEntry' con 'correlationId' redactando secretos, además de actualizar 'isAdminRequestAuthorized' en 'src/runtime/admin-catalog.handler.ts' para autorizar tanto la cookie firmada válida del navegador como la cabecera 'x-admin-key' / 'Bearer' en pruebas automatizadas de API; (4) Construir la vista profesional '/admin/login' ('src/app/admin/login/page.tsx' y 'src/ui/components/AdminLoginView.tsx' con 'robots: { index: false, follow: false }') bajo diseño suizo Atelier Monolith (logo personal Sebastian J, campos Usuario/Email y Contraseña con Mostrar/Ocultar, feedback de error/bloqueo y redirección a '/admin/proyectos'); (5) Proteger 'src/app/admin/proyectos/page.tsx' en el servidor redirigiendo a '/admin/login' cuando no exista sesión válida y eliminar por completo de 'src/ui/components/CatalogAdminView.tsx' el recuadro de input 'ADMIN_ACCESS_KEY' + 'SINCRONIZAR CATÁLOGO', dejando en su lugar el indicador de sesión activa y el botón 'Cerrar Sesión'; y (6) Actualizar 'docs/design-docs/homelab-deployment.md' y crear la suite 'tests/admin-auth-session.test.ts' (sincronizando 'tests/catalog-admin-ui.test.ts' y 'tests/harness-deprecation-dag.test.ts').",
+      "area": "admin-security-and-auth",
+      "user_visible_behavior": "Al intentar ingresar a '/admin/proyectos' sin haber iniciado sesión, el sistema redirige automáticamente a una pantalla profesional de login en '/admin/login' con Usuario y Contraseña protegida contra fuerza bruta; tras autenticarse con cookie segura HttpOnly, Sebastián accede al administrador sin campos de clave expuestos y cuenta con botón 'Cerrar Sesión'.",
+      "priority": "P0",
+      "status": "not-started",
+      "dependencies": [
+        "feat-011"
+      ],
+      "required_files": [
+        ".env.example",
+        "docker-compose.yml",
+        "src/types/portfolio.ts",
+        "src/config/site.config.ts",
+        "src/service/admin-auth.service.ts",
+        "src/runtime/admin-auth.handler.ts",
+        "src/runtime/admin-catalog.handler.ts",
+        "src/app/api/admin/auth/login/route.ts",
+        "src/app/api/admin/auth/logout/route.ts",
+        "src/app/admin/login/page.tsx",
+        "src/ui/components/AdminLoginView.tsx",
+        "src/app/admin/proyectos/page.tsx",
+        "src/ui/components/CatalogAdminView.tsx",
+        "docs/design-docs/homelab-deployment.md",
+        "tests/admin-auth-session.test.ts",
+        "tests/catalog-admin-ui.test.ts",
+        "tests/harness-deprecation-dag.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "REGLAS CRÍTICAS DE FEAT-012: (1) Cero paquetes externos nuevos en package.json: usar exclusivamente 'node:crypto' nativo de Node 22. (2) Respetar las 6 capas: 'src/app/admin/*' y 'src/ui/components/*' NUNCA deben importar de 'src/config/' ni 'src/repo/'; los route.ts delegan a 'src/runtime/admin-auth.handler.ts'. (3) Mantener compatibilidad en 'isAdminRequestAuthorized' ('src/runtime/admin-catalog.handler.ts') aceptando la cookie firmada 'dekolabs_admin_session' O la cabecera 'x-admin-key'/'Bearer' para que 'tests/admin-api-and-uploads.test.ts' siga pasando intacto al 100%. (4) Añadir 'AdminLoginView.tsx' al listado 'activeComponents' en 'tests/harness-deprecation-dag.test.ts'. (5) Manejar 'cookies()' de 'next/headers' en 'src/app/admin/proyectos/page.tsx' de forma segura tanto en Server Components reales (redirect('/admin/login') sin sesión) como al invocarse en pruebas unitarias Vitest."
+    },
+    {
+      "id": "feat-013",
+      "name": "Reestructuración del Administrador (/admin/proyectos) en 2 Vistas Separadas, Selector <select> de Sección y Evolución de IA a Producción",
+      "description": "Reorganizar la interfaz y flujo de trabajo de '/admin/proyectos' (Sección 8.2 de docs/product-specs/dekolabs-portfolio-spec.md) en 'src/ui/components/CatalogAdminView.tsx' y 'src/service/systems.service.ts': (1) Dividir el panel en 2 vistas independientes ('viewMode: \"list\" | \"form\"', iniciando siempre en '\"list\"'): en la Vista 1 (entrada al administrador) mostrar únicamente las tarjetas de los proyectos ya creados (agrupados en 'PROYECTOS EN PRODUCCIÓN' y 'MÁS PROYECTOS DE IA') junto con UN ÚNICO botón primario '+ Crear Nuevo Proyecto' en el encabezado (eliminando los dos botones redundantes '+ Nuevo en Producción' y '+ Nuevo Proyecto de IA' y evitando abrir el formulario en automático al entrar); (2) Abrir la Vista 2 (el formulario completo de 4 bloques y subida de 4 imágenes) únicamente cuando Sebastián haga clic en '+ Crear Nuevo Proyecto' o en 'Editar' dentro de una tarjeta existente, incluyendo el botón '← Volver a Proyectos Creados' (y 'Cargar Molde Base (Deco Vintage)' dentro de la vista de formulario al crear uno nuevo) y regresando al listado tras guardar; (3) Eliminar por completo de Bloque A las dos cajas grandes de radio 'UBICACIÓN DEL PROYECTO EN LA PÁGINA DE INICIO (CATALOGSECTION) *' (segunda captura de revisión) y colocar en su lugar un selector desplegable '<select name=\"catalogSection\">' limpio para elegir entre 'Proyectos en Producción' ('production-systems') y 'Más Proyectos de IA' ('ai-projects'); (4) Implementar el ciclo de evolución del proyecto permitiendo promover cualquier tarjeta de 'MÁS PROYECTOS DE IA' hacia 'PROYECTOS EN PRODUCCIÓN' tanto con un botón directo 'Evolucionar a Producción' en la tarjeta de la Vista 1 (ejecutando 'PUT /api/admin/systems' con 'catalogSection: \"production-systems\"') como desde el selector '<select>' al editar; y (5) Actualizar 'tests/catalog-admin-ui.test.ts' verificando ambas vistas ('initialViewMode=\"list\"' por defecto sin formulario abierto + 'initialViewMode=\"form\"' con '<select>' y sin cajas radio antiguas) y la lógica de promoción a producción.",
+      "area": "catalog-admin-ux-and-lifecycle",
+      "user_visible_behavior": "Al entrar a '/admin/proyectos', Sebastián ve limpiamente solo las tarjetas de sus proyectos creados y un único botón '+ Crear Nuevo Proyecto'; al pulsarlo (o al editar una tarjeta) se abre la vista independiente del formulario con un selector desplegable limpio de sección (sin las cajas radio antiguas), y desde las tarjetas de 'Más Proyectos de IA' puede evolucionar cualquier proyecto a 'Proyectos en Producción' con un clic.",
+      "priority": "P0",
+      "status": "not-started",
+      "dependencies": [
+        "feat-012"
+      ],
+      "required_files": [
+        "src/service/systems.service.ts",
+        "src/ui/components/CatalogAdminView.tsx",
+        "tests/catalog-admin-ui.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "REGLAS CRÍTICAS DE FEAT-013: (1) En 'CatalogAdminViewProps' soportar 'initialViewMode?: \"list\" | \"form\"' con valor por defecto '\"list\"' para que en producción '/admin/proyectos' abra siempre en la vista limpia de tarjetas, y 'tests/catalog-admin-ui.test.ts' pueda verificar con 'renderToStaticMarkup' tanto la Vista 1 por defecto (confirmando que NO renderiza el formulario ni los 2 botones viejos) como la Vista 2 ('initialViewMode=\"form\"', confirmando los 4 cargadores de imagen y el '<select name=\"catalogSection\">'). (2) Asegurar que el texto y radio buttons antiguos 'UBICACIÓN DEL PROYECTO EN LA PÁGINA DE INICIO' desaparezcan al 100%. (3) Mantener 0 violaciones de las 6 capas."
+    },
+    {
+      "id": "feat-014",
+      "name": "Página de Inicio (/) Exclusiva para Sistemas en Producción y Nueva Página Pública Dedicada /proyectos-ia",
+      "description": "Separar las vistas públicas del catálogo según su etapa de madurez (Sección 8.3 de docs/product-specs/dekolabs-portfolio-spec.md): (1) Retirar por completo de 'src/app/page.tsx' y 'src/ui/components/ProductionSystemsSection.tsx' la sección 'MÁS PROYECTOS DE IA' ('#mas-proyectos-ia'), dejando la página de inicio ('/') exclusivamente con 'HeroSection' y los proyectos de 'SISTEMAS EN PRODUCCIÓN' ('#proyectos-destacados'); (2) Crear la nueva ruta pública dedicada 'src/app/proyectos-ia/page.tsx' ('force-dynamic') y el componente 'src/ui/components/AiProjectsCatalogView.tsx' reutilizando el diseño equilibrado de tarjetas Atelier Monolith para mostrar los proyectos en etapa 'Más Proyectos de IA' ('catalogSection === \"ai-projects\"'), incluyendo estado vacío sobrio cuando no existan proyectos activos en construcción; (3) Actualizar 'SITE_NAVIGATION', 'SITE_IDENTITY' y 'CATALOG_SECTIONS_CONFIG' en 'src/config/site.config.ts' (y 'src/types/portfolio.ts' si requiere ampliar 'anchorId' / 'routeHref') para que el botón 'MAS PROYECTOS DE IA' del Header apunte a '/proyectos-ia' y los enlaces de sección usen '/#proyectos-destacados', '/#stack-tecnologico' y '/#contacto' funcionando desde cualquier ruta; (4) Añadir 'revalidatePath(\"/proyectos-ia\")' en 'src/runtime/admin-catalog.handler.ts' para que crear, editar, borrar o evolucionar un proyecto actualice de inmediato tanto '/' como '/proyectos-ia'; y (5) Crear 'tests/ai-projects-page.test.ts' y sincronizar 'tests/postgres-catalog-and-gallery.test.ts' y 'tests/harness-deprecation-dag.test.ts'.",
+      "area": "public-catalog-curation",
+      "user_visible_behavior": "En la página inicial ('/') de dekolabs.org aparecen únicamente el Hero y 'SISTEMAS EN PRODUCCIÓN' sin la sección de IA inferior; al hacer clic en 'MAS PROYECTOS DE IA' en la barra superior, el visitante accede a la página dedicada '/proyectos-ia', y cuando un proyecto evoluciona a Producción pasa automáticamente de '/proyectos-ia' a la página de inicio ('/').",
+      "priority": "P0",
+      "status": "not-started",
+      "dependencies": [
+        "feat-013"
+      ],
+      "required_files": [
+        "src/types/portfolio.ts",
+        "src/config/site.config.ts",
+        "src/runtime/admin-catalog.handler.ts",
+        "src/app/page.tsx",
+        "src/app/proyectos-ia/page.tsx",
+        "src/ui/components/AppShell.tsx",
+        "src/ui/components/ProductionSystemsSection.tsx",
+        "src/ui/components/AiProjectsCatalogView.tsx",
+        "tests/ai-projects-page.test.ts",
+        "tests/postgres-catalog-and-gallery.test.ts",
+        "tests/harness-deprecation-dag.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "REGLAS CRÍTICAS DE FEAT-014: (1) Verificar en 'tests/ai-projects-page.test.ts' y 'tests/postgres-catalog-and-gallery.test.ts' que 'ProductionSystemsSection.tsx' y el render de '/' NO contengan 'id=\"mas-proyectos-ia\"' ni 'MÁS PROYECTOS DE IA', y que '/proyectos-ia' los renderice correctamente. (2) Conservar intactos los textos de 'label' en 'SITE_NAVIGATION' ('SISTEMAS EN PRODUCCIÓN', 'STACK TECNOLOGICO', 'MAS PROYECTOS DE IA') para mantener compatibilidad con 'tests/site.service.test.ts', cambiando únicamente sus 'href'. (3) Registrar 'AiProjectsCatalogView.tsx' en 'activeComponents' dentro de 'tests/harness-deprecation-dag.test.ts'. (4) No alterar 'src/app/robots.ts' ni 'src/app/sitemap.ts' salvo que se actualice explícitamente 'tests/deployment-config.test.ts'."
+    },
+    {
+      "id": "feat-015",
+      "name": "Pie de Página Oficial (OfficialFooter) con Copyright 'Creado por Sebastian Jimenez 2026' y Botones de Redes Sociales (LinkedIn, Facebook, Instagram, WhatsApp)",
+      "description": "Construir e integrar el pie de página oficial del portafolio (Sección 8.4 de docs/product-specs/dekolabs-portfolio-spec.md) respetando estrictamente las 6 capas (Types -> Config -> Repo -> Service -> Runtime -> UI): (1) Definir en 'src/types/portfolio.ts' los contratos 'SocialPlatformId' ('linkedin' | 'facebook' | 'instagram' | 'whatsapp'), 'SocialLinkItem' y 'OfficialFooterData'; (2) Parametrizar en '.env.example' y 'src/config/site.config.ts' las URLs configurables de las 4 redes ('NEXT_PUBLIC_SOCIAL_LINKEDIN_URL', 'NEXT_PUBLIC_SOCIAL_FACEBOOK_URL', 'NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL', 'NEXT_PUBLIC_SOCIAL_WHATSAPP_URL') junto con el texto oficial de copyright 'Creado por Sebastian Jimenez 2026', exponiéndolos a través de 'src/repo/site.repo.ts' y 'src/service/site.service.ts' ('getSiteFoundationSnapshot().footer'); (3) Implementar el componente visual 'src/ui/components/OfficialFooter.tsx' e integrarlo globalmente al cierre de 'src/ui/components/AppShell.tsx' (pasando 'footer={siteSnapshot.footer}' desde las páginas y manteniendo fallback limpio desde tipos/props opcionales) con estética suiza Atelier Monolith, sección de botones interactivos con íconos vectoriales SVG accesibles para LinkedIn, Facebook, Instagram y WhatsApp ('target=\"_blank\"', 'rel=\"noopener noreferrer\"') y la leyenda oficial visible 'Creado por Sebastian Jimenez 2026'; y (4) Crear la suite 'tests/official-footer.test.ts' y actualizar 'activeComponents' en 'tests/harness-deprecation-dag.test.ts'.",
+      "area": "brand-identity-and-footer",
+      "user_visible_behavior": "Todas las páginas del portafolio exhiben en la parte inferior un pie de página oficial Atelier Monolith con botones directos hacia LinkedIn, Facebook, Instagram y WhatsApp y la leyenda de copyright 'Creado por Sebastian Jimenez 2026'.",
+      "priority": "P1",
+      "status": "not-started",
+      "dependencies": [
+        "feat-014"
+      ],
+      "required_files": [
+        ".env.example",
+        "src/types/portfolio.ts",
+        "src/config/site.config.ts",
+        "src/repo/site.repo.ts",
+        "src/service/site.service.ts",
+        "src/ui/components/OfficialFooter.tsx",
+        "src/ui/components/AppShell.tsx",
+        "src/app/page.tsx",
+        "src/app/proyectos-ia/page.tsx",
+        "src/app/sistemas/[slug]/page.tsx",
+        "tests/official-footer.test.ts",
+        "tests/harness-deprecation-dag.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "",
+      "notes": "REGLAS CRÍTICAS DE FEAT-015: (1) Respetar las 6 capas: 'OfficialFooter.tsx' y 'AppShell.tsx' están en la capa UI y jamás deben importar de 'src/config/' ni 'src/repo/'; reciben 'OfficialFooterData' por props desde 'getSiteFoundationSnapshot()' en 'src/service/site.service.ts' (dejando 'footer?: OfficialFooterData' opcional en 'AppShellProps' con valores seguros por defecto para no romper renders existentes en tests). (2) Garantizar que el texto renderizado contenga literalmente 'Creado por Sebastian Jimenez 2026' y los 4 botones accesibles para LinkedIn, Facebook, Instagram y WhatsApp. (3) Añadir 'OfficialFooter.tsx' a 'activeComponents' en 'tests/harness-deprecation-dag.test.ts'."
     }
   ]
 }

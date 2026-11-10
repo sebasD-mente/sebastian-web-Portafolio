@@ -257,3 +257,57 @@ Siguiendo la recomendación operativa para contenedores Next.js `standalone` con
 - En `docker-compose.yml`, el servicio `dekolabs-db` ejecuta `pgvector/pgvector:pg17` con volumen persistente `dekolabs_pgdata` y red interna hacia `dekolabs-portfolio`.
 - El repositorio en `src/repo/postgres-catalog.repo.ts` implementa el contrato sobre PostgreSQL (`pg.Pool`) creando de forma idempotente las tablas `portfolio_systems` (incluyendo la columna `rag_knowledge_document` preparada para la futura fase de Agente RAG en vivo) y `portfolio_system_gallery`, sembrando automáticamente el Proyecto 01 (`DECO VINTAGE PLATFORM`).
 - Mediante el `Capability Seam` de la Capa 3 (`Repo`), cuando se ejecutan pruebas locales o `bash ./init.sh` en entornos sin contenedor PostgreSQL local activo, el proveedor opera limpiamente contra el respaldo local determinista sin bloquear las 3 puertas ni requerir parches.
+
+---
+
+## 8. Evolución Pre-GitHub v2.3 (`feat-012` a `feat-015`) — Login Profesional Seguro, Administrador en 2 Vistas con Ciclo de Evolución, Página `/proyectos-ia` y Pie de Página Oficial
+
+Por revisión directa y decisiones de diseño de Sebastián previas a la publicación del repositorio en GitHub, se planifican y declaran **4 entregas secuenciales atómicas (`feat-012 -> feat-013 -> feat-014 -> feat-015`)** para profesionalizar el acceso, la ergonomía del administrador, la curaduría de la página principal y el cierre institucional del sitio.
+
+### 8.1 Sistema Profesional y Seguro de Login Único (`feat-012`)
+Se reemplaza el antiguo campo suelto `ADMIN_ACCESS_KEY` de la cabecera de `/admin/proyectos` por un **flujo real de autenticación y sesión de administrador** sin dependencias externas (`node:crypto`):
+- **Credenciales y Secretos en Entorno (`.env` / `.env.example` / `docker-compose.yml`)**:
+  - `ADMIN_USERNAME`: Identificador o correo del administrador único (ej. `admin@dekolabs.org`).
+  - `ADMIN_PASSWORD`: Contraseña privada del administrador, comparada en servidor en tiempo constante (`scryptSync` / `timingSafeEqual`).
+  - `ADMIN_SESSION_SECRET`: Clave criptográfica HMAC-SHA256 de alta entropía para firmar tokens de sesión sin estado (`sub`, `iat`, `exp`).
+- **Pantalla Dedicada `/admin/login` (`src/app/admin/login/page.tsx` y `src/ui/components/AdminLoginView.tsx`)**:
+  - Diseño suizo *Atelier Monolith* (`robots: { index: false, follow: false }`) con logo de firma `Sebastian J`, formulario limpio de `Usuario / Email` + `Contraseña` (con alternador Mostrar/Ocultar), mensajes claros de validación y redirección automática hacia `/admin/proyectos` al iniciar sesión.
+- **Endpoints de Sesión y Seguridad Anti-Fuerza Bruta (`src/service/admin-auth.service.ts` y `src/runtime/admin-auth.handler.ts`)**:
+  - `POST /api/admin/auth/login`: Aplica límite de intentos por IP (`rate-limit`, devolviendo `429 Too Many Requests` tras exceder el umbral en ventana móvil), verifica credenciales bajo política `Fail-Closed`, emite cookie `dekolabs_admin_session` con banderas `HttpOnly; SameSite=Strict; Path=/; Max-Age=43200` (+ `Secure` en `NODE_ENV=production`) y registra `RuntimeLogEntry` con `correlationId` redactando credenciales.
+  - `POST /api/admin/auth/logout`: Revoca/expira inmediatamente la cookie (`Max-Age=0`).
+- **Protección Server-Side de `/admin/proyectos` y Limpieza de Cabecera**:
+  - `src/app/admin/proyectos/page.tsx` valida la cookie firmada en el servidor antes de entregar cualquier HTML del administrador; si no hay sesión válida, redirige de inmediato a `/admin/login`.
+  - Dentro de `CatalogAdminView.tsx` **se elimina por completo** la barra del campo de clave `ADMIN_ACCESS_KEY` y el botón `SINCRONIZAR CATÁLOGO`, dejando un indicador sobrio de sesión activa y el botón **`Cerrar Sesión`**.
+  - `src/runtime/admin-catalog.handler.ts` autoriza peticiones que presenten la cookie firmada válida `dekolabs_admin_session` (flujo navegador) y mantiene compatibilidad con `x-admin-key` / `Bearer` para pruebas automatizadas de API.
+
+### 8.2 División del Administrador en 2 Vistas Separadas, Selector `<select>` y Evolución de Proyectos (`feat-013`)
+Se reorganiza la experiencia de `/admin/proyectos` (`src/ui/components/CatalogAdminView.tsx`) para eliminar la saturación visual de abrir el formulario gigante automáticamente:
+1. **Vista 1 — Entrada al Administrador (Listado de Tarjetas + 1 Solo Botón de Creación)**:
+   - Al entrar a `/admin/proyectos`, Sebastián visualiza **únicamente los proyectos ya creados con sus tarjetas** (agrupados en `PROYECTOS EN PRODUCCIÓN` y `MÁS PROYECTOS DE IA`) y **un único botón principal `+ Crear Nuevo Proyecto`** en la parte superior (eliminando el par confuso de botones `+ Nuevo en Producción` / `+ Nuevo Proyecto de IA`).
+   - Cada tarjeta conserva sus indicadores (`orden`, `slug`, miniatura/estado, `X/3 fotos detalle`) y acciones rápidas (`Editar`, `Ver ↗`, `Eliminar`).
+2. **Vista 2 — Formulario de Creación / Edición (Bajo Demanda)**:
+   - Se abre **exclusivamente** al hacer clic en `+ Crear Nuevo Proyecto` o en `Editar` sobre un proyecto existente.
+   - Incluye en su barra superior el botón **`← Volver a Proyectos Creados`** (y el botón auxiliar `Cargar Molde Base (Deco Vintage)` cuando se crea un proyecto nuevo), regresando a la Vista 1 una vez guardado el proyecto.
+3. **Selector Desplegable `<select>` de Sección y Retiro de las Cajas Radio Antiguas**:
+   - Se **elimina por completo** el bloque de dos cajas grandes de radio (`UBICACIÓN DEL PROYECTO EN LA PÁGINA DE INICIO (CATALOGSECTION) *`).
+   - En su lugar, el formulario incorpora un **selector desplegable `<select>` limpio** (`Sección / Etapa del Proyecto`) con las dos etapas del catálogo: `Más Proyectos de IA` (`"ai-projects"`) y `Proyectos en Producción` (`"production-systems"`).
+4. **Ciclo de Evolución de Proyecto (`Más Proyectos de IA` → `Proyectos en Producción`)**:
+   - Como el ciclo natural de cada desarrollo inicia en `Más Proyectos de IA` y madura hacia `Proyectos en Producción`, cada tarjeta listada bajo `MÁS PROYECTOS DE IA` en la Vista 1 incluye un botón directo **`Evolucionar a Producción ↗`** que promueve el proyecto en un clic hacia `Proyectos en Producción` mediante `PUT /api/admin/systems` (además de poder cambiarse en cualquier momento desde el `<select>` al editar).
+
+### 8.3 Página de Inicio Exclusiva para Producción (`/`) y Página Dedicada `/proyectos-ia` (`feat-014`)
+- **Depuración de la Página Inicial (`/`)**:
+  - En `src/app/page.tsx` y `src/ui/components/ProductionSystemsSection.tsx` **se retira por completo la sección `MÁS PROYECTOS DE IA` (`#mas-proyectos-ia`)**. La página de inicio muestra únicamente el `HeroSection` y la sección **`SISTEMAS EN PRODUCCIÓN`**.
+- **Nueva Ruta Pública `/proyectos-ia` (`src/app/proyectos-ia/page.tsx` y `src/ui/components/AiProjectsCatalogView.tsx`)**:
+  - El enlace **`MAS PROYECTOS DE IA`** del Header superior (`AppShell.tsx` / `site.config.ts`) pasa a dirigir a `/proyectos-ia` (mientras los enlaces de ancla usan `/#proyectos-destacados`, `/#stack-tecnologico` y `/#contacto` para navegar limpiamente desde cualquier ruta).
+  - `/proyectos-ia` exhibe con el mismo diseño de tarjetas *Atelier Monolith* todos los proyectos activos en la etapa `Más Proyectos de IA` (`catalogSection === "ai-projects"`), revalidándose automáticamente cuando un proyecto se crea, edita o evoluciona a Producción.
+
+### 8.4 Pie de Página Oficial (`OfficialFooter`) con Copyright y Botones de Redes Sociales (`feat-015`)
+- **Componente Global `src/ui/components/OfficialFooter.tsx` integrado en `AppShell.tsx`**:
+  - **Copyright Oficial Exacto**: Incluye de forma visible y literal la leyenda oficial:
+    > **`© 2026 · Creado por Sebastian Jimenez 2026`**
+  - **Sección de Redes Sociales y Contacto Directo**: Botones estilizados bajo estética *Atelier Monolith* con iconografía vectorial SVG accesible (`target="_blank"`, `rel="noopener noreferrer"`) para las 4 plataformas solicitadas:
+    1. **LinkedIn**
+    2. **Facebook**
+    3. **Instagram**
+    4. **WhatsApp**
+  - **Configuración Desacoplada en 6 Capas**: Las URLs de las 4 redes quedan parametrizadas en `src/config/site.config.ts` y `.env.example` (`NEXT_PUBLIC_SOCIAL_LINKEDIN_URL`, `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL`, `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL`, `NEXT_PUBLIC_SOCIAL_WHATSAPP_URL`), fluyendo por `src/repo/site.repo.ts` y `src/service/site.service.ts` hacia `AppShell.tsx` y `OfficialFooter.tsx` para que Sebastián actualice sus enlaces reales en cualquier momento sin tocar componentes visuales.

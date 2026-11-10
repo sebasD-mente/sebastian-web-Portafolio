@@ -1,42 +1,47 @@
 # Session Handoff
 
 ## Current Objective
-- **Goal:** Completar `feat-011` (*Panel Visual del Administrador de Proyectos (`/admin/proyectos`) con Subida de 4 Imágenes, Selector de Categoría y Guía de Despliegue Home Lab*) y dejar todas las tareas del portafolio en estado limpio (`100/100`).
-- **Current status:** `clean-state` (`feat-001` a `feat-011` en `"done"`, `WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `39/39` tests unitarios en 10 suites en verde y build `standalone` de Next.js 15 exitoso)
-- **Branch / commit:** `main` (`feat-011` completada)
+- **Goal:** Planificar y declarar formalmente en el arnés los 6 requerimientos pre-GitHub de Sebastián (`feat-012` a `feat-015`) dejando el repositorio en `clean-state` (`WIP = 0`, `100/100`) listo para que las sesiones ejecutoras construyan cada feature en orden secuencial.
+- **Current status:** `clean-state` (`feat-001` a `feat-011` en `"done"`, `feat-012` a `feat-015` declaradas en `"not-started"`, `WIP = 0`; `Overall: 100/100`; `0 CRLF`; `0 UTF-8 BOM`; `39/39` tests unitarios en 10 suites PASS y build `standalone` OK)
+- **Branch / commit:** `main` (planificación v2.3 declarada: `feat-012`..`feat-015`)
 
 ## Completed This Session
-- [x] **`feat-011` implementada y verificada al `100/100`**:
-  - `src/app/admin/proyectos/page.tsx` y `src/ui/components/CatalogAdminView.tsx` implementados con autenticación `ADMIN_ACCESS_KEY`, listado lateral por categoría (`SISTEMAS EN PRODUCCIÓN` y `MÁS PROYECTOS DE IA`), botón **"Cargar Molde Base (Deco Vintage)"**, selector de categoría, subida independiente desde PC de las **4 imágenes** (1 de portada de tarjeta + 3 de detalle `VIEW 01`, `VIEW 02`, `VIEW 03` hacia `/app/data/uploads`) y edición completa del Ledger y Blueprint técnico.
-  - `docs/design-docs/homelab-deployment.md` actualizada con la operación de `dekolabs-db` (`pgvector/pgvector:pg17`), el volumen `/app/data/uploads` bajo `read_only: true`, `ADMIN_ACCESS_KEY` y `/admin/proyectos`.
-  - Nueva suite de pruebas `tests/catalog-admin-ui.test.ts` pasando (`39/39` tests PASS en 10 suites).
+- [x] **Revisión visual y arquitectónica de los 6 puntos y las 2 capturas de Sebastián**, resolviendo las decisiones clave de diseño mediante `ask_question`.
+- [x] **Especificación de Producto (`docs/product-specs/dekolabs-portfolio-spec.md` — Sección 8) y `ARCHITECTURE.md` actualizados**.
+- [x] **Declaración secuencial en el DAG de `feature_list.json` y `sprint-contract.md`**:
+  1. **`feat-012`** (`not-started`, depende de `feat-011`): Login profesional `/admin/login` con Usuario/Contraseña desde `.env`, cookie de sesión firmada `HttpOnly` + `SameSite=Strict`, protección anti-fuerza bruta por IP, botón `Cerrar Sesión` y eliminación de la barra expuesta `ADMIN_ACCESS_KEY` en `/admin/proyectos`.
+  2. **`feat-013`** (`not-started`, depende de `feat-012`): División de `/admin/proyectos` en 2 vistas separadas (Vista 1 solo tarjetas de proyectos creados + botón único `+ Crear Nuevo Proyecto`; Vista 2 formulario al crear/editar), reemplazo de las 2 cajas radio de la captura por un `<select>` limpio y botón rápido `Evolucionar a Producción` en tarjetas de `Más Proyectos de IA`.
+  3. **`feat-014`** (`not-started`, depende de `feat-013`): Retiro total de `MÁS PROYECTOS DE IA` de la página de inicio (`/`) dejando solo `SISTEMAS EN PRODUCCIÓN`, y creación de la página pública dedicada `/proyectos-ia` conectada al menú superior.
+  4. **`feat-015`** (`not-started`, depende de `feat-014`): Pie de página oficial (`OfficialFooter.tsx`) en `AppShell.tsx` con copyright exacto `"Creado por Sebastian Jimenez 2026"` y botones configurables para LinkedIn, Facebook, Instagram y WhatsApp.
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 | :--- | :--- | :--- | :--- |
 | Vigilante Arquitectónico y Higiene (Puerta 1) | `bash scripts/check-architecture.sh` | `PASS (Exit code 0)` | 6 capas en `src/` sin violaciones direccionales, `0 CRLF`, `0 BOM` |
-| Validación de los 5 Subsistemas (Puerta 2) | `node scripts/validate-harness.mjs --min-score 100` | `PASS (100/100)` | `25/25` checks PASS (`feat-001`..`feat-011` en `done`, `WIP = 0`) |
-| Build, Lint, Typecheck y Tests (Puerta 3) | `bash ./init.sh` | `PASS (Exit code 0)` | `tsc --noEmit` OK, `vitest run` (`39/39 PASS` en 10 suites) y `next build` (`standalone` OK con `/admin/proyectos`) |
+| Validación de los 5 Subsistemas (Puerta 2) | `node scripts/validate-harness.mjs --min-score 100` | `PASS (100/100)` | `25/25` checks PASS (`feat-001`..`feat-011` en `done`, `feat-012`..`feat-015` en `not-started`, `WIP = 0`) |
+| Build, Lint, Typecheck y Tests (Puerta 3) | `bash ./init.sh` | `PASS (Exit code 0)` | `tsc --noEmit` OK, `vitest run` (`39/39 PASS` en 10 suites) y `next build` (`standalone` OK) |
 
 ## Files Changed
-- `src/app/admin/proyectos/page.tsx`
-- `src/ui/components/CatalogAdminView.tsx`
-- `docs/design-docs/homelab-deployment.md`
-- `tests/catalog-admin-ui.test.ts`
-- `tests/harness-deprecation-dag.test.ts`
-- `feature_list.json`, `sprint-contract.md`, `progress.md`, `session-handoff.md`
+- `docs/product-specs/dekolabs-portfolio-spec.md`
+- `ARCHITECTURE.md`
+- `feature_list.json`
+- `sprint-contract.md`
+- `progress.md`
+- `session-handoff.md`
 
 ## Decisions Made
-- Resolver los datos iniciales en el Server Component `src/app/admin/proyectos/page.tsx` y mantener `CatalogAdminView.tsx` libre de imports transitivos de servidor (`pg`), operando en el navegador mediante `fetch` contra `/api/admin/systems` y `/api/admin/upload`.
+- Autenticación de administrador único vía `.env` + cookie `HttpOnly` firmada con `node:crypto` + rate-limit por IP en `/admin/login` (conservando soporte de `x-admin-key` en API para suites automatizadas).
+- Separación del catálogo de proyectos de IA en su propia ruta `/proyectos-ia`, manteniendo `/` exclusivamente con `SISTEMAS EN PRODUCCIÓN`.
+- URLs de LinkedIn, Facebook, Instagram y WhatsApp parametrizadas en `site.config.ts` / `.env.example` respetando las 6 capas.
 
 ## Blockers / Risks
 - Ninguno activo.
 
 ## Next Session Startup
 1. Confirmar `pwd` en `sebastian web Portafolio`.
-2. Leer `AGENTS.md`, `harness.config.json`, `progress.md`, `session-handoff.md` y `feature_list.json`.
-3. Ejecutar `bash ./init.sh` para verificar las 3 puertas antes de cualquier nuevo requerimiento.
+2. Leer `AGENTS.md`, `harness.config.json`, `progress.md`, `session-handoff.md`, `sprint-contract.md` y `feature_list.json`.
+3. Ejecutar `bash ./init.sh` para verificar que la línea base está en verde (`100/100`).
 
 ## Recommended Next Step
-- Todas las tareas planificadas (`feat-001` a `feat-011`) están en `"done"`. Desplegar en el Ubuntu Linux Home Lab con `docker compose up -d --build` o definir la siguiente tarea en `feature_list.json` cuando Sebastián lo solicite.
+- Seleccionar únicamente **`feat-012`** en `feature_list.json`, pasarla a `"status": "in-progress"` (`WIP = 1`) e implementar el sistema profesional de login (`/admin/login`), cookie de sesión `HttpOnly` y cierre de sesión.
