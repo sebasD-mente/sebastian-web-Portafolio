@@ -381,6 +381,141 @@ export function buildPromoteToProductionPayload(
   };
 }
 
+export function parseAgentProjectJsonToDraft(
+  rawInput: string,
+  fallbackOrder: string = "02"
+):
+  | { ok: true; draft: ProductionSystemUpsertInput }
+  | { ok: false; error: string } {
+  const trimmed = rawInput.trim();
+  if (!trimmed) {
+    return {
+      ok: false,
+      error: "Pega aquí el bloque JSON generado por el agente antes de importar."
+    };
+  }
+
+  let jsonCandidate = trimmed;
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fencedMatch && typeof fencedMatch[1] === "string") {
+    jsonCandidate = fencedMatch[1].trim();
+  } else if (trimmed.startsWith("```")) {
+    jsonCandidate = trimmed
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+  }
+
+  let parsedUnknown: unknown;
+  try {
+    parsedUnknown = JSON.parse(jsonCandidate);
+  } catch {
+    return {
+      ok: false,
+      error:
+        "El texto pegado no es un JSON válido. Copia el bloque JSON completo entregado por la skill /dekolabs-project-extractor."
+    };
+  }
+
+  if (
+    !parsedUnknown ||
+    typeof parsedUnknown !== "object" ||
+    Array.isArray(parsedUnknown)
+  ) {
+    return {
+      ok: false,
+      error:
+        "El JSON debe ser un objeto con la estructura ProductionSystemUpsertInput."
+    };
+  }
+
+  const record = parsedUnknown as Partial<ProductionSystemUpsertInput> &
+    Record<string, unknown>;
+
+  const rawTitle =
+    typeof record.title === "string" ? record.title.trim() : "";
+  if (!rawTitle) {
+    return {
+      ok: false,
+      error:
+        "El JSON no incluye un campo 'title' válido (obligatorio en Bloque A)."
+    };
+  }
+
+  const rawSummary =
+    typeof record.summary === "string" ? record.summary.trim() : "";
+  if (!rawSummary) {
+    return {
+      ok: false,
+      error:
+        "El JSON no incluye un campo 'summary' válido (obligatorio en Bloque A)."
+    };
+  }
+
+  const rawSlugCandidate =
+    typeof record.slug === "string" && record.slug.trim().length > 0
+      ? record.slug.trim()
+      : rawTitle;
+  const normalizedSlug = slugifyProjectTitle(rawSlugCandidate);
+  if (!normalizedSlug) {
+    return {
+      ok: false,
+      error:
+        "No fue posible derivar un 'slug' URL válido a partir del título o slug del JSON."
+    };
+  }
+
+  const normalizedOrder =
+    typeof record.order === "string" && record.order.trim().length > 0
+      ? record.order.trim()
+      : fallbackOrder.trim() || "02";
+
+  const normalizedCatalogSection: CatalogSectionId =
+    record.catalogSection === "ai-projects" ||
+    record.catalogSection === "production-systems"
+      ? record.catalogSection
+      : "ai-projects";
+
+  const normalizedStackTags = Array.isArray(record.stackTags)
+    ? record.stackTags
+        .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+        .map((t) => t.trim().toUpperCase())
+    : [];
+
+  const normalizedHighlightedTag =
+    typeof record.highlightedStackTag === "string" &&
+    record.highlightedStackTag.trim().length > 0
+      ? record.highlightedStackTag.trim().toUpperCase()
+      : normalizedStackTags[0];
+
+  const baseInput: ProductionSystemUpsertInput = {
+    ...(record as ProductionSystemUpsertInput),
+    id: undefined,
+    order: normalizedOrder,
+    slug: normalizedSlug,
+    title: rawTitle,
+    summary: rawSummary,
+    catalogSection: normalizedCatalogSection,
+    stackTags:
+      normalizedStackTags.length > 0
+        ? normalizedStackTags
+        : ["NEXT.JS 15", "TYPESCRIPT", "POSTGRESQL + PGVECTOR"],
+    highlightedStackTag: normalizedHighlightedTag,
+    detailHref: `/sistemas/${normalizedSlug}`
+  };
+
+  const draft = convertSystemToFormInput(baseInput);
+  return {
+    ok: true,
+    draft: {
+      ...draft,
+      id: undefined,
+      slug: normalizedSlug,
+      detailHref: `/sistemas/${normalizedSlug}`
+    }
+  };
+}
+
 const INPUT_FOCUS_CLASSES =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]";
 
@@ -435,6 +570,12 @@ export function CatalogAdminView({
   }, [viewMode]);
 
   const [newStackTagInput, setNewStackTagInput] = useState<string>("");
+  const [isAgentJsonPanelOpen, setIsAgentJsonPanelOpen] =
+    useState<boolean>(false);
+  const [agentJsonRawInput, setAgentJsonRawInput] = useState<string>("");
+  const [agentJsonImportError, setAgentJsonImportError] = useState<
+    string | null
+  >(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [statusBanner, setStatusBanner] = useState<{
     type: "idle" | "loading" | "success" | "error";
@@ -563,6 +704,36 @@ export function CatalogAdminView({
       type: "success",
       message:
         "Molde base de DECO VINTAGE PLATFORM cargado. Ajusta el título, slug, sección e imágenes antes de guardar."
+    });
+  }
+
+  function handleApplyAgentJsonImport(): void {
+    const nextOrderNum =
+      formState.order?.trim() || String(systems.length + 1).padStart(2, "0");
+    const parsedResult = parseAgentProjectJsonToDraft(
+      agentJsonRawInput,
+      nextOrderNum
+    );
+
+    if (!parsedResult.ok) {
+      setAgentJsonImportError(parsedResult.error);
+      setStatusBanner({
+        type: "error",
+        message: parsedResult.error
+      });
+      return;
+    }
+
+    setFormState((prev) => ({
+      ...parsedResult.draft,
+      id: isEditingExisting ? prev.id : undefined
+    }));
+    setFieldErrors({});
+    setAgentJsonImportError(null);
+    setIsAgentJsonPanelOpen(false);
+    setStatusBanner({
+      type: "success",
+      message: `JSON del agente importado con éxito para '${parsedResult.draft.title}' (/sistemas/${parsedResult.draft.slug}). Los 4 bloques (A, B, C y D) fueron autorrellenados; sube las 4 imágenes y guarda el proyecto.`
     });
   }
 
@@ -1457,10 +1628,108 @@ export function CatalogAdminView({
             <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
+                aria-expanded={isAgentJsonPanelOpen}
+                aria-controls="agent-json-import-panel"
+                onClick={() => {
+                  setIsAgentJsonPanelOpen((prev) => !prev);
+                  setAgentJsonImportError(null);
+                }}
+                className={`min-h-[44px] px-4 py-2 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1D4ED8] border border-[#2563EB] font-mono text-xs font-semibold rounded-[8px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+              >
+                ⚡ Importar JSON del Agente
+              </button>
+              <button
+                type="button"
                 onClick={handleReturnToListView}
                 className={`min-h-[44px] px-4 py-2 bg-[#F8F9FA] hover:bg-[#E5E7EB] text-[#111827] border border-[#6B7280] font-mono text-xs font-semibold rounded-[8px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
               >
                 ← Volver a Proyectos Creados
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="agent-json-import-panel"
+            hidden={!isAgentJsonPanelOpen}
+            aria-label="Importar JSON generado por el Agente"
+            className={`${
+              isAgentJsonPanelOpen ? "block" : "hidden"
+            } mb-6 bg-white border-2 border-[#2563EB] rounded-[12px] p-5 sm:p-6 shadow-xs space-y-4`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E7EB] pb-3">
+              <div>
+                <span className="font-mono text-xs uppercase tracking-[0.14em] text-[#2563EB] font-semibold block">
+                  AUTORRELLENO EN 1 CLIC // SKILL GLOBAL /dekolabs-project-extractor
+                </span>
+                <h3 className="font-display text-base sm:text-lg font-bold text-[#0A0A0A] mt-0.5">
+                  Importar Esquema JSON del Agente (Bloques A, B, C y D)
+                </h3>
+              </div>
+              <span className="font-mono text-[11px] px-2.5 py-1 rounded bg-[#EFF6FF] border border-[#93C5FD] text-[#1E40AF]">
+                ProductionSystemUpsertInput
+              </span>
+            </div>
+
+            <p className="text-xs sm:text-sm text-[#4B5563]">
+              Ejecuta{" "}
+              <code className="font-mono text-xs bg-[#F3F4F6] px-1.5 py-0.5 rounded text-[#111827]">
+                /dekolabs-project-extractor
+              </code>{" "}
+              sobre el repositorio de tu proyecto en Antigravity, copia el
+              bloque JSON final (Parte 2) y pégalo aquí para rellenar
+              automáticamente todos los textos, etiquetas de stack, ledger, 3
+              etapas del pipeline, pestañas de código y 3 desafíos resueltos.
+            </p>
+
+            <div>
+              <label
+                htmlFor="agent-project-json-textarea"
+                className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1.5"
+              >
+                Bloque JSON del Agente (acepta JSON puro o bloque ```json)
+              </label>
+              <textarea
+                id="agent-project-json-textarea"
+                name="agentProjectJsonInput"
+                rows={7}
+                value={agentJsonRawInput}
+                onChange={(e) => {
+                  setAgentJsonRawInput(e.target.value);
+                  if (agentJsonImportError) {
+                    setAgentJsonImportError(null);
+                  }
+                }}
+                placeholder='{"order":"02","slug":"mi-proyecto","title":"MI PROYECTO","summary":"Resumen ejecutivo..."}'
+                className={`w-full px-3.5 py-2.5 bg-[#0A0A0A] text-[#F9FAFB] border border-[#374151] rounded-[8px] font-mono text-xs leading-relaxed ${INPUT_FOCUS_CLASSES}`}
+              />
+            </div>
+
+            {agentJsonImportError && (
+              <p
+                role="alert"
+                className="text-xs font-mono font-semibold text-[#991B1B] bg-[#FEF2F2] border border-[#B91C1C] rounded-[6px] px-3 py-2"
+              >
+                {agentJsonImportError}
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleApplyAgentJsonImport}
+                className={`min-h-[44px] px-5 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-mono text-xs font-semibold uppercase tracking-wider rounded-[8px] transition-colors cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+              >
+                Autorrellenar los 4 Bloques
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAgentJsonPanelOpen(false);
+                  setAgentJsonImportError(null);
+                }}
+                className={`min-h-[44px] px-4 py-2 bg-[#F8F9FA] hover:bg-[#E5E7EB] text-[#111827] border border-[#6B7280] font-mono text-xs font-semibold rounded-[8px] cursor-pointer ${INPUT_FOCUS_CLASSES}`}
+              >
+                Cerrar Panel
               </button>
             </div>
           </div>

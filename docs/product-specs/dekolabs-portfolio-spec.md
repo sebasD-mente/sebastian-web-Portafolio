@@ -372,3 +372,16 @@ Con base en la auditoría de hardware, sensores y cgroups v2 del nodo real **`se
      2. **`HOST RAM USAGE`**: Porcentaje y GiB usados sobre los `14.81 GiB` del host.
      3. **`CONTAINER CGROUP QUOTA`**: Porcentaje y MiB usados sobre el límite duro de `256 MiB` del contenedor.
    - En el navegador, `HeroSection.tsx` realiza polling ligero cada `5000 ms` contra `GET /api/telemetry` (`Cache-Control: no-store`) para refrescar los valores reales en vivo sin recargar la página.
+
+### 9.5 Importación en Un Clic desde la Skill Global `/dekolabs-project-extractor` en `/admin/proyectos` y Botón Discreto de Engranaje hacia `/admin/login` en el Pie de Página (`feat-021`)
+Para conectar la **Skill Global de Antigravity** (`~/.gemini/config/skills/dekolabs-project-extractor/SKILL.md`) con el panel `/admin/proyectos` y facilitar el acceso discreto del administrador desde cualquier página pública, `feat-021` incorpora dos mejoras:
+1. **Función Pura de Normalización y Parseo (`parseAgentProjectJsonToDraft` en `src/ui/components/CatalogAdminView.tsx`)**:
+   - Recibe `rawInput: string` y `fallbackOrder: string = "02"`.
+   - Limpia automáticamente delimitadores Markdown opcionales (````json ... ````) por si el administrador copió el bloque completo desde el chat del agente.
+   - Valida que el JSON sea un objeto válido con `title` y `summary` no vacíos, deriva `slug` con `slugifyProjectTitle` si no viene explícito, y normaliza la estructura completa mediante `convertSystemToFormInput` para garantizar que los **4 bloques (Bloques A, B, C y D)** queden rellenos sin campos huérfanos.
+2. **Botón y Panel/Modal `⚡ Importar JSON del Agente` en la Vista de Formulario (`CatalogAdminView.tsx`)**:
+   - En la barra superior de la Vista 2 (`viewMode === "form"`), muestra el botón **`⚡ Importar JSON del Agente`**.
+   - Al pulsarlo, despliega un cuadro accesible (`id="agent-json-import-panel"`) con un `<textarea id="agent-project-json-textarea">` y el botón **`Autorrellenar los 4 Bloques`** (además de poder abrirse directamente visible o colapsable).
+   - Al confirmar un JSON válido, autorrellena de golpe todos los campos de los Bloques A, B, C y D en `formState`, limpia `fieldErrors` y muestra confirmación en `statusBanner`, dejando al administrador únicamente la tarea de subir las 4 fotos desde su PC y pulsar **Publicar Proyecto**.
+3. **Botón Muy Discreto de Engranaje en `OfficialFooter.tsx` hacia `/admin/login` (Sin Texto Visible ni `title`)**:
+   - En la franja inferior institucional de `src/ui/components/OfficialFooter.tsx` (junto a `{footer.technicalNote}`), añadir un enlace minimalista `<a href="/admin/login" aria-label="Acceso de administrador" data-admin-login-trigger="true">` que contenga **únicamente un ícono vectorial SVG de engranaje pequeño (`w-3.5 h-3.5`)**, con color neutro atenuado (`text-[#9CA3AF] hover:text-[#4B5563] opacity-60 hover:opacity-100`), **sin texto visible y sin atributo `title`**, para que pase desapercibido al público pero permita a Sebastián entrar a `/admin/login` con un clic desde el pie de página.

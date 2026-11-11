@@ -178,13 +178,27 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
       expect(footerHtml).toContain(`<span>${expected.label}</span>`);
     }
 
-    // 4 enlaces externos seguros + 4 íconos vectoriales SVG decorativos ocultos de lectores de pantalla
+    // 4 enlaces externos seguros + 5 íconos vectoriales SVG decorativos ocultos de lectores de pantalla (4 redes + 1 engranaje discreto)
     const blankMatches = footerHtml.match(/target="_blank"/g) ?? [];
     const relMatches = footerHtml.match(/rel="noopener noreferrer"/g) ?? [];
     const svgMatches = footerHtml.match(/<svg[^>]*aria-hidden="true"/g) ?? [];
     expect(blankMatches).toHaveLength(4);
     expect(relMatches).toHaveLength(4);
-    expect(svgMatches).toHaveLength(4);
+    expect(svgMatches).toHaveLength(5);
+
+    // Enlace muy discreto de engranaje hacia /admin/login sin texto visible ni atributo title
+    expect(footerHtml).toContain('href="/admin/login"');
+    expect(footerHtml).toContain('aria-label="Acceso de administrador"');
+    expect(footerHtml).toContain('data-admin-login-trigger="true"');
+    const adminLinkMatch = footerHtml.match(
+      /<a\b[^>]*data-admin-login-trigger="true"[^>]*>([\s\S]*?)<\/a>/
+    );
+    expect(adminLinkMatch).not.toBeNull();
+    expect(adminLinkMatch?.[0]).not.toContain("title=");
+    const innerContentWithoutSvg = (adminLinkMatch?.[1] ?? "")
+      .replace(/<svg[\s\S]*?<\/svg>/g, "")
+      .trim();
+    expect(innerContentWithoutSvg).toBe("");
   });
 
   it("integra OfficialFooter globalmente en AppShell (con prop explícita y fallback seguro) y en las páginas /, /proyectos-ia y /sistemas/[slug]", async () => {

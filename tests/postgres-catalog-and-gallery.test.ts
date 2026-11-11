@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
   createPostgresCatalogRepository,
@@ -9,13 +11,19 @@ import { createProductionSystemsRepository } from "@/repo/systems.repo";
 import {
   deleteCatalogSystemBySlugAsync,
   getCatalogSectionsConfig,
+  getDefaultSystemTemplateInput,
   getNormalizedSystemGallery,
   getProductionSystemDeepDiveBySlugAsync,
+  getProductionSystems,
   getSystemRagDocument,
   listCatalogSystemsAsync,
   splitSystemsByHomeCatalogSection,
   upsertCatalogSystemAsync
 } from "@/service/systems.service";
+import {
+  CatalogAdminView,
+  parseAgentProjectJsonToDraft
+} from "@/ui/components/CatalogAdminView";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 
@@ -250,5 +258,79 @@ describe("feat-009: Cimiento PostgreSQL (pgvector), Volumen /app/data/uploads, 2
     expect(detailViewCode).not.toContain("CONSOLA DE MANDO Y DIAGNÓSTICO EN TIEMPO REAL");
     expect(detailViewCode).not.toContain("Trazabilidad Operativa y Telemetría de Ejecución");
     expect(detailViewCode).not.toContain("Indicadores clave de rendimiento del sistema");
+  });
+
+  it("feat-021: parsea el bloque JSON del agente (parseAgentProjectJsonToDraft) y renderiza '⚡ Importar JSON del Agente' en CatalogAdminView", () => {
+    const emptyRes = parseAgentProjectJsonToDraft("   ");
+    expect(emptyRes.ok).toBe(false);
+
+    const invalidJsonRes = parseAgentProjectJsonToDraft("{ invalid json ");
+    expect(invalidJsonRes.ok).toBe(false);
+
+    const missingTitleRes = parseAgentProjectJsonToDraft(
+      JSON.stringify({ summary: "Solo resumen" })
+    );
+    expect(missingTitleRes.ok).toBe(false);
+
+    const missingSummaryRes = parseAgentProjectJsonToDraft(
+      JSON.stringify({ title: "PROYECTO SIN RESUMEN" })
+    );
+    expect(missingSummaryRes.ok).toBe(false);
+
+    const fencedMarkdownInput = [
+      "Aquí tienes el bloque JSON listo para importar:",
+      "```json",
+      JSON.stringify(
+        {
+          title: "MOTOR RAG DEKOLABS V2",
+          subtitle: "Recuperación Semántica sobre PostgreSQL 17 y pgvector",
+          catalogSection: "ai-projects",
+          categoryLabel: "AGENTIC AI & RAG SYSTEMS",
+          summary:
+            "Sistema de recuperación aumentada con Google ADK, embeddings vectoriales en pgvector y trazabilidad de fuentes.",
+          stackTags: ["google adk", "postgresql 17", "pgvector", "typescript"],
+          highlightedStackTag: "google adk",
+          liveUrl: "https://dekolabs.org/proyectos-ia"
+        },
+        null,
+        2
+      ),
+      "```"
+    ].join("\n");
+
+    const parsedRes = parseAgentProjectJsonToDraft(fencedMarkdownInput, "04");
+    expect(parsedRes.ok).toBe(true);
+    if (parsedRes.ok) {
+      expect(parsedRes.draft.order).toBe("04");
+      expect(parsedRes.draft.slug).toBe("motor-rag-dekolabs-v2");
+      expect(parsedRes.draft.title).toBe("MOTOR RAG DEKOLABS V2");
+      expect(parsedRes.draft.catalogSection).toBe("ai-projects");
+      expect(parsedRes.draft.stackTags).toEqual([
+        "GOOGLE ADK",
+        "POSTGRESQL 17",
+        "PGVECTOR",
+        "TYPESCRIPT"
+      ]);
+      expect(parsedRes.draft.highlightedStackTag).toBe("GOOGLE ADK");
+      expect(parsedRes.draft.galleryImages).toHaveLength(3);
+      expect(parsedRes.draft.architectureSpecs).toHaveLength(2);
+      expect(parsedRes.draft.pipelineStages).toHaveLength(3);
+      expect(parsedRes.draft.codeTabs.length).toBeGreaterThanOrEqual(1);
+      expect(parsedRes.draft.solvedChallenges).toHaveLength(3);
+    }
+
+    const formMarkup = renderToStaticMarkup(
+      React.createElement(CatalogAdminView, {
+        initialSystems: getProductionSystems(),
+        sections: getCatalogSectionsConfig(),
+        defaultTemplate: getDefaultSystemTemplateInput(),
+        initialViewMode: "form"
+      })
+    );
+
+    expect(formMarkup).toContain("⚡ Importar JSON del Agente");
+    expect(formMarkup).toContain('id="agent-json-import-panel"');
+    expect(formMarkup).toContain('id="agent-project-json-textarea"');
+    expect(formMarkup).toContain("Autorrellenar los 4 Bloques");
   });
 });

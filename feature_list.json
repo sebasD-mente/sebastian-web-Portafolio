@@ -641,6 +641,34 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 55/55 tests PASS en 13 suites verificando el monitor en tiempo real HOME-LAB // SERVERDMENTE en HeroSection y /api/telemetry con 8 filas reales, 3 barras de progreso y 0 fugas de DEFAULT THEME o HARNESS SCORE, next build standalone OK en 3.8s).",
       "notes": "REGLAS CRÍTICAS DE FEAT-020: (1) Conservar intacto el contrato de 'getHeroTelemetryCardData()' y 'buildSparklineSvgGeometry()' en 'src/service/systems.service.ts' / 'src/repo/systems.repo.ts' para que 'tests/systems.service.test.ts' siga pasando al 100% sin romper compatibilidad. (2) En 'HeroSectionProps' ('src/ui/components/HeroSection.tsx'), hacer que 'liveMonitor?: ServerdmenteLiveMonitorData' sea opcional y use 'getServerdmenteLiveMonitor()' (desde 'src/service/telemetry.service.ts') como fallback por defecto cuando no se pase por prop, respetando las 6 capas (UI -> Service). (3) Verificar con 'renderToStaticMarkup(HeroSection)' en 'tests/telemetry-and-contact.test.ts' que el HTML del Hero contiene 'HOME-LAB // SERVERDMENTE', 'HOST &amp; KERNEL', 'CPU &amp; LOAD', 'THERMAL SENSORS', 'HOST MEMORY', 'CONTAINER CGROUP', 'STORAGE (NVME)', 'DATA &amp; EDGE MESH' y 'HOST UPTIME', y que NO contiene 'DEFAULT THEME' ni 'HARNESS SCORE'."
+    },
+    {
+      "id": "feat-021",
+      "name": "Botón '⚡ Importar JSON del Agente' en /admin/proyectos (Autorrelleno en 1 Clic) y Botón Discreto de Engranaje hacia /admin/login en el Pie de Página",
+      "description": "Implementar en 'src/ui/components/CatalogAdminView.tsx' el importador en un clic para el JSON generado por la Skill Global '/dekolabs-project-extractor' y añadir en 'src/ui/components/OfficialFooter.tsx' el acceso discreto de engranaje hacia '/admin/login' (Sección 9.5 de docs/product-specs/dekolabs-portfolio-spec.md): (1) Exportar en 'src/ui/components/CatalogAdminView.tsx' la función pura 'parseAgentProjectJsonToDraft(rawInput: string, fallbackOrder?: string): { ok: true; draft: ProductionSystemUpsertInput } | { ok: false; error: string }' que limpie delimitadores Markdown opcionales ('```json ... ```'), parsee el JSON, valide que sea un objeto con 'title' y 'summary' no vacíos, normalice el 'slug' con 'slugifyProjectTitle' y devuelva un 'ProductionSystemUpsertInput' completo mediante 'convertSystemToFormInput' con los 4 bloques (Bloques A, B, C y D: 'catalogSection', 'stackTags', 'highlightedStackTag', 'architectureSpecs', 'deploymentLedger', 'galleryImages', 'pipelineStages', 'codeTabs' y 'solvedChallenges'); (2) Añadir en la barra de acciones del modo formulario ('viewMode === \"form\"') de 'CatalogAdminView.tsx' el botón '⚡ Importar JSON del Agente' que abre/cierra un panel accesible ('id=\"agent-json-import-panel\"') con un '<textarea id=\"agent-project-json-textarea\">', validación de errores en español y el botón 'Autorrellenar los 4 Bloques' que inyecta el borrador completo en 'formState', limpia 'fieldErrors' y notifica en 'statusBanner'; (3) Añadir en la franja inferior institucional de 'src/ui/components/OfficialFooter.tsx' (al lado de '{footer.technicalNote}') un enlace muy discreto '<a href=\"/admin/login\" aria-label=\"Acceso de administrador\" data-admin-login-trigger=\"true\">' que contenga exclusivamente un ícono SVG de engranaje pequeño ('w-3.5 h-3.5', 'aria-hidden=\"true\"'), sin texto visible y sin atributo 'title'; y (4) Ampliar 'tests/postgres-catalog-and-gallery.test.ts' (verificando 'parseAgentProjectJsonToDraft' y el botón '⚡ Importar JSON del Agente' en 'CatalogAdminView') y actualizar 'tests/official-footer.test.ts' (verificando el enlace discreto 'href=\"/admin/login\"' sin texto visible ni 'title' y ajustando el conteo de '<svg aria-hidden=\"true\"' de 4 a 5).",
+      "area": "admin-agent-json-importer-and-footer-gear",
+      "user_visible_behavior": "En el pie de página de todo el sitio aparece un pequeño y muy discreto engranaje (sin título ni texto) que lleva directo a '/admin/login', y dentro de '/admin/proyectos' el administrador cuenta con el botón '⚡ Importar JSON del Agente' para pegar el JSON de la Skill Global y autorrellenar los 4 bloques del formulario en un clic.",
+      "priority": "P1",
+      "status": "done",
+      "dependencies": [
+        "feat-020"
+      ],
+      "required_files": [
+        "src/ui/components/CatalogAdminView.tsx",
+        "src/ui/components/OfficialFooter.tsx",
+        "tests/postgres-catalog-and-gallery.test.ts",
+        "tests/official-footer.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 56/56 tests PASS en 13 suites verificando parseAgentProjectJsonToDraft, botón '⚡ Importar JSON del Agente' en CatalogAdminView y enlace discreto de engranaje href='/admin/login' sin texto visible ni title en OfficialFooter, next build standalone OK).",
+      "notes": "REGLAS CRÍTICAS DE FEAT-021: (1) Respetar las 6 capas: 'CatalogAdminView.tsx' y 'OfficialFooter.tsx' están en 'src/ui/components/' y solo deben importar tipos de '@/types/portfolio'. (2) El botón de engranaje en 'OfficialFooter.tsx' debe apuntar a 'href=\"/admin/login\"', llevar 'aria-label=\"Acceso de administrador\"' y 'data-admin-login-trigger=\"true\"', NO tener atributo 'title' y NO tener ningún texto visible dentro del '<a>' (solo el '<svg aria-hidden=\"true\" ...>'). (3) OBLIGATORIO actualizar en 'tests/official-footer.test.ts' la línea 'expect(svgMatches).toHaveLength(4)' a 'expect(svgMatches).toHaveLength(5)' (4 íconos sociales + 1 ícono de engranaje) y verificar que existe 'href=\"/admin/login\"'."
     }
   ]
 }
