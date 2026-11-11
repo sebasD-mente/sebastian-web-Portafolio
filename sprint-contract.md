@@ -4,46 +4,39 @@ Este documento materializa la **Observabilidad de Proceso (Antes de Codificar)**
 
 ---
 
-## Estado Actual del Contrato (`WIP = 0` — `feat-022` Declarada y Lista para Ejecución)
-- **Última tarea completada (`done`):** `feat-021` (*Botón `'⚡ Importar JSON del Agente'` en `/admin/proyectos` (Autorrelleno en 1 Clic) y Botón Discreto de Engranaje hacia `/admin/login` en el Pie de Página*).
-- **Siguiente tarea planificada (`not-started`):** `feat-022` (*Pipeline de Optimización Automática de Imágenes a WebP (`<= 1920x1200 px`, Calidad `0.86`) en `/admin/proyectos` y Bloqueo de URLs Placeholder Heredadas en `.env`*).
-- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; el agente ejecutor debe pasar `feat-022` a `in-progress` al iniciar su turno).
-- **Hoja de ruta secuencial declarada en el DAG (`feat-021 -> feat-022`):**
-  1. **`feat-021`** (`done`, depende de `feat-020`): *Botón `'⚡ Importar JSON del Agente'` en `/admin/proyectos` (Autorrelleno en 1 Clic) y Botón Discreto de Engranaje hacia `/admin/login` en el Pie de Página*.
-  2. **`feat-022`** (`not-started`, depende de `feat-021`): *Pipeline de Optimización Automática de Imágenes a WebP (`<= 1920x1200 px`, Calidad `0.86`) en `/admin/proyectos` y Bloqueo de URLs Placeholder Heredadas en `.env`*.
-- **Especificación maestra de referencia:** `docs/product-specs/dekolabs-portfolio-spec.md` (Sección 9.6) y `ARCHITECTURE.md`.
-
-## Justificación de Dependencias en `package.json` (Regla Dura #4 de `ARCHITECTURE.md`)
-- **Runtime (`dependencies`) — Sin dependencias nuevas requeridas para `feat-022`**:
-  - `next` (`^15.2.0`), `react` (`^19.0.0`), `react-dom` (`^19.0.0`), `pg` (`^8.23.1`).
+## Estado Actual del Contrato (`WIP = 0` — `feat-023` Completada y Verificada en `done`)
+- **Última tarea completada (`done`):** `feat-023` (*Fuente Única de Verdad para Redes Sociales en `src/config/site.config.ts` (Sin Variables `NEXT_PUBLIC_SOCIAL_*` en `.env`) y Perfil Oficial de LinkedIn (`sebastian-jimenez-aibuilder`)*).
+- **Tarea activa (`in-progress`):** Ninguna (`WIP = 0`; `feat-001` a `feat-023` en `"done"`).
+- **Hoja de ruta secuencial declarada en el DAG (`feat-022 -> feat-023`):**
+  1. **`feat-022`** (`done`, depende de `feat-021`): *Pipeline de Optimización Automática de Imágenes a WebP (`<= 1920x1200 px`, Calidad `0.86`) antes de Subir en `/admin/proyectos`*.
+  2. **`feat-023`** (`done`, depende de `feat-022`): *Fuente Única de Verdad para Redes Sociales en `src/config/site.config.ts` (Sin Variables `NEXT_PUBLIC_SOCIAL_*` en `.env`) y Perfil Oficial de LinkedIn (`sebastian-jimenez-aibuilder`)*.
+- **Especificación maestra de referencia:** `docs/product-specs/dekolabs-portfolio-spec.md` (Sección 9.7) y `ARCHITECTURE.md`.
 
 ---
 
-## Alcance Incluido (`Fair game`) para `feat-022`
+## Alcance Incluido (`Fair game`) para `feat-023`
 
-### `feat-022`: Pipeline de Optimización Automática de Imágenes a WebP (`<= 1920x1200 px`, Calidad `0.86`) + Bloqueo de URLs Placeholder Antiguas en `.env`
-1. **Funciones Puras de Dimensionamiento y Formato (`src/ui/components/CatalogAdminView.tsx`)**:
-   - Exportar `MAX_OPTIMIZED_IMAGE_WIDTH = 1920`, `MAX_OPTIMIZED_IMAGE_HEIGHT = 1200` y `WEBP_COMPRESSION_QUALITY = 0.86`.
-   - Exportar `computeOptimizedImageDimensions(width: number, height: number, maxWidth = 1920, maxHeight = 1200): { width: number; height: number; wasResized: boolean }`.
-   - Exportar `replaceFileExtensionWithWebp(filename: string): string` y `formatOptimizationSummary(originalBytes: number, optimizedBytes: number, width: number, height: number): string`.
-2. **Compresor WebP en el Navegador (`optimizeImageFileForUpload` en `src/ui/components/CatalogAdminView.tsx`)**:
-   - Exportar `optimizeImageFileForUpload(file: File): Promise<{ file: File; originalBytes: number; optimizedBytes: number; width: number; height: number; optimizationSummary: string }>`.
-   - Integrar `optimizeImageFileForUpload(file)` al inicio de `uploadImageFileToServer(file)` antes de enviar el `FormData` a `/api/admin/upload`.
-   - Ampliar `UploadSlotStatus` con `optimizationSummary?: string | null` y mostrar en las 4 ranuras (Portada + `VIEW 01..03`) la guía **`1920×1200 px (16:10) · Auto-WebP 86%`** y el resumen del ahorro logrado.
-3. **Bloqueo de URLs Placeholder Antiguas del `.env` en `src/config/site.config.ts`**:
-   - Exportar `LEGACY_PLACEHOLDER_SOCIAL_URLS` (`https://www.facebook.com/dekolabs`, `https://www.instagram.com/dekolabs`, `https://wa.me/573000000000`, ignorando mayúsculas y slash final).
-   - En `resolveSafeSocialUrl(rawValue, fallbackUrl)`, si `rawValue` coincide con cualquiera de los placeholders antiguos en `LEGACY_PLACEHOLDER_SOCIAL_URLS`, descartarlo y devolver `fallbackUrl` (`DEFAULT_SOCIAL_LINKS_URLS`: WhatsApp `https://wa.me/50240275763`, Instagram `https://www.instagram.com/sebastian.1969c/`, Facebook `https://www.facebook.com/sebastian.jimenez.561437`).
-4. **Pruebas Unitarias (`tests/catalog-admin-ui.test.ts` y `tests/official-footer.test.ts`)**:
-   - En `tests/catalog-admin-ui.test.ts`: verificar `computeOptimizedImageDimensions`, `replaceFileExtensionWithWebp`, `formatOptimizationSummary`, `optimizeImageFileForUpload` y la guía `1920×1200 px (16:10) · Auto-WebP 86%`.
-   - En `tests/official-footer.test.ts`: verificar que si `process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL = "https://www.facebook.com/dekolabs"`, `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL = "https://www.instagram.com/dekolabs"` y `NEXT_PUBLIC_SOCIAL_WHATSAPP_URL = "https://wa.me/573000000000"`, `getOfficialFooterSnapshot()` los ignora y retorna las URLs reales de Sebastián.
+### `feat-023`: Fuente Única de Verdad para Redes Sociales en `src/config/site.config.ts` y Perfil Oficial de LinkedIn
+1. **Actualización de `DEFAULT_SOCIAL_LINKS_URLS` en `src/config/site.config.ts`**:
+   - Actualizar `linkedin` a `"https://www.linkedin.com/in/sebastian-jimenez-aibuilder/"`.
+   - Conservar `facebook` (`"https://www.facebook.com/sebastian.jimenez.561437"`), `instagram` (`"https://www.instagram.com/sebastian.1969c/"`) y `whatsapp` (`"https://wa.me/50240275763"`).
+2. **Retiro de `process.env.NEXT_PUBLIC_SOCIAL_*` en `getOfficialFooterConfig` (`src/config/site.config.ts`)**:
+   - En `getOfficialFooterConfig(overrides?: SocialLinksEnvOverrides)`, resolver cada URL únicamente con `overrides?.<platform>Url` (si se pasa por parámetro) o con `DEFAULT_SOCIAL_LINKS_URLS.<platform>`, sin consultar `process.env.NEXT_PUBLIC_SOCIAL_*`.
+3. **Limpieza de `.env.example` (Conservando Intactas Todas las Llaves y Secretos)**:
+   - Eliminar de `.env.example` únicamente las 4 variables `NEXT_PUBLIC_SOCIAL_*`.
+   - Mantener 100% intactas `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `ADMIN_ACCESS_KEY`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`, `CATALOG_UPLOADS_DIR` y `HOMELAB_*`.
+4. **Pruebas Unitarias (`tests/official-footer.test.ts`)**:
+   - Actualizar las aserciones de `DEFAULT_SOCIAL_LINKS_URLS.linkedin` a `"https://www.linkedin.com/in/sebastian-jimenez-aibuilder/"`.
+   - Verificar que `.env.example` NO contiene `NEXT_PUBLIC_SOCIAL_` pero sí conserva `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `ADMIN_ACCESS_KEY` y `DATABASE_URL`.
+   - Verificar que aunque `process.env.NEXT_PUBLIC_SOCIAL_*` tenga valores antiguos en el entorno, `getOfficialFooterSnapshot()` los ignora por completo y devuelve `DEFAULT_SOCIAL_LINKS_URLS`.
 
 ---
 
 ## Exclusiones Explícitas (Qué NO se va a tocar bajo ninguna circunstancia)
-- **Prohibido renombrar o borrar `/assets/deco-vintage-preview.png`**.
-- **Prohibido modificar el historial cerrado** de `feat-001` a `feat-021` en `feature_list.json`.
-- **Prohibido violar las 6 capas**: `CatalogAdminView.tsx` pertenece a `src/ui/components/` y no puede importar desde `src/config/` ni `src/repo/`.
+- **Prohibido tocar o alterar cualquier variable de entorno de llaves, contraseñas, sesiones o base de datos** (`ADMIN_*`, `POSTGRES_*`, `DATABASE_URL`, `CATALOG_UPLOADS_DIR`, `HOMELAB_*`).
+- **Prohibido modificar el historial cerrado** de `feat-001` a `feat-022` en `feature_list.json`.
+- **Prohibido violar las 6 capas**.
 
 ## Estándares de Verificación ("Hecho" significa exactamente esto)
-1. Ejecutar estrictamente una sola tarea a la vez (`WIP = 1`) pasando `feat-022` a `in-progress` al iniciar.
+1. Ejecutar estrictamente una sola tarea a la vez (`WIP = 1`) pasando `feat-023` a `in-progress` al iniciar.
 2. `bash ./init.sh`, `bash scripts/check-architecture.sh` y `node scripts/validate-harness.mjs --min-score 100` devuelven código `0` y `Overall: 100/100` (`0 CRLF`, `0 UTF-8 BOM`).

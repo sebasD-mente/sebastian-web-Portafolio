@@ -51,23 +51,23 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
     }
   });
 
-  it("expone OfficialFooterData en getSiteFoundationSnapshot().footer y parametriza las 4 URLs en .env.example y site.config.ts con sanitización de esquema", () => {
+  it("expone OfficialFooterData en getSiteFoundationSnapshot().footer usando site.config.ts como fuente única de verdad de redes sociales (sin variables NEXT_PUBLIC_SOCIAL_* en .env.example) y con sanitización de esquema", () => {
     const envExample = readRepoFile(".env.example");
-    expect(envExample).toContain(
-      'NEXT_PUBLIC_SOCIAL_LINKEDIN_URL="https://www.linkedin.com/in/sebastian-jimenez-dekolabs"'
-    );
-    expect(envExample).toContain(
-      'NEXT_PUBLIC_SOCIAL_FACEBOOK_URL="https://www.facebook.com/sebastian.jimenez.561437"'
-    );
-    expect(envExample).toContain(
-      'NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL="https://www.instagram.com/sebastian.1969c/"'
-    );
-    expect(envExample).toContain(
-      'NEXT_PUBLIC_SOCIAL_WHATSAPP_URL="https://wa.me/50240275763"'
-    );
+    // .env.example ya no incluye variables NEXT_PUBLIC_SOCIAL_*
+    expect(envExample).not.toContain("NEXT_PUBLIC_SOCIAL_");
+    // Todas las variables de claves, sesión y base de datos permanecen intactas
+    expect(envExample).toContain("ADMIN_USERNAME=");
+    expect(envExample).toContain("ADMIN_PASSWORD=");
+    expect(envExample).toContain("ADMIN_SESSION_SECRET=");
+    expect(envExample).toContain("ADMIN_ACCESS_KEY=");
+    expect(envExample).toContain("POSTGRES_USER=");
+    expect(envExample).toContain("POSTGRES_PASSWORD=");
+    expect(envExample).toContain("POSTGRES_DB=");
+    expect(envExample).toContain("DATABASE_URL=");
+    expect(envExample).toContain("CATALOG_UPLOADS_DIR=");
 
     expect(DEFAULT_SOCIAL_LINKS_URLS).toEqual({
-      linkedin: "https://www.linkedin.com/in/sebastian-jimenez-dekolabs",
+      linkedin: "https://www.linkedin.com/in/sebastian-jimenez-aibuilder/",
       facebook: "https://www.facebook.com/sebastian.jimenez.561437",
       instagram: "https://www.instagram.com/sebastian.1969c/",
       whatsapp: "https://wa.me/50240275763"
@@ -95,21 +95,22 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
       "WhatsApp"
     ]);
 
-    // Parametrización por variables de entorno NEXT_PUBLIC_SOCIAL_*
+    // Incluso si existen variables NEXT_PUBLIC_SOCIAL_* heredadas en process.env del servidor,
+    // getOfficialFooterSnapshot() las ignora y usa DEFAULT_SOCIAL_LINKS_URLS como fuente única de verdad
     process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN_URL =
-      "https://www.linkedin.com/in/sebastian-jimenez-oficial";
+      "https://www.linkedin.com/in/valor-heredado-en-env";
     process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL =
-      "https://www.facebook.com/sebastian.dekolabs";
+      "https://www.facebook.com/valor-heredado-en-env";
     process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL =
-      "https://www.instagram.com/sebastian.dekolabs";
+      "https://www.instagram.com/valor-heredado-en-env";
     process.env.NEXT_PUBLIC_SOCIAL_WHATSAPP_URL = "https://wa.me/573101234567";
 
     const envSnapshot = getOfficialFooterSnapshot();
     expect(envSnapshot.socialLinks.map((item) => item.href)).toEqual([
-      "https://www.linkedin.com/in/sebastian-jimenez-oficial",
-      "https://www.facebook.com/sebastian.dekolabs",
-      "https://www.instagram.com/sebastian.dekolabs",
-      "https://wa.me/573101234567"
+      "https://www.linkedin.com/in/sebastian-jimenez-aibuilder/",
+      "https://www.facebook.com/sebastian.jimenez.561437",
+      "https://www.instagram.com/sebastian.1969c/",
+      "https://wa.me/50240275763"
     ]);
 
     // Sanitización Fail-Safe contra esquemas inseguros (javascript:, data:, cadenas corruptas)
@@ -234,6 +235,9 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
       expect(pageHtml).toContain('data-social-platform="facebook"');
       expect(pageHtml).toContain('data-social-platform="instagram"');
       expect(pageHtml).toContain('data-social-platform="whatsapp"');
+      expect(pageHtml).toContain(
+        'href="https://www.linkedin.com/in/sebastian-jimenez-aibuilder/"'
+      );
       expect(pageHtml).toContain('href="https://wa.me/50240275763"');
       expect(pageHtml).toContain(
         'href="https://www.instagram.com/sebastian.1969c/"'

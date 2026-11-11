@@ -695,6 +695,33 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 57/57 tests PASS en 13 suites verificando computeOptimizedImageDimensions <= 1920x1200 px, replaceFileExtensionWithWebp, formatOptimizationSummary, optimizeImageFileForUpload y guía Auto-WebP 86% en CatalogAdminView, next build standalone OK).",
       "notes": "REGLAS CRÍTICAS DE FEAT-022: (1) Respetar las 6 capas: 'CatalogAdminView.tsx' pertenece a 'src/ui/components/' y solo debe importar tipos de '@/types/portfolio' (cero librerías pesadas externas; usar Canvas/WebP nativo del navegador). (2) Conservar intactos todos los textos de etiquetas existentes en 'CatalogAdminView.tsx' que son verificados por 'tests/catalog-admin-ui.test.ts' y 'tests/postgres-catalog-and-gallery.test.ts' (añadir la leyenda '1920×1200 px (16:10) · Auto-WebP 86%' de forma aditiva sin romper ningún selector ni texto previo)."
+    },
+    {
+      "id": "feat-023",
+      "name": "Fuente Única de Verdad para Redes Sociales en src/config/site.config.ts (Sin Variables NEXT_PUBLIC_SOCIAL_* en .env) y Perfil Oficial de LinkedIn (sebastian-jimenez-aibuilder)",
+      "description": "Consolidar los 4 enlaces públicos de redes sociales exclusivamente en 'src/config/site.config.ts' eliminando su dependencia de variables de entorno '.env' ('NEXT_PUBLIC_SOCIAL_*') sin tocar ninguna variable de claves, sesión ni base de datos (Sección 9.7 de docs/product-specs/dekolabs-portfolio-spec.md): (1) Actualizar en 'src/config/site.config.ts' ('DEFAULT_SOCIAL_LINKS_URLS') el enlace oficial de LinkedIn de Sebastián a 'https://www.linkedin.com/in/sebastian-jimenez-aibuilder/' junto con Facebook ('https://www.facebook.com/sebastian.jimenez.561437'), Instagram ('https://www.instagram.com/sebastian.1969c/') y WhatsApp ('https://wa.me/50240275763'); (2) En 'getOfficialFooterConfig' ('src/config/site.config.ts'), eliminar por completo la lectura de 'process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN_URL', 'process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL', 'process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL' y 'process.env.NEXT_PUBLIC_SOCIAL_WHATSAPP_URL', usando únicamente 'overrides' explícitos o 'DEFAULT_SOCIAL_LINKS_URLS' como fuente única de verdad en código; (3) En '.env.example', retirar únicamente las 4 líneas 'NEXT_PUBLIC_SOCIAL_*' conservando intactas todas las variables de servidor, base de datos ('POSTGRES_*', 'DATABASE_URL') y llaves/secretos ('ADMIN_USERNAME', 'ADMIN_PASSWORD', 'ADMIN_SESSION_SECRET', 'ADMIN_ACCESS_KEY', 'CATALOG_UPLOADS_DIR', 'HOMELAB_*'); y (4) Actualizar 'tests/official-footer.test.ts' para verificar el nuevo LinkedIn 'https://www.linkedin.com/in/sebastian-jimenez-aibuilder/', comprobar que '.env.example' ya no declara 'NEXT_PUBLIC_SOCIAL_*' (manteniendo intactas las variables 'ADMIN_*' y 'DATABASE_URL'), y verificar que aunque existan variables 'process.env.NEXT_PUBLIC_SOCIAL_*' heredadas en el entorno del servidor, 'getOfficialFooterSnapshot()' las ignora y devuelve siempre los 4 enlaces oficiales de 'DEFAULT_SOCIAL_LINKS_URLS'.",
+      "area": "social-links-single-source-of-truth",
+      "user_visible_behavior": "Los 4 botones de redes sociales del pie de página toman sus URLs directamente de 'src/config/site.config.ts' (LinkedIn 'https://www.linkedin.com/in/sebastian-jimenez-aibuilder/', Facebook 'https://www.facebook.com/sebastian.jimenez.561437', Instagram 'https://www.instagram.com/sebastian.1969c/' y WhatsApp 'https://wa.me/50240275763') sin depender de variables '.env' ni ser pisados por valores antiguos del servidor, mientras todas las llaves y secretos de administración y base de datos permanecen intactos.",
+      "priority": "P0",
+      "status": "done",
+      "dependencies": [
+        "feat-022"
+      ],
+      "required_files": [
+        ".env.example",
+        "src/config/site.config.ts",
+        "tests/official-footer.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 57/57 tests PASS en 13 suites verificando DEFAULT_SOCIAL_LINKS_URLS como fuente única de verdad en site.config.ts con LinkedIn https://www.linkedin.com/in/sebastian-jimenez-aibuilder/, retiro de NEXT_PUBLIC_SOCIAL_* en .env.example sin tocar llaves ADMIN_* ni DATABASE_URL, next build standalone OK).",
+      "notes": "REGLAS CRÍTICAS DE FEAT-023: (1) PROHIBIDO tocar o alterar cualquier variable de entorno de claves, autenticación o infraestructura en '.env.example', 'src/config/site.config.ts' o 'docker-compose.yml' ('ADMIN_USERNAME', 'ADMIN_PASSWORD', 'ADMIN_SESSION_SECRET', 'ADMIN_ACCESS_KEY', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'DATABASE_URL', 'CATALOG_UPLOADS_DIR', 'HOMELAB_*'). (2) Conservar el parámetro opcional 'overrides?: SocialLinksEnvOverrides' en 'getOfficialFooterConfig(overrides)' y 'getOfficialFooterSnapshot(overrides)' para que los tests que pasan 'overrides' por argumento sigan funcionando al 100%."
     }
   ]
 }

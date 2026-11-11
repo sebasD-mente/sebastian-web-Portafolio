@@ -322,7 +322,7 @@ export const OFFICIAL_COPYRIGHT_NOTICE =
   "© 2026 · Creado por Sebastián Jiménez";
 
 export const DEFAULT_SOCIAL_LINKS_URLS: Record<SocialPlatformId, string> = {
-  linkedin: "https://www.linkedin.com/in/sebastian-jimenez-dekolabs",
+  linkedin: "https://www.linkedin.com/in/sebastian-jimenez-aibuilder/",
   facebook: "https://www.facebook.com/sebastian.jimenez.561437",
   instagram: "https://www.instagram.com/sebastian.1969c/",
   whatsapp: "https://wa.me/50240275763"
@@ -352,27 +352,19 @@ export function getOfficialFooterConfig(
   overrides?: SocialLinksEnvOverrides
 ): OfficialFooterData {
   const linkedinHref = resolveSafeSocialUrl(
-    overrides?.linkedinUrl !== undefined
-      ? overrides.linkedinUrl
-      : process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN_URL,
+    overrides?.linkedinUrl,
     DEFAULT_SOCIAL_LINKS_URLS.linkedin
   );
   const facebookHref = resolveSafeSocialUrl(
-    overrides?.facebookUrl !== undefined
-      ? overrides.facebookUrl
-      : process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL,
+    overrides?.facebookUrl,
     DEFAULT_SOCIAL_LINKS_URLS.facebook
   );
   const instagramHref = resolveSafeSocialUrl(
-    overrides?.instagramUrl !== undefined
-      ? overrides.instagramUrl
-      : process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL,
+    overrides?.instagramUrl,
     DEFAULT_SOCIAL_LINKS_URLS.instagram
   );
   const whatsappHref = resolveSafeSocialUrl(
-    overrides?.whatsappUrl !== undefined
-      ? overrides.whatsappUrl
-      : process.env.NEXT_PUBLIC_SOCIAL_WHATSAPP_URL,
+    overrides?.whatsappUrl,
     DEFAULT_SOCIAL_LINKS_URLS.whatsapp
   );
 

@@ -399,6 +399,15 @@ Para eliminar la demora al subir imágenes pesadas (`.png` / `.jpg` de varios me
 3. **Guía de Medidas Exactas (`1920×1200 px · 16:10`) y Resumen de Ahorro en la UI (`CatalogAdminView.tsx`)**:
    - Ampliar `UploadSlotStatus` con `optimizationSummary?: string | null`.
    - Mostrar en los encabezados de la Imagen 1 de 4 (Portada) y de las 3 Imágenes de Detalle (`VIEW 01`, `VIEW 02`, `VIEW 03`) la guía de medida ideal (`1920×1200 px (16:10) · Auto-WebP 86%`) y, tras cada subida, mostrar el badge con el resumen real de compresión (`optimizationSummary`).
-4. **Bloqueo Automático de URLs Placeholder Antiguas en `.env` del Servidor (`src/config/site.config.ts`)**:
-   - En el servidor de producción `serverdmente`, el archivo `.env` creado el Día 1 antes de `feat-017` aún conservaba las variables antiguas `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL="https://www.facebook.com/dekolabs"`, `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL="https://www.instagram.com/dekolabs"` y `NEXT_PUBLIC_SOCIAL_WHATSAPP_URL="https://wa.me/573000000000"`, las cuales pisaban en tiempo de ejecución a `DEFAULT_SOCIAL_LINKS_URLS`.
-   - En `resolveSafeSocialUrl` (`src/config/site.config.ts`), exportar `LEGACY_PLACEHOLDER_SOCIAL_URLS` (`facebook.com/dekolabs`, `instagram.com/dekolabs`, `wa.me/573000000000`) y descartar automáticamente cualquier valor que coincida con esos placeholders heredados, retornando `fallbackUrl` (`DEFAULT_SOCIAL_LINKS_URLS` con WhatsApp `https://wa.me/50240275763`, Instagram `https://www.instagram.com/sebastian.1969c/` y Facebook `https://www.facebook.com/sebastian.jimenez.561437`) incluso si el archivo `.env` del servidor no ha sido editado manualmente.
+
+### 9.7 Fuente Única de Verdad para Redes Sociales en `src/config/site.config.ts` (Sin Variables `NEXT_PUBLIC_SOCIAL_*` en `.env`) y Perfil Real de LinkedIn (`feat-023`)
+Los enlaces públicos de redes sociales del pie de página (`OfficialFooter`) no son secretos ni variables de infraestructura, por lo que no deben leerse desde `.env` (evitando así que archivos `.env` antiguos del servidor pisen la configuración real versionada en Git):
+1. **Actualización de `DEFAULT_SOCIAL_LINKS_URLS` en `src/config/site.config.ts`**:
+   - Establecer como fuente única de verdad en `src/config/site.config.ts`:
+     - `linkedin`: `"https://www.linkedin.com/in/sebastian-jimenez-aibuilder/"`
+     - `facebook`: `"https://www.facebook.com/sebastian.jimenez.561437"`
+     - `instagram`: `"https://www.instagram.com/sebastian.1969c/"`
+     - `whatsapp`: `"https://wa.me/50240275763"`
+2. **Eliminación de `process.env.NEXT_PUBLIC_SOCIAL_*` en `getOfficialFooterConfig` (`src/config/site.config.ts`) y en `.env.example`**:
+   - En `getOfficialFooterConfig(overrides?: SocialLinksEnvOverrides)`, resolver cada red usando únicamente `overrides?.<red>Url` (cuando se pasa explícitamente por argumento en tests) o directamente `DEFAULT_SOCIAL_LINKS_URLS.<red>`, sin leer `process.env.NEXT_PUBLIC_SOCIAL_*`.
+   - En `.env.example`, retirar las 4 líneas `NEXT_PUBLIC_SOCIAL_*`, manteniendo 100% intactas todas las variables de servidor, base de datos (`POSTGRES_*`, `DATABASE_URL`), autenticación y llaves (`ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `ADMIN_ACCESS_KEY`, `CATALOG_UPLOADS_DIR`, `HOMELAB_*`).

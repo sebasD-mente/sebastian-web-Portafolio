@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-11 09:08
-**Session ID:** sesion-032 (Implementación y Cierre de `feat-022`: Pipeline de Optimización Automática de Imágenes a WebP `<= 1920x1200 px` en `/admin/proyectos`)
-**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-022` en `"done"`)
+**Last Updated:** 2026-11-11 09:32
+**Session ID:** sesion-033 (Implementación y Cierre de `feat-023`: Fuente Única de Verdad para Redes Sociales en `src/config/site.config.ts` y Perfil Oficial de LinkedIn `sebastian-jimenez-aibuilder`)
+**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-023` en `"done"`)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -12,33 +12,34 @@
 
 ### What's Done
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y certificación de **Universal Chameleon Harness v2.1** (`Overall: 100/100`, `0 CRLF`, `0 UTF-8 BOM`).
-- [x] **`feat-001` a `feat-021` completadas, verificadas en `"done"` (`100/100`) y publicadas en `origin/main` (`24d09c8`)**.
-- [x] **`feat-022` completada y verificada en `"done"` (`100/100`, `57/57` tests PASS en 13 suites)**:
-  - Exportadas en `src/ui/components/CatalogAdminView.tsx` las constantes `MAX_OPTIMIZED_IMAGE_WIDTH = 1920`, `MAX_OPTIMIZED_IMAGE_HEIGHT = 1200`, `WEBP_COMPRESSION_QUALITY = 0.86` y las funciones puras `computeOptimizedImageDimensions`, `replaceFileExtensionWithWebp` y `formatOptimizationSummary`.
-  - Implementado `optimizeImageFileForUpload` en `CatalogAdminView.tsx` con decodificación en navegador, escalado proporcional en `<canvas>` (`imageSmoothingQuality = "high"`), compresión a `image/webp` (`0.86`) antes del envío a `POST /api/admin/upload` y fallback seguro en Node/Vitest.
-  - Integradas en las 4 ranuras de imagen (Portada + `VIEW 01`, `VIEW 02`, `VIEW 03`) la guía de dimensiones ideales `1920×1200 px (16:10) · Auto-WebP 86%` y la visualización del resumen de ahorro (`optimizationSummary`).
-  - Ampliada `tests/catalog-admin-ui.test.ts` (`6/6` tests en la suite, `57/57` tests globales PASS).
+- [x] **`feat-001` a `feat-022` completadas, verificadas en `"done"` (`100/100`) y publicadas en `origin/main` (`72b1ee5`)**.
+- [x] **`feat-023` completada y verificada en `"done"` (`100/100`, `57/57` tests PASS en 13 suites)**:
+  - Actualizado `DEFAULT_SOCIAL_LINKS_URLS` en `src/config/site.config.ts` con el LinkedIn oficial `https://www.linkedin.com/in/sebastian-jimenez-aibuilder/`, Facebook `https://www.facebook.com/sebastian.jimenez.561437`, Instagram `https://www.instagram.com/sebastian.1969c/` y WhatsApp `https://wa.me/50240275763`.
+  - Eliminada la lectura de `process.env.NEXT_PUBLIC_SOCIAL_*` en `getOfficialFooterConfig` (`src/config/site.config.ts`), consolidando `DEFAULT_SOCIAL_LINKS_URLS` (o `overrides` explícitos en tests) como fuente única de verdad en código.
+  - Retiradas únicamente las 4 variables `NEXT_PUBLIC_SOCIAL_*` de `.env.example`, conservando 100% intactas todas las variables de servidor, base de datos (`POSTGRES_*`, `DATABASE_URL`) y llaves/secretos (`ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `ADMIN_ACCESS_KEY`, `CATALOG_UPLOADS_DIR`, `HOMELAB_*`).
+  - Actualizada `tests/official-footer.test.ts` (`4/4` tests en la suite, `57/57` tests globales PASS).
 
 ### What's In Progress
 - Ninguna tarea en curso (`WIP = 0`).
 
 ### What's Next
-1. El catálogo completo de tareas planificadas (`feat-001` a `feat-022`) se encuentra 100% en estado `"done"`. Listo para hacer commit/push a `origin/main` y reconstruir el contenedor en `serverdmente` cuando Sebastián lo indique.
+1. Todas las tareas planificadas (`feat-001` a `feat-023`) están en `"done"` (`WIP = 0`). Si se requiere una nueva mejora, declararla primero en `feature_list.json` y `sprint-contract.md` respetando `WIP = 1`.
 
 ## Blockers / Risks
 - Ninguno activo.
 
 ## Decisions Made
-- **Optimización WebP en el Navegador antes del Envío por Red (`feat-022`)**:
-  - Context: Subir archivos `.png` crudos de `3–8 MB` tardaba varios segundos al viajar por el túnel Edge -> WireGuard -> contenedor `dekolabs-portfolio` y quedaban sin comprimir en `/app/data/uploads`.
+- **Fuente Única de Verdad en Código para Redes Sociales (`feat-023`)**:
+  - Context: Los enlaces de redes sociales (`LinkedIn`, `Facebook`, `Instagram`, `WhatsApp`) son URLs públicas fijas del portafolio y no secretos; mantener `NEXT_PUBLIC_SOCIAL_*` en `.env` provocaba que valores antiguos en el `.env` del servidor `serverdmente` pisaran los enlaces actualizados en Git.
   - Alternatives considered:
-    1. *Subir el archivo crudo de varios MB y comprimir en el servidor con `sharp`*: Descartado porque no elimina el cuello de botella de subida por red (el archivo pesado igual viaja entero por internet) y añade binarios nativos C++ al contenedor con límite estricto de `256 MiB` de RAM.
-    2. *Escalar hasta `1920x1200 px` y comprimir a `image/webp` (`0.86`) en el navegador con `<canvas>` antes de hacer `POST /api/admin/upload`*: Elegida porque convierte imágenes de `5 MB` en `.webp` de `~100 KB` en `< 150 ms` antes de viajar por internet, haciendo la subida instantánea (`< 0.3s`) y guardándolas ya en `.webp` en `/app/data/uploads`.
+    1. *Seguir leyendo `process.env.NEXT_PUBLIC_SOCIAL_*` y editar manualmente el `.env` del servidor cada vez que cambie una red social*: Descartado porque obliga a intervenir manualmente el archivo `.env` de producción para cambios no sensibles y propensos a desincronización.
+    2. *Consolidar las 4 URLs exclusivamente en `DEFAULT_SOCIAL_LINKS_URLS` dentro de `src/config/site.config.ts` y retirar `NEXT_PUBLIC_SOCIAL_*` de `.env.example` conservando intactas todas las llaves y secretos (`ADMIN_*`, `POSTGRES_*`, `DATABASE_URL`)*: Elegida porque garantiza que cada despliegue desde Git refleje de inmediato los enlaces oficiales reales sin tocar secretos del servidor.
 
 ## Files Modified This Session
-- `src/ui/components/CatalogAdminView.tsx` - Implementación de `computeOptimizedImageDimensions`, `replaceFileExtensionWithWebp`, `formatOptimizationSummary`, `optimizeImageFileForUpload` y badges `1920×1200 px (16:10) · Auto-WebP 86%`
-- `tests/catalog-admin-ui.test.ts` - Pruebas unitarias de `feat-022` (`6/6` tests PASS)
-- `feature_list.json`, `sprint-contract.md`, `progress.md`, `session-handoff.md` - Cierre y evidencia de `feat-022`
+- `src/config/site.config.ts` - `DEFAULT_SOCIAL_LINKS_URLS.linkedin` actualizado a `https://www.linkedin.com/in/sebastian-jimenez-aibuilder/` y retiro de `process.env.NEXT_PUBLIC_SOCIAL_*` en `getOfficialFooterConfig`
+- `.env.example` - Retiro exclusivo de `NEXT_PUBLIC_SOCIAL_*` conservando intactas todas las llaves y variables de base de datos/servidor
+- `tests/official-footer.test.ts` - Verificación del nuevo LinkedIn, ausencia de `NEXT_PUBLIC_SOCIAL_*` en `.env.example` e inmunidad frente a variables heredadas en `process.env`
+- `feature_list.json`, `sprint-contract.md`, `progress.md`, `session-handoff.md` - Cierre y evidencia de `feat-023`
 
 ## Verification Evidence
 - [x] Full 3-Gate Harness Verification: `bash ./init.sh` -> `Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 57/57 tests PASS en 13 suites, next build standalone OK)`
