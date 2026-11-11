@@ -13,6 +13,8 @@ vi.mock("next/cache", () => ({
 }));
 
 import HomePage, { dynamic as homeDynamic } from "@/app/page";
+import SistemasPage, { dynamic as sistemasDynamic } from "@/app/sistemas/page";
+import HabilidadesYStackPage, { dynamic as stackDynamic } from "@/app/habilidades-y-stack/page";
 import { metadata as rootMetadata } from "@/app/layout";
 import AiProjectsPage, {
   dynamic as aiProjectsDynamic,
@@ -56,8 +58,10 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
     mockedRevalidatePath.mockReset();
   });
 
-  it("retira por completo #mas-proyectos-ia y MÁS PROYECTOS DE IA de la página de inicio (/) y de ProductionSystemsSection.tsx", async () => {
+  it("desacopla la página de inicio (/) dejando solo Hero y aloja ProductionSystemsSection en /sistemas y TechStackSection en /habilidades-y-stack", async () => {
     expect(homeDynamic).toBe("force-dynamic");
+    expect(sistemasDynamic).toBe("force-dynamic");
+    expect(stackDynamic).toBe("force-dynamic");
 
     const homeSource = readRepoFile("src/app/page.tsx");
     const sectionSource = readRepoFile(
@@ -82,17 +86,30 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
     expect(sectionHtml).not.toContain('id="mas-proyectos-ia"');
     expect(sectionHtml).not.toContain("MÁS PROYECTOS DE IA");
 
+    // HomePage austera y limpia: contiene Hero y NO contiene los catálogos empotrados
     const homeElement = await HomePage();
     const homeHtml = renderToStaticMarkup(homeElement);
-    expect(homeHtml).toContain('id="proyectos-destacados"');
-    expect(homeHtml).toContain("SISTEMAS EN PRODUCCIÓN");
-    expect(homeHtml).toContain("DECO VINTAGE PLATFORM");
-    expect(homeHtml).toContain('id="stack-tecnologico"');
-    expect(homeHtml).toContain("02 // ARQUITECTURA &amp; HERRAMIENTAS");
-    expect(homeHtml).toContain("STACK TECNOLÓGICO");
-    expect(homeHtml).toContain("SECCIÓN EN CONSTRUCCIÓN");
+    expect(homeHtml).toContain("NODE TELEMETRY");
+    expect(homeHtml).toContain("HOME-LAB // serverdmente");
+    expect(homeHtml).not.toContain('id="proyectos-destacados"');
+    expect(homeHtml).not.toContain("SISTEMAS EN PRODUCCIÓN");
+    expect(homeHtml).not.toContain('id="stack-tecnologico"');
+    expect(homeHtml).not.toContain("SECCIÓN EN CONSTRUCCIÓN");
     expect(homeHtml).not.toContain('id="mas-proyectos-ia"');
     expect(homeHtml).not.toContain("MÁS PROYECTOS DE IA");
+
+    // /sistemas aloja de forma exclusiva los sistemas en producción
+    const sistemasHtml = renderToStaticMarkup(await SistemasPage());
+    expect(sistemasHtml).toContain('id="proyectos-destacados"');
+    expect(sistemasHtml).toContain("SISTEMAS EN PRODUCCIÓN");
+    expect(sistemasHtml).toContain("DECO VINTAGE PLATFORM");
+
+    // /habilidades-y-stack aloja la sección de stack técnico
+    const stackPageHtml = renderToStaticMarkup(await HabilidadesYStackPage());
+    expect(stackPageHtml).toContain('id="stack-tecnologico"');
+    expect(stackPageHtml).toContain("02 // ARQUITECTURA &amp; HERRAMIENTAS");
+    expect(stackPageHtml).toContain("STACK TECNOLÓGICO");
+    expect(stackPageHtml).toContain("SECCIÓN EN CONSTRUCCIÓN");
 
     const techStackHtml = renderToStaticMarkup(
       React.createElement(TechStackSection)
@@ -104,7 +121,7 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
     expect(techStackHtml).toContain("SECCIÓN EN CONSTRUCCIÓN");
   });
 
-  it("actualiza la navegación global hacia /proyectos-ia y /#... manteniendo los labels oficiales e indicando aria-current=\"page\"", () => {
+  it("actualiza la navegación global hacia /sistemas, /habilidades-y-stack y /proyectos-ia manteniendo los labels oficiales e indicando aria-current=\"page\"", () => {
     const siteSnapshot = getSiteFoundationSnapshot();
 
     expect(siteSnapshot.navigation).toEqual([
@@ -112,13 +129,13 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
         id: "sistemas",
         code: "01",
         label: "SISTEMAS EN PRODUCCIÓN",
-        href: "/#proyectos-destacados"
+        href: "/sistemas"
       },
       {
         id: "stack",
         code: "02",
-        label: "STACK TECNOLÓGICO",
-        href: "/#stack-tecnologico"
+        label: "HABILIDADES Y STACK TECNOLÓGICO",
+        href: "/habilidades-y-stack"
       },
       {
         id: "mas-proyectos",
@@ -127,7 +144,7 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
         href: "/proyectos-ia"
       }
     ]);
-    expect(siteSnapshot.identity.primaryCtaHref).toBe("/#proyectos-destacados");
+    expect(siteSnapshot.identity.primaryCtaHref).toBe("/sistemas");
     expect(siteSnapshot.identity.secondaryCtaHref).toBe("/#contacto");
 
     const homeShellHtml = renderToStaticMarkup(
@@ -141,10 +158,10 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
       })
     );
     expect(homeShellHtml).toContain('href="/proyectos-ia"');
-    expect(homeShellHtml).toContain('href="/#proyectos-destacados"');
-    expect(homeShellHtml).toContain('href="/#stack-tecnologico"');
+    expect(homeShellHtml).toContain('href="/sistemas"');
+    expect(homeShellHtml).toContain('href="/habilidades-y-stack"');
     expect(homeShellHtml).toContain('href="/#contacto"');
-    expect(homeShellHtml).toContain("TECNOLÓGICO");
+    expect(homeShellHtml).toContain("STACK TECNOLÓGICO");
     expect(homeShellHtml).toContain("MÁS PROYECTOS");
     expect(homeShellHtml).not.toContain('aria-current="page"');
 
@@ -363,7 +380,10 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
   it("cumple estrictamente las 6 capas (cero imports a config/repo desde app/ui) y 0 CRLF", () => {
     for (const relPath of [
       "src/app/page.tsx",
+      "src/app/sistemas/page.tsx",
+      "src/app/habilidades-y-stack/page.tsx",
       "src/app/proyectos-ia/page.tsx",
+      "src/ui/components/Navbar.tsx",
       "src/ui/components/AppShell.tsx",
       "src/ui/components/ProductionSystemsSection.tsx",
       "src/ui/components/TechStackSection.tsx",

@@ -43,8 +43,13 @@ describe("feat-001: Site Foundation Service & Atelier Monolith Tokens", () => {
     expect(snapshot.identity.tagline).toContain("Google ADK y sistemas RAG");
     expect(snapshot.navigation.map((n) => n.label)).toEqual([
       "SISTEMAS EN PRODUCCIÓN",
-      "STACK TECNOLÓGICO",
+      "HABILIDADES Y STACK TECNOLÓGICO",
       "MÁS PROYECTOS DE IA"
+    ]);
+    expect(snapshot.navigation.map((n) => n.href)).toEqual([
+      "/sistemas",
+      "/habilidades-y-stack",
+      "/proyectos-ia"
     ]);
   });
 });

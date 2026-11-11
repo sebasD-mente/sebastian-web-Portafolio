@@ -755,7 +755,7 @@
       "area": "site-navigation-and-clean-home",
       "user_visible_behavior": "La página de inicio de dekolabs.org luce completamente limpia y sobria (Hero + Monitor + Footer centrado), mientras que 'Sistemas en Producción' y 'Habilidades y Stack Tecnológico' cuentan con sus propias páginas independientes accesibles directamente desde los botones de la barra de navegación superior.",
       "priority": "P1",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-024"
       ],
@@ -774,7 +774,8 @@
         "npm run typecheck",
         "npm test",
         "npm run build"
-      ]
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS con WIP=1; Puerta 3 typecheck OK, vitest 57/57 tests PASS en 13 suites verificando /sistemas, /habilidades-y-stack, Navbar modular, Home limpia y copyright centrado, next build standalone OK con rutas SSG/SSR)."
     },
     {
       "id": "feat-026",

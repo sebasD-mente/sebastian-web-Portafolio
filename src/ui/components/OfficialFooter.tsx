@@ -120,14 +120,11 @@ export function OfficialFooter({ footer }: OfficialFooterProps) {
 
       {/* Institutional Copyright Strip */}
       <div className="border-t border-[#E5E7EB] bg-[#F8F9FA] py-4">
-        <div className="swiss-container flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div className="swiss-container relative flex items-center justify-center text-center">
           <p className="mono-code text-xs sm:text-[13px] font-semibold text-[#111827]">
             {footer.copyrightNotice}
           </p>
-          <div className="flex items-center justify-center sm:justify-end gap-2.5">
-            <p className="mono-label text-[11px] text-[#4B5563]">
-              {footer.technicalNote}
-            </p>
+          <div className="absolute right-4 sm:right-6 flex items-center">
             <a
               href="/admin/login"
               aria-label="Acceso de administrador"

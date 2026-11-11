@@ -5,6 +5,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import HomePage from "@/app/page";
 import AiProjectsPage from "@/app/proyectos-ia/page";
+import HabilidadesYStackPage from "@/app/habilidades-y-stack/page";
+import SistemasPage from "@/app/sistemas/page";
 import SystemDetailPage from "@/app/sistemas/[slug]/page";
 import {
   DEFAULT_SOCIAL_LINKS_URLS,
@@ -75,11 +77,13 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
 
     const snapshot = getSiteFoundationSnapshot();
     expect(snapshot.footer.copyrightYear).toBe(2026);
-    expect(snapshot.footer.authorCredit).toBe("Creado por Sebastián Jiménez");
+    expect(snapshot.footer.authorCredit).toBe(
+      "Creado por Sebastián Jiménez / Deko Labs"
+    );
     expect(snapshot.footer.copyrightNotice).toBe(OFFICIAL_COPYRIGHT_NOTICE);
     expect(snapshot.footer.copyrightNotice).toContain(OFFICIAL_AUTHOR_CREDIT);
     expect(snapshot.footer.copyrightNotice).toBe(
-      "© 2026 · Creado por Sebastián Jiménez"
+      "© 2026 · Creado por Sebastián Jiménez / Deko Labs"
     );
 
     expect(snapshot.footer.socialLinks.map((item) => item.id)).toEqual([
@@ -147,8 +151,10 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
     expect(footerHtml).toContain(
       'aria-label="Redes sociales y contacto directo"'
     );
-    expect(footerHtml).toContain("Creado por Sebastián Jiménez");
-    expect(footerHtml).toContain("© 2026 · Creado por Sebastián Jiménez");
+    expect(footerHtml).toContain("Creado por Sebastián Jiménez / Deko Labs");
+    expect(footerHtml).toContain(
+      "© 2026 · Creado por Sebastián Jiménez / Deko Labs"
+    );
     expect(footerHtml).not.toContain("Jimenez 2026");
     expect(footerHtml).not.toContain("Jiménez 2026");
 
@@ -215,12 +221,18 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
         children: React.createElement("section", null, "Vista de Prueba")
       })
     );
-    expect(fallbackShellHtml).toContain("Creado por Sebastián Jiménez");
-    expect(fallbackShellHtml).toContain("© 2026 · Creado por Sebastián Jiménez");
+    expect(fallbackShellHtml).toContain(
+      "Creado por Sebastián Jiménez / Deko Labs"
+    );
+    expect(fallbackShellHtml).toContain(
+      "© 2026 · Creado por Sebastián Jiménez / Deko Labs"
+    );
     expect(fallbackShellHtml.match(/<footer\b/g) ?? []).toHaveLength(1);
 
-    // 2. Páginas públicas principales del portafolio: /, /proyectos-ia y /sistemas/[slug]
+    // 2. Páginas públicas principales del portafolio: /, /sistemas, /habilidades-y-stack, /proyectos-ia y /sistemas/[slug]
     const homeHtml = renderToStaticMarkup(await HomePage());
+    const sistemasHtml = renderToStaticMarkup(await SistemasPage());
+    const stackHtml = renderToStaticMarkup(await HabilidadesYStackPage());
     const aiProjectsHtml = renderToStaticMarkup(await AiProjectsPage());
     const detailHtml = renderToStaticMarkup(
       await SystemDetailPage({
@@ -228,9 +240,17 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
       })
     );
 
-    for (const pageHtml of [homeHtml, aiProjectsHtml, detailHtml]) {
-      expect(pageHtml).toContain("Creado por Sebastián Jiménez");
-      expect(pageHtml).toContain("© 2026 · Creado por Sebastián Jiménez");
+    for (const pageHtml of [
+      homeHtml,
+      sistemasHtml,
+      stackHtml,
+      aiProjectsHtml,
+      detailHtml
+    ]) {
+      expect(pageHtml).toContain("Creado por Sebastián Jiménez / Deko Labs");
+      expect(pageHtml).toContain(
+        "© 2026 · Creado por Sebastián Jiménez / Deko Labs"
+      );
       expect(pageHtml).toContain('data-social-platform="linkedin"');
       expect(pageHtml).toContain('data-social-platform="facebook"');
       expect(pageHtml).toContain('data-social-platform="instagram"');
@@ -251,9 +271,12 @@ describe("feat-015: Pie de Página Oficial (OfficialFooter), Redes Sociales y Co
 
   it("respeta estrictamente las 6 capas (cero saltos desde app/ui hacia config/repo) y mantiene 0 CRLF", () => {
     for (const uiPath of [
+      "src/ui/components/Navbar.tsx",
       "src/ui/components/OfficialFooter.tsx",
       "src/ui/components/AppShell.tsx",
       "src/app/page.tsx",
+      "src/app/sistemas/page.tsx",
+      "src/app/habilidades-y-stack/page.tsx",
       "src/app/proyectos-ia/page.tsx",
       "src/app/sistemas/[slug]/page.tsx"
     ]) {

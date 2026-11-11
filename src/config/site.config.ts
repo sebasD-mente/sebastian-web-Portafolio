@@ -200,7 +200,7 @@ export const SITE_IDENTITY: SiteIdentity = {
   summary:
     "Construyo software apoyado en un entorno profesional de agentes de código gobernados por un arnés de ingeniería de alto estándar. Combino desarrollo de agentes inteligentes, pruebas de modelos locales en aplicaciones no exploradas y administración de mi propio Home Lab",
   primaryCtaLabel: "SISTEMAS EN PRODUCCIÓN",
-  primaryCtaHref: "/#proyectos-destacados",
+  primaryCtaHref: "/sistemas",
   secondaryCtaLabel: "CONTRATAR / HABLEMOS",
   secondaryCtaHref: "/#contacto",
   footerNote:
@@ -212,13 +212,13 @@ export const SITE_NAVIGATION: NavigationItem[] = [
     id: "sistemas",
     code: "01",
     label: "SISTEMAS EN PRODUCCIÓN",
-    href: "/#proyectos-destacados"
+    href: "/sistemas"
   },
   {
     id: "stack",
     code: "02",
-    label: "STACK TECNOLÓGICO",
-    href: "/#stack-tecnologico"
+    label: "HABILIDADES Y STACK TECNOLÓGICO",
+    href: "/habilidades-y-stack"
   },
   {
     id: "mas-proyectos",
@@ -317,9 +317,10 @@ export function getAmbientTelemetryDefaults(): AmbientTelemetryStatus {
 }
 
 export const OFFICIAL_COPYRIGHT_YEAR = 2026;
-export const OFFICIAL_AUTHOR_CREDIT = "Creado por Sebastián Jiménez";
+export const OFFICIAL_AUTHOR_CREDIT =
+  "Creado por Sebastián Jiménez / Deko Labs";
 export const OFFICIAL_COPYRIGHT_NOTICE =
-  "© 2026 · Creado por Sebastián Jiménez";
+  "© 2026 · Creado por Sebastián Jiménez / Deko Labs";
 
 export const DEFAULT_SOCIAL_LINKS_URLS: Record<SocialPlatformId, string> = {
   linkedin: "https://www.linkedin.com/in/sebastian-jimenez-aibuilder/",
