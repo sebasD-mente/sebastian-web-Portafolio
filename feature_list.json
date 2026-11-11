@@ -669,6 +669,32 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 56/56 tests PASS en 13 suites verificando parseAgentProjectJsonToDraft, botón '⚡ Importar JSON del Agente' en CatalogAdminView y enlace discreto de engranaje href='/admin/login' sin texto visible ni title en OfficialFooter, next build standalone OK).",
       "notes": "REGLAS CRÍTICAS DE FEAT-021: (1) Respetar las 6 capas: 'CatalogAdminView.tsx' y 'OfficialFooter.tsx' están en 'src/ui/components/' y solo deben importar tipos de '@/types/portfolio'. (2) El botón de engranaje en 'OfficialFooter.tsx' debe apuntar a 'href=\"/admin/login\"', llevar 'aria-label=\"Acceso de administrador\"' y 'data-admin-login-trigger=\"true\"', NO tener atributo 'title' y NO tener ningún texto visible dentro del '<a>' (solo el '<svg aria-hidden=\"true\" ...>'). (3) OBLIGATORIO actualizar en 'tests/official-footer.test.ts' la línea 'expect(svgMatches).toHaveLength(4)' a 'expect(svgMatches).toHaveLength(5)' (4 íconos sociales + 1 ícono de engranaje) y verificar que existe 'href=\"/admin/login\"'."
+    },
+    {
+      "id": "feat-022",
+      "name": "Pipeline de Optimización Automática de Imágenes a WebP (<= 1920x1200 px, Calidad 0.86) antes de Subir en /admin/proyectos",
+      "description": "Implementar en 'src/ui/components/CatalogAdminView.tsx' el pipeline de optimización y compresión instantánea a WebP en el navegador antes de enviar archivos a 'POST /api/admin/upload' (Sección 9.6 de docs/product-specs/dekolabs-portfolio-spec.md): (1) Exportar en 'src/ui/components/CatalogAdminView.tsx' las constantes 'MAX_OPTIMIZED_IMAGE_WIDTH = 1920', 'MAX_OPTIMIZED_IMAGE_HEIGHT = 1200' y 'WEBP_COMPRESSION_QUALITY = 0.86', junto con las funciones puras 'computeOptimizedImageDimensions(width: number, height: number, maxWidth?: number, maxHeight?: number): { width: number; height: number; wasResized: boolean }', 'replaceFileExtensionWithWebp(filename: string): string' y 'formatOptimizationSummary(originalBytes: number, optimizedBytes: number, width: number, height: number): string'; (2) Implementar y exportar 'optimizeImageFileForUpload(file: File): Promise<{ file: File; originalBytes: number; optimizedBytes: number; width: number; height: number; optimizationSummary: string }>' que en el navegador decodifique la imagen, calcule dimensiones proporcionales (<= 1920x1200 sin recortar ni deformar), la renderice en un '<canvas>' con 'imageSmoothingQuality = \"high\"', la codifique a 'image/webp' (calidad 0.86) y devuelva el archivo '.webp' optimizado con fallback seguro try/catch para SSR/Vitest; (3) Integrar 'optimizeImageFileForUpload' dentro de 'uploadImageFileToServer' en 'CatalogAdminView.tsx', ampliar 'UploadSlotStatus' con 'optimizationSummary?: string | null' y mostrar en la UI de las 4 ranuras (Portada + VIEW 01..03) tanto la guía de dimensiones ideales ('1920×1200 px (16:10) · Auto-WebP 86%') como el resumen del ahorro logrado tras subir cada imagen; y (4) Ampliar 'tests/catalog-admin-ui.test.ts' verificando 'computeOptimizedImageDimensions', 'replaceFileExtensionWithWebp', 'formatOptimizationSummary', el fallback seguro de 'optimizeImageFileForUpload' en entorno Node/Vitest y la presencia de la guía '1920×1200 px (16:10) · Auto-WebP 86%' en el render de 'CatalogAdminView'.",
+      "area": "client-webp-image-optimization-pipeline",
+      "user_visible_behavior": "Al seleccionar cualquier imagen pesada (.png o .jpg de varios megabytes) en '/admin/proyectos', el navegador la escala proporcionalmente hasta máximo 1920x1200 px y la comprime automáticamente a .webp (calidad 86%) en milisegundos antes de subirla, haciendo que la carga al servidor sea instantánea (< 0.3s) y mostrando el porcentaje de peso ahorrado en pantalla.",
+      "priority": "P0",
+      "status": "done",
+      "dependencies": [
+        "feat-021"
+      ],
+      "required_files": [
+        "src/ui/components/CatalogAdminView.tsx",
+        "tests/catalog-admin-ui.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 57/57 tests PASS en 13 suites verificando computeOptimizedImageDimensions <= 1920x1200 px, replaceFileExtensionWithWebp, formatOptimizationSummary, optimizeImageFileForUpload y guía Auto-WebP 86% en CatalogAdminView, next build standalone OK).",
+      "notes": "REGLAS CRÍTICAS DE FEAT-022: (1) Respetar las 6 capas: 'CatalogAdminView.tsx' pertenece a 'src/ui/components/' y solo debe importar tipos de '@/types/portfolio' (cero librerías pesadas externas; usar Canvas/WebP nativo del navegador). (2) Conservar intactos todos los textos de etiquetas existentes en 'CatalogAdminView.tsx' que son verificados por 'tests/catalog-admin-ui.test.ts' y 'tests/postgres-catalog-and-gallery.test.ts' (añadir la leyenda '1920×1200 px (16:10) · Auto-WebP 86%' de forma aditiva sin romper ningún selector ni texto previo)."
     }
   ]
 }

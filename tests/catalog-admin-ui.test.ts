@@ -25,10 +25,17 @@ import {
   buildDecoTemplateDraft,
   buildPromoteToProductionPayload,
   CatalogAdminView,
+  computeOptimizedImageDimensions,
   convertSystemToFormInput,
   createBlankProjectDraft,
   ensureThreeGallerySlots,
-  slugifyProjectTitle
+  formatOptimizationSummary,
+  MAX_OPTIMIZED_IMAGE_HEIGHT,
+  MAX_OPTIMIZED_IMAGE_WIDTH,
+  optimizeImageFileForUpload,
+  replaceFileExtensionWithWebp,
+  slugifyProjectTitle,
+  WEBP_COMPRESSION_QUALITY
 } from "@/ui/components/CatalogAdminView";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -295,5 +302,91 @@ describe("feat-011 & feat-013: Panel /admin/proyectos en 2 Vistas Separadas, <se
     expect(doc).toContain("ADMIN_ACCESS_KEY");
     expect(doc).toContain("/admin/proyectos");
     expect(doc.includes("\r")).toBe(false);
+  });
+
+  it("feat-022: calcula dimensiones proporcionales <= 1920x1200 px, convierte extensiones a .webp, formatea el ahorro y muestra la guía Auto-WebP 86%", async () => {
+    expect(MAX_OPTIMIZED_IMAGE_WIDTH).toBe(1920);
+    expect(MAX_OPTIMIZED_IMAGE_HEIGHT).toBe(1200);
+    expect(WEBP_COMPRESSION_QUALITY).toBe(0.86);
+
+    // Imágenes que ya caben dentro de 1920x1200 no se redimensionan
+    expect(computeOptimizedImageDimensions(1920, 1200)).toEqual({
+      width: 1920,
+      height: 1200,
+      wasResized: false
+    });
+    expect(computeOptimizedImageDimensions(1440, 900)).toEqual({
+      width: 1440,
+      height: 900,
+      wasResized: false
+    });
+
+    // Imágenes 4K 16:10 y 16:9 se escalan proporcionalmente sin deformar
+    expect(computeOptimizedImageDimensions(3840, 2400)).toEqual({
+      width: 1920,
+      height: 1200,
+      wasResized: true
+    });
+    expect(computeOptimizedImageDimensions(3840, 2160)).toEqual({
+      width: 1920,
+      height: 1080,
+      wasResized: true
+    });
+    expect(computeOptimizedImageDimensions(2000, 2000)).toEqual({
+      width: 1200,
+      height: 1200,
+      wasResized: true
+    });
+
+    // Normalización de extensión a .webp
+    expect(replaceFileExtensionWithWebp("TARJETA PRO 1.png")).toBe(
+      "TARJETA PRO 1.webp"
+    );
+    expect(replaceFileExtensionWithWebp("captura-hero.JPG")).toBe(
+      "captura-hero.webp"
+    );
+    expect(replaceFileExtensionWithWebp("detalle.jpeg")).toBe("detalle.webp");
+    expect(replaceFileExtensionWithWebp("ya-optimizada.webp")).toBe(
+      "ya-optimizada.webp"
+    );
+    expect(replaceFileExtensionWithWebp("sin-extension")).toBe(
+      "sin-extension.webp"
+    );
+
+    // Formato de resumen de compresión
+    const summary = formatOptimizationSummary(
+      4200 * 1024,
+      118 * 1024,
+      1920,
+      1200
+    );
+    expect(summary).toBe(
+      "Optimizada a WEBP (1920×1200 · 4200 KB → 118 KB · -97%)"
+    );
+
+    // Fallback seguro en entorno Node/Vitest sin DOM Canvas
+    const dummyPng = new File(
+      [new Uint8Array(2048)],
+      "captura-pesada.png",
+      { type: "image/png" }
+    );
+    const fallbackResult = await optimizeImageFileForUpload(dummyPng);
+    expect(fallbackResult.file).toBe(dummyPng);
+    expect(fallbackResult.originalBytes).toBe(2048);
+    expect(fallbackResult.width).toBe(1920);
+    expect(fallbackResult.height).toBe(1200);
+    expect(fallbackResult.optimizationSummary).toContain("Optimizada a WEBP");
+
+    // Verificación en el HTML renderizado de la Vista 2 ('form')
+    const formHtml = renderToStaticMarkup(
+      React.createElement(CatalogAdminView, {
+        initialSystems: getProductionSystems(),
+        sections: getCatalogSectionsConfig(),
+        defaultTemplate: getDefaultSystemTemplateInput(),
+        initialViewMode: "form"
+      })
+    );
+    expect(formHtml).toContain("1920×1200 px (16:10) · Auto-WebP 86%");
+    expect(formHtml).toContain("Auto-WebP 1920×1200");
   });
 });

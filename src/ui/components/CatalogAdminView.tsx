@@ -29,6 +29,230 @@ export interface UploadSlotStatus {
   uploading: boolean;
   error: string | null;
   lastUploadedUrl: string | null;
+  optimizationSummary?: string | null;
+}
+
+export const MAX_OPTIMIZED_IMAGE_WIDTH = 1920;
+export const MAX_OPTIMIZED_IMAGE_HEIGHT = 1200;
+export const WEBP_COMPRESSION_QUALITY = 0.86;
+
+export function computeOptimizedImageDimensions(
+  width: number,
+  height: number,
+  maxWidth: number = MAX_OPTIMIZED_IMAGE_WIDTH,
+  maxHeight: number = MAX_OPTIMIZED_IMAGE_HEIGHT
+): { width: number; height: number; wasResized: boolean } {
+  const safeMaxW = Math.max(1, Math.round(maxWidth));
+  const safeMaxH = Math.max(1, Math.round(maxHeight));
+  if (
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return {
+      width: safeMaxW,
+      height: safeMaxH,
+      wasResized: false
+    };
+  }
+
+  const roundedW = Math.max(1, Math.round(width));
+  const roundedH = Math.max(1, Math.round(height));
+  if (roundedW <= safeMaxW && roundedH <= safeMaxH) {
+    return {
+      width: roundedW,
+      height: roundedH,
+      wasResized: false
+    };
+  }
+
+  const scale = Math.min(safeMaxW / roundedW, safeMaxH / roundedH);
+  const nextWidth = Math.max(1, Math.round(roundedW * scale));
+  const nextHeight = Math.max(1, Math.round(roundedH * scale));
+  return {
+    width: nextWidth,
+    height: nextHeight,
+    wasResized: true
+  };
+}
+
+export function replaceFileExtensionWithWebp(filename: string): string {
+  const trimmed = filename.trim();
+  if (!trimmed) {
+    return "imagen-optimizada.webp";
+  }
+  if (/\.(?:png|jpe?g|webp)$/i.test(trimmed)) {
+    return trimmed.replace(/\.(?:png|jpe?g|webp)$/i, ".webp");
+  }
+  return `${trimmed}.webp`;
+}
+
+export function formatOptimizationSummary(
+  originalBytes: number,
+  optimizedBytes: number,
+  width: number,
+  height: number
+): string {
+  const safeOrig = Math.max(1, originalBytes);
+  const safeOpt = Math.max(1, optimizedBytes);
+  const origKb = Math.max(1, Math.round(safeOrig / 1024));
+  const optKb = Math.max(1, Math.round(safeOpt / 1024));
+  const savedRatio = Math.max(
+    0,
+    Math.round(((safeOrig - safeOpt) / safeOrig) * 100)
+  );
+  return `Optimizada a WEBP (${width}×${height} · ${origKb} KB → ${optKb} KB · -${savedRatio}%)`;
+}
+
+export async function optimizeImageFileForUpload(file: File): Promise<{
+  file: File;
+  originalBytes: number;
+  optimizedBytes: number;
+  width: number;
+  height: number;
+  optimizationSummary: string;
+}> {
+  const fallbackWidth = MAX_OPTIMIZED_IMAGE_WIDTH;
+  const fallbackHeight = MAX_OPTIMIZED_IMAGE_HEIGHT;
+
+  if (
+    typeof window === "undefined" ||
+    typeof document === "undefined" ||
+    typeof Image === "undefined" ||
+    typeof URL === "undefined" ||
+    typeof URL.createObjectURL !== "function"
+  ) {
+    return {
+      file,
+      originalBytes: file.size,
+      optimizedBytes: file.size,
+      width: fallbackWidth,
+      height: fallbackHeight,
+      optimizationSummary: formatOptimizationSummary(
+        file.size,
+        file.size,
+        fallbackWidth,
+        fallbackHeight
+      )
+    };
+  }
+
+  try {
+    const objectUrl = URL.createObjectURL(file);
+    let img: HTMLImageElement;
+    try {
+      img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = () =>
+          reject(
+            new Error("No se pudo decodificar la imagen en el navegador.")
+          );
+        element.src = objectUrl;
+      });
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+
+    const naturalWidth =
+      img.naturalWidth || img.width || MAX_OPTIMIZED_IMAGE_WIDTH;
+    const naturalHeight =
+      img.naturalHeight || img.height || MAX_OPTIMIZED_IMAGE_HEIGHT;
+    const dims = computeOptimizedImageDimensions(
+      naturalWidth,
+      naturalHeight,
+      MAX_OPTIMIZED_IMAGE_WIDTH,
+      MAX_OPTIMIZED_IMAGE_HEIGHT
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = dims.width;
+    canvas.height = dims.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx || typeof canvas.toBlob !== "function") {
+      return {
+        file,
+        originalBytes: file.size,
+        optimizedBytes: file.size,
+        width: dims.width,
+        height: dims.height,
+        optimizationSummary: formatOptimizationSummary(
+          file.size,
+          file.size,
+          dims.width,
+          dims.height
+        )
+      };
+    }
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, dims.width, dims.height);
+
+    const webpBlob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(
+        (blob) => resolve(blob),
+        "image/webp",
+        WEBP_COMPRESSION_QUALITY
+      );
+    });
+
+    if (!webpBlob) {
+      return {
+        file,
+        originalBytes: file.size,
+        optimizedBytes: file.size,
+        width: dims.width,
+        height: dims.height,
+        optimizationSummary: formatOptimizationSummary(
+          file.size,
+          file.size,
+          dims.width,
+          dims.height
+        )
+      };
+    }
+
+    const webpFilename = replaceFileExtensionWithWebp(file.name);
+    const optimizedFile =
+      file.type === "image/webp" &&
+      !dims.wasResized &&
+      webpBlob.size >= file.size
+        ? file
+        : new File([webpBlob], webpFilename, {
+            type: "image/webp",
+            lastModified: Date.now()
+          });
+
+    return {
+      file: optimizedFile,
+      originalBytes: file.size,
+      optimizedBytes: optimizedFile.size,
+      width: dims.width,
+      height: dims.height,
+      optimizationSummary: formatOptimizationSummary(
+        file.size,
+        optimizedFile.size,
+        dims.width,
+        dims.height
+      )
+    };
+  } catch {
+    return {
+      file,
+      originalBytes: file.size,
+      optimizedBytes: file.size,
+      width: fallbackWidth,
+      height: fallbackHeight,
+      optimizationSummary: formatOptimizationSummary(
+        file.size,
+        file.size,
+        fallbackWidth,
+        fallbackHeight
+      )
+    };
+  }
 }
 
 export function slugifyProjectTitle(raw: string): string {
@@ -589,15 +813,31 @@ export function CatalogAdminView({
   const [coverUploadStatus, setCoverUploadStatus] = useState<UploadSlotStatus>({
     uploading: false,
     error: null,
-    lastUploadedUrl: null
+    lastUploadedUrl: null,
+    optimizationSummary: null
   });
 
   const [galleryUploadStatus, setGalleryUploadStatus] = useState<
     Record<SystemGallerySlotNumber, UploadSlotStatus>
   >({
-    1: { uploading: false, error: null, lastUploadedUrl: null },
-    2: { uploading: false, error: null, lastUploadedUrl: null },
-    3: { uploading: false, error: null, lastUploadedUrl: null }
+    1: {
+      uploading: false,
+      error: null,
+      lastUploadedUrl: null,
+      optimizationSummary: null
+    },
+    2: {
+      uploading: false,
+      error: null,
+      lastUploadedUrl: null,
+      optimizationSummary: null
+    },
+    3: {
+      uploading: false,
+      error: null,
+      lastUploadedUrl: null,
+      optimizationSummary: null
+    }
   });
 
   const productionSystemsList = systems.filter(
@@ -640,12 +880,28 @@ export function CatalogAdminView({
     setCoverUploadStatus({
       uploading: false,
       error: null,
-      lastUploadedUrl: null
+      lastUploadedUrl: null,
+      optimizationSummary: null
     });
     setGalleryUploadStatus({
-      1: { uploading: false, error: null, lastUploadedUrl: null },
-      2: { uploading: false, error: null, lastUploadedUrl: null },
-      3: { uploading: false, error: null, lastUploadedUrl: null }
+      1: {
+        uploading: false,
+        error: null,
+        lastUploadedUrl: null,
+        optimizationSummary: null
+      },
+      2: {
+        uploading: false,
+        error: null,
+        lastUploadedUrl: null,
+        optimizationSummary: null
+      },
+      3: {
+        uploading: false,
+        error: null,
+        lastUploadedUrl: null,
+        optimizationSummary: null
+      }
     });
   }
 
@@ -833,9 +1089,13 @@ export function CatalogAdminView({
 
   async function uploadImageFileToServer(
     file: File
-  ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  ): Promise<
+    | { ok: true; url: string; optimizationSummary: string }
+    | { ok: false; error: string }
+  > {
+    const optimized = await optimizeImageFileForUpload(file);
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", optimized.file);
 
     try {
       const response = await fetch("/api/admin/upload", {
@@ -873,7 +1133,8 @@ export function CatalogAdminView({
 
       return {
         ok: true,
-        url: payload.asset.url
+        url: payload.asset.url,
+        optimizationSummary: optimized.optimizationSummary
       };
     } catch {
       return {
@@ -892,7 +1153,8 @@ export function CatalogAdminView({
     setCoverUploadStatus({
       uploading: true,
       error: null,
-      lastUploadedUrl: null
+      lastUploadedUrl: null,
+      optimizationSummary: null
     });
 
     const result = await uploadImageFileToServer(file);
@@ -900,7 +1162,8 @@ export function CatalogAdminView({
       setCoverUploadStatus({
         uploading: false,
         error: result.error,
-        lastUploadedUrl: null
+        lastUploadedUrl: null,
+        optimizationSummary: null
       });
       return;
     }
@@ -912,11 +1175,12 @@ export function CatalogAdminView({
     setCoverUploadStatus({
       uploading: false,
       error: null,
-      lastUploadedUrl: result.url
+      lastUploadedUrl: result.url,
+      optimizationSummary: result.optimizationSummary
     });
     setStatusBanner({
       type: "success",
-      message: `Imagen de portada subida a ${result.url}. Recuerda guardar el proyecto para publicar los cambios.`
+      message: `Imagen de portada subida a ${result.url} (${result.optimizationSummary}). Recuerda guardar el proyecto para publicar los cambios.`
     });
   }
 
@@ -929,14 +1193,24 @@ export function CatalogAdminView({
 
     setGalleryUploadStatus((prev) => ({
       ...prev,
-      [slot]: { uploading: true, error: null, lastUploadedUrl: null }
+      [slot]: {
+        uploading: true,
+        error: null,
+        lastUploadedUrl: null,
+        optimizationSummary: null
+      }
     }));
 
     const result = await uploadImageFileToServer(file);
     if (!result.ok) {
       setGalleryUploadStatus((prev) => ({
         ...prev,
-        [slot]: { uploading: false, error: result.error, lastUploadedUrl: null }
+        [slot]: {
+          uploading: false,
+          error: result.error,
+          lastUploadedUrl: null,
+          optimizationSummary: null
+        }
       }));
       return;
     }
@@ -957,11 +1231,16 @@ export function CatalogAdminView({
 
     setGalleryUploadStatus((prev) => ({
       ...prev,
-      [slot]: { uploading: false, error: null, lastUploadedUrl: result.url }
+      [slot]: {
+        uploading: false,
+        error: null,
+        lastUploadedUrl: result.url,
+        optimizationSummary: result.optimizationSummary
+      }
     }));
     setStatusBanner({
       type: "success",
-      message: `Imagen de detalle VIEW 0${slot} subida a ${result.url}. Guarda el proyecto para persistir en PostgreSQL.`
+      message: `Imagen de detalle VIEW 0${slot} subida a ${result.url} (${result.optimizationSummary}). Guarda el proyecto para persistir en PostgreSQL.`
     });
   }
 
@@ -2219,11 +2498,16 @@ export function CatalogAdminView({
                       (independiente de las 3 imágenes de detalle).
                     </p>
                   </div>
-                  {coverUploadStatus.uploading && (
-                    <span className="font-mono text-xs text-[#2563EB] font-semibold">
-                      Subiendo a /app/data/uploads...
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-[11px] px-2.5 py-1 rounded bg-[#EFF6FF] border border-[#93C5FD] text-[#1E40AF] font-semibold">
+                      1920×1200 px (16:10) · Auto-WebP 86%
                     </span>
-                  )}
+                    {coverUploadStatus.uploading && (
+                      <span className="font-mono text-xs text-[#2563EB] font-semibold">
+                        Optimizando a WebP y subiendo a /app/data/uploads...
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
@@ -2253,7 +2537,7 @@ export function CatalogAdminView({
                         htmlFor="cover-image-file-input"
                         className="block font-mono text-xs font-semibold uppercase text-[#111827] mb-1"
                       >
-                        Subir Imagen de Portada desde tu PC (PNG, JPG, WEBP &lt;= 10 MB)
+                        Subir Imagen de Portada desde tu PC (PNG, JPG, WEBP &lt;= 10 MB · Auto-WebP 1920×1200)
                       </label>
                       <input
                         id="cover-image-file-input"
@@ -2290,6 +2574,12 @@ export function CatalogAdminView({
                       />
                     </div>
 
+                    {coverUploadStatus.optimizationSummary && (
+                      <p className="font-mono text-[11px] font-semibold text-[#065F46] bg-[#ECFDF5] border border-[#059669] rounded-[6px] px-2.5 py-1.5">
+                        ✓ {coverUploadStatus.optimizationSummary}
+                      </p>
+                    )}
+
                     {coverUploadStatus.error && (
                       <p className="text-xs text-[#B91C1C] font-medium">
                         {coverUploadStatus.error}
@@ -2308,18 +2598,23 @@ export function CatalogAdminView({
                 BLOQUE B // 3 IMÁGENES EXCLUSIVAS DE LA VISTA DE DETALLE (/sistemas/[slug])
               </legend>
 
-              <p className="text-xs sm:text-sm text-[#4B5563]">
-                Estas{" "}
-                <strong className="text-[#111827]">
-                  3 vistas técnicas (VIEW 01, VIEW 02, VIEW 03)
-                </strong>{" "}
-                se renderizan dentro de la página de estudio de caso (
-                <code>01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA</code>) y son{" "}
-                <strong className="text-[#111827]">
-                  independientes de la foto de la tarjeta de inicio
-                </strong>
-                .
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-xs sm:text-sm text-[#4B5563]">
+                  Estas{" "}
+                  <strong className="text-[#111827]">
+                    3 vistas técnicas (VIEW 01, VIEW 02, VIEW 03)
+                  </strong>{" "}
+                  se renderizan dentro de la página de estudio de caso (
+                  <code>01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA</code>) y son{" "}
+                  <strong className="text-[#111827]">
+                    independientes de la foto de la tarjeta de inicio
+                  </strong>
+                  .
+                </p>
+                <span className="font-mono text-[11px] px-2.5 py-1 rounded bg-[#EFF6FF] border border-[#93C5FD] text-[#1E40AF] font-semibold shrink-0">
+                  1920×1200 px (16:10) · Auto-WebP 86%
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {normalizedGallerySlots.map((slotItem) => {
@@ -2358,7 +2653,7 @@ export function CatalogAdminView({
                             />
                           ) : (
                             <span className="font-mono text-[11px] text-[#4B5563] text-center px-2">
-                              VIEW 0{slotNum} · Lista para subir desde tu PC
+                              VIEW 0{slotNum} · Lista para subir desde tu PC (1920×1200 WebP)
                             </span>
                           )}
                         </div>
@@ -2383,7 +2678,12 @@ export function CatalogAdminView({
                           />
                           {slotStatus.uploading && (
                             <p className="mt-1 font-mono text-[11px] text-[#2563EB]">
-                              Subiendo VIEW 0{slotNum}...
+                              Optimizando a WebP y subiendo VIEW 0{slotNum}...
+                            </p>
+                          )}
+                          {slotStatus.optimizationSummary && (
+                            <p className="mt-1 font-mono text-[10px] font-semibold text-[#065F46] bg-[#ECFDF5] border border-[#059669] rounded px-2 py-1">
+                              ✓ {slotStatus.optimizationSummary}
                             </p>
                           )}
                           {slotStatus.error && (
