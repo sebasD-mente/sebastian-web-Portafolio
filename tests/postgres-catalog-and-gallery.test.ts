@@ -246,10 +246,17 @@ describe("feat-009: Cimiento PostgreSQL (pgvector), Volumen /app/data/uploads, 2
     expect(homeSectionCode).toContain("SISTEMAS EN PRODUCCIÓN");
     expect(homeSectionCode).not.toContain('id="mas-proyectos-ia"');
     expect(homeSectionCode).not.toContain("MÁS PROYECTOS DE IA");
+    // feat-026: Split layout editorial de 2 columnas, hover iluminado en azul y separación vertical
+    expect(homeSectionCode).toContain("lg:col-span-4");
+    expect(homeSectionCode).toContain("lg:col-span-8");
+    expect(homeSectionCode).toContain("space-y-16 lg:space-y-24");
+    expect(homeSectionCode).toContain("hover:border-[#2563EB]");
+    expect(homeSectionCode).toContain("hover:-translate-y-0.5");
 
     const aiProjectsViewCode = readRepoFile("src/ui/components/AiProjectsCatalogView.tsx");
     expect(aiProjectsViewCode).toContain("mas-proyectos-ia");
     expect(aiProjectsViewCode).toContain("MÁS PROYECTOS DE IA");
+    expect(aiProjectsViewCode).toContain("space-y-16 lg:space-y-24");
 
     const detailViewCode = readRepoFile("src/ui/components/SystemDetailView.tsx");
     expect(detailViewCode).toContain("01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA");

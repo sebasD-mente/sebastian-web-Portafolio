@@ -784,7 +784,7 @@
       "area": "projects-showcase-ux-redesign",
       "user_visible_behavior": "En las páginas de sistemas en producción y más proyectos de IA, cada proyecto se presenta con su título claramente identificado en el lado izquierdo y con generosa separación vertical; al pasar el cursor sobre las tarjetas, estas responden con un elegante borde azul iluminado y una sutil elevación que da vida al sitio sin perder sobriedad.",
       "priority": "P1",
-      "status": "not-started",
+      "status": "done",
       "dependencies": [
         "feat-025"
       ],
@@ -799,7 +799,8 @@
         "npm run typecheck",
         "npm test",
         "npm run build"
-      ]
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS con WIP=0; Puerta 3 typecheck OK, vitest 57/57 tests PASS en 13 suites verificando layout split editorial 2 columnas con lg:col-span-4 sticky, lg:col-span-8, separación vertical space-y-16 lg:space-y-24, divisores de ritmo y micro-interacción hover con borde iluminado #2563EB, next build standalone OK)."
     }
   ]
 }

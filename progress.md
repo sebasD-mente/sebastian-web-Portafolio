@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-11 16:15
-**Session ID:** sesion-036 (Ejecución y Verificación de feat-025: Página de Inicio Limpia, Vistas Independientes /sistemas y /habilidades-y-stack, y Pie Centrado)
-**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-025` en `"done"`; `feat-026` declarada en `"not-started"`)
+**Last Updated:** 2026-11-11 16:38
+**Session ID:** sesion-037 (Ejecución y Verificación de feat-026: Nuevo Layout Split de Proyectos, Separación Vertical y Micro-interacción Hover)
+**Active Feature:** Ninguna (`WIP = 0`; `feat-001` a `feat-026` en `"done"`)
 **Standard Startup Path:** `bash ./init.sh`
 **Standard Verification Path:** `bash ./init.sh`
 
@@ -12,58 +12,51 @@
 
 ### What's Done
 - [x] Instalación inicial de `Plantilla-Maestra-Arnes` y certificación de **Universal Chameleon Harness v2.1** (`Overall: 100/100`, `0 CRLF`, `0 UTF-8 BOM`).
-- [x] **`feat-001` a `feat-024` completadas, verificadas en `"done"` (`100/100`)**.
-- [x] **`feat-025` completada y verificada en `"done"` (`100/100`)**:
-  - **Página de Inicio Limpia (`src/app/page.tsx`)**:
-    - Retirados los catálogos empotrados (`ProductionSystemsSection` y `TechStackSection`), dejando la vista `/` sobria y enfocada exclusivamente en el `HeroSection` (con el monitor modular `serverdmente`), `AppShell` y `OfficialFooter`.
-  - **Vistas Independientes Dedicadas**:
-    - Creada la ruta `/sistemas` (`src/app/sistemas/page.tsx`) que aloja de forma exclusiva `ProductionSystemsSection` con metadatos SEO y `dynamic = "force-dynamic"`.
-    - Creada la ruta `/habilidades-y-stack` (`src/app/habilidades-y-stack/page.tsx`) que aloja `TechStackSection` con metadatos SEO y `dynamic = "force-dynamic"`.
-  - **Componente Modular de Navegación (`src/ui/components/Navbar.tsx`)**:
-    - Extraído `<Navbar />` e integrado en `AppShell.tsx`, con división estilizada de dos líneas para etiquetas largas (`renderTwoLineNavLabel`).
-  - **Configuración de Navegación (`src/config/site.config.ts`)**:
-    - `01 // SISTEMAS EN PRODUCCIÓN` apuntando a `/sistemas`.
-    - `02 // HABILIDADES Y STACK TECNOLÓGICO` apuntando a `/habilidades-y-stack`.
-    - `primaryCtaHref: "/sistemas"`.
-  - **Pie de Página Institucional (`src/ui/components/OfficialFooter.tsx`)**:
-    - Retirado el texto técnico derecho (`footer.technicalNote`).
-    - Centrado el texto de copyright: `© 2026 · Creado por Sebastián Jiménez / Deko Labs`.
-    - Conservado el acceso discreto de engranaje de administrador (`data-admin-login-trigger="true"`).
+- [x] **`feat-001` a `feat-025` completadas, verificadas en `"done"` (`100/100`)**.
+- [x] **`feat-026` completada y verificada en `"done"` (`100/100`)**:
+  - **Layout Split Editorial de 2 Columnas (`src/ui/components/ProductionSystemsSection.tsx` & `ProjectPreviewCard`)**:
+    - Reestructurada cada fila de proyecto en una cuadrícula `grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start`.
+    - **Columna izquierda (`col-span-12 lg:col-span-4 lg:sticky lg:top-28 self-start space-y-4`)**:
+      - Encabezado de orden y categoría (`headerCategory` en `mono-pixel text-[11px] sm:text-[12px] text-[#2563EB] font-bold`).
+      - Título prominente del proyecto (`<HeadingTag className="font-display text-2xl sm:text-3xl lg:text-[2.25rem] font-extrabold uppercase tracking-[-0.02em] text-[#0A0A0A] leading-[1.08]">`).
+      - Badge de versión (`versionBadge`) e indicador de estado `ONLINE` / `EDGE ACTIVE`.
+      - Subtítulo narrativo contextual del sistema (`system.subtitle`).
+    - **Columna derecha (`col-span-12 lg:col-span-8`)**:
+      - Tarjeta interactiva técnica que aloja el marco de ventana de navegador con punto verde, preview de pantalla con aspect ratio armónico, panel de resumen, stack pills con destacado azul `#2563EB`, caja de especificaciones técnicas y botones de acción directos (`PROBAR SISTEMA EN VIVO ↗` y `{}` `ARQUITECTURA & REPO`).
+  - **Aumento Sustancial de Separación Vertical y Divisores de Ritmo**:
+    - Aplicado `space-y-16 lg:space-y-24` tanto en `ProductionSystemsSection.tsx` como en `AiProjectsCatalogView.tsx`.
+    - Añadidos divisores sutiles (`border-t border-[#CBD5E1] pt-12 sm:pt-16 lg:pt-20`) para marcar la cadencia entre múltiples proyectos.
+  - **Micro-interacciones Hover Elegantes**:
+    - Borde exterior iluminado en azul `#2563EB` en hover (`hover:border-[#2563EB]`).
+    - Elevación sutil (`hover:-translate-y-0.5`).
+    - Sombreado suave con tinte azul (`hover:shadow-[0_12px_30px_-8px_rgba(37,99,235,0.18)]`).
+    - Transición suave en tarjetas e imágenes (`transition-all duration-300`, `group-hover:scale-[1.01]`).
   - **Sincronización de Suites de Prueba**:
-    - Actualizados `tests/harness-deprecation-dag.test.ts` (añadido `Navbar.tsx` a componentes activos), `tests/official-footer.test.ts`, `tests/site.service.test.ts` y `tests/ai-projects-page.test.ts`.
-    - Pasadas las 3 puertas de `bash ./init.sh` (57/57 tests PASS en 13 suites, 100/100 harness, build standalone OK con rutas SSG/SSR).
+    - Actualizados `tests/ai-projects-page.test.ts`, `tests/postgres-catalog-and-gallery.test.ts` y `tests/systems.service.test.ts` verificando el marcado split, tokens de hover y atributos del modelo.
+    - Certificación en 3 puertas de `bash ./init.sh` (`57/57` tests PASS en 13 suites, `100/100` arnés, `0 CRLF`, build standalone de Next.js OK).
 
 ### What's In Progress
-- Ninguna tarea en curso (`WIP = 0`). La tarea `feat-026` queda lista como siguiente paso en el DAG.
+- Ninguna tarea en curso (`WIP = 0`). Todas las tareas del plan maestro (`feat-001` a `feat-026`) están completadas y verificadas.
 
 ### What's Next
-1. Iniciar la ejecución de **`feat-026`** (`WIP = 1`):
-   - Rediseño editorial split de 2 columnas en `ProductionSystemsSection.tsx` y `AiProjectsCatalogView.tsx` (Título, orden y categoría a la izquierda; tarjeta a la derecha).
-   - Aumento sustancial de separación vertical (`space-y-16 lg:space-y-24`).
-   - Micro-interacción hover con elevación sutil y borde exterior iluminado en azul `#2563EB`.
+- Proyecto en estado limpio y certificado (`clean-state`). Listo para revisión de usuario, despliegue en Home Lab o nuevas tareas en el backlog.
 
 ## Blockers / Risks
-- Ninguno activo. Estado limpio y verificable (`100/100`).
+- Ninguno activo. Estado 100% limpio y verificable (`100/100`).
 
 ## Decisions Made
-- **Desacople limpio de la Home y modularización del Navbar (`feat-025`)**:
-  - Context: Se requería que `/` fuera austera y minimalista, mientras que el catálogo de sistemas y el stack tecnológico tuvieran sus propias páginas con URLs canónicas dedicadas.
-  - Decision: Se crearon `/sistemas` y `/habilidades-y-stack`, se extrajo el componente `Navbar.tsx` satisfaciendo los `required_files` del arnés, y se centró la franja de copyright en `OfficialFooter.tsx` retirando el texto técnico derecho redundante.
+- **Layout Split Editorial (4 cols sticky + 8 cols tarjeta interactiva) (`feat-026`)**:
+  - Context: La lista de proyectos presentaba tarjetas contiguas muy pegadas que generaban monotonía visual al hacer scroll.
+  - Decision: Se separaron los títulos, categorías y badges en una columna izquierda sticky (`lg:col-span-4`) que acompaña la lectura mientras a la derecha se exhibe la tarjeta interactiva (`lg:col-span-8`) con mayor separación vertical (`space-y-16 lg:space-y-24`) y micro-interacción hover iluminada en el azul `#2563EB` de la marca.
 
 ## Files Modified This Session
-- `src/ui/components/Navbar.tsx` - Nuevo componente de barra de navegación superior
-- `src/ui/components/AppShell.tsx` - Integración modular del nuevo `<Navbar />`
-- `src/app/page.tsx` - Limpieza de la página de inicio (solo Hero + Monitor + Footer)
-- `src/app/sistemas/page.tsx` - Nueva ruta dedicada para Sistemas en Producción
-- `src/app/habilidades-y-stack/page.tsx` - Nueva ruta dedicada para Habilidades y Stack
-- `src/config/site.config.ts` - Navegación actualizada y copyright oficial con Deko Labs
-- `src/ui/components/OfficialFooter.tsx` - Franja de copyright centrada sin texto técnico derecho
-- `tests/harness-deprecation-dag.test.ts` - Añadido Navbar.tsx al registro de componentes
-- `tests/official-footer.test.ts` - Aserciones de copyright y renderizado de páginas públicas
-- `tests/site.service.test.ts` - Aserciones de etiquetas y rutas de navegación
-- `tests/ai-projects-page.test.ts` - Verificación de desacople de Home y nuevas rutas dedicadas
-- `feature_list.json` - `feat-025` marcado como `done` con evidencia registrada
-- `sprint-contract.md` - Contrato de ejecución de `feat-025`
+- `src/ui/components/ProductionSystemsSection.tsx` - Reestructuración split editorial de 2 columnas, hover azul `#2563EB` y mayor distancia vertical
+- `src/ui/components/AiProjectsCatalogView.tsx` - Aplicada mayor separación vertical `space-y-16 lg:space-y-24` y divisores de ritmo visual
+- `tests/ai-projects-page.test.ts` - Aserciones de layout split (`lg:col-span-4`, `lg:col-span-8`, `lg:sticky`), separación y hover
+- `tests/postgres-catalog-and-gallery.test.ts` - Verificación de tokens de layout split y hover en ProductionSystemsSection y AiProjectsCatalogView
+- `tests/systems.service.test.ts` - Verificación de atributos del modelo requeridos para la presentación split
+- `feature_list.json` - `feat-026` completada y registrada en `"done"`
+- `sprint-contract.md` - Contrato de ejecución de `feat-026`
 - `progress.md`, `session-handoff.md` - Registro de avance y acta de entrega
 
 ## Verification Evidence
@@ -72,5 +65,5 @@
 - [x] Type check / static validation clean: `node scripts/validate-harness.mjs --min-score 100` -> `Overall: 100/100 (25/25 checks PASS)`
 
 ## Notes for Next Session
-- Tomar `feat-026` (`WIP = 1`).
-- Seguir el orden secuencial del DAG: `feat-026` (Layout editorial split de proyectos y micro-interacción hover).
+- El catálogo de sistemas y proyectos de IA cuenta con layout editorial split de 2 columnas con micro-interacciones hover.
+- Todas las características de `feat-001` a `feat-026` están en `"done"` con `WIP = 0`.

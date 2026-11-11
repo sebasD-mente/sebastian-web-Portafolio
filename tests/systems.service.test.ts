@@ -40,6 +40,12 @@ describe("feat-002 & feat-007: Production Systems Catalog, Hero Telemetry & Deco
     expect(featured[0]?.highlightedStackTag).toBe("GOOGLE CLOUD STORAGE");
     expect(featured[0]?.liveUrl).toBe("https://www.decovintage.online");
     expect(featured[0]?.previewImageSrc).toBe("/assets/deco-vintage-preview.png");
+    // feat-026: Atributos requeridos para el layout split editorial (columna izquierda + tarjeta derecha)
+    expect(featured[0]?.subtitle.length).toBeGreaterThan(10);
+    expect(featured[0]?.summary.length).toBeGreaterThan(20);
+    expect(featured[0]?.architectureSpecs.length).toBeGreaterThanOrEqual(2);
+    expect(featured[0]?.stackTags.length).toBeGreaterThanOrEqual(4);
+    expect(featured[0]?.detailHref).toBe("/sistemas/deco-vintage-platform");
 
     expect(snapshot.primarySystems).toHaveLength(1);
     expect(snapshot.primarySystems[0]?.layoutVariant).toBe("primary-7-5");
