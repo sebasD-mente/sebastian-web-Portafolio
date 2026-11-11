@@ -295,7 +295,7 @@ describe("Ubuntu Home Lab Telemetry & Contact Advisory (feat-005)", () => {
     );
     expect(telPayload.telemetry.liveMonitor.gauges).toHaveLength(3);
 
-    // Verify HeroSection and HomePage markup contain the 8 real rows and 3 gauges and NO leaked harness/theme rows
+    // feat-024: Verify HeroSection and HomePage render the modular dashboard in JetBrains Mono without ellipsis, with integrated progressbars and uptime
     const { identity } = getSiteFoundationSnapshot();
     const heroHtml = renderToStaticMarkup(
       React.createElement(HeroSection, { identity })
@@ -303,22 +303,25 @@ describe("Ubuntu Home Lab Telemetry & Contact Advisory (feat-005)", () => {
     const homeHtml = renderToStaticMarkup(await HomePage());
 
     for (const html of [heroHtml, homeHtml]) {
-      expect(html).toContain("HOME-LAB // SERVERDMENTE");
+      expect(html).toContain("NODE TELEMETRY");
+      expect(html).toContain("HOME-LAB // serverdmente");
       expect(html).toContain("ONLINE · LIVE 5S");
-      expect(html).toContain("HOST &amp; KERNEL");
-      expect(html).toContain("CPU &amp; LOAD");
-      expect(html).toContain("THERMAL SENSORS");
-      expect(html).toContain("HOST MEMORY");
-      expect(html).toContain("CONTAINER CGROUP");
-      expect(html).toContain("STORAGE (NVME)");
-      expect(html).toContain("DATA &amp; EDGE MESH");
-      expect(html).toContain("HOST UPTIME");
-      expect(html).toContain("THERMAL HEADROOM");
-      expect(html).toContain("HOST RAM USAGE");
-      expect(html).toContain("CONTAINER CGROUP QUOTA");
+      expect(html).toContain("HOST OS &amp; KERNEL");
+      expect(html).toContain("TEMPERATURA &amp; DISIPACIÓN");
+      expect(html).toContain("HOST RAM");
+      expect(html).toContain("CGROUP NEXT.JS");
+      expect(html).toContain("ALMACENAMIENTO NVMe");
+      expect(html).toContain("TIEMPO ACTIVO (UPTIME):");
+      expect(html).toContain("font-mono-tech");
+      expect(html).toContain('role="progressbar"');
       expect(html).not.toContain("DEFAULT THEME");
       expect(html).not.toContain("HARNESS SCORE");
       expect(html).not.toContain("14 NODES");
     }
+
+    // HeroSection specific ergonomic invariants: zero ellipsis, no truncate class, and network badges replaced with uptime
+    expect(heroHtml).not.toContain("...");
+    expect(heroHtml).not.toContain("truncate");
+    expect(heroHtml).not.toContain("pgvector:pg17 ONLINE · Tailscale WireGuard");
   });
 });

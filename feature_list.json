@@ -722,6 +722,83 @@
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 57/57 tests PASS en 13 suites verificando DEFAULT_SOCIAL_LINKS_URLS como fuente única de verdad en site.config.ts con LinkedIn https://www.linkedin.com/in/sebastian-jimenez-aibuilder/, retiro de NEXT_PUBLIC_SOCIAL_* en .env.example sin tocar llaves ADMIN_* ni DATABASE_URL, next build standalone OK).",
       "notes": "REGLAS CRÍTICAS DE FEAT-023: (1) PROHIBIDO tocar o alterar cualquier variable de entorno de claves, autenticación o infraestructura en '.env.example', 'src/config/site.config.ts' o 'docker-compose.yml' ('ADMIN_USERNAME', 'ADMIN_PASSWORD', 'ADMIN_SESSION_SECRET', 'ADMIN_ACCESS_KEY', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'DATABASE_URL', 'CATALOG_UPLOADS_DIR', 'HOMELAB_*'). (2) Conservar el parámetro opcional 'overrides?: SocialLinksEnvOverrides' en 'getOfficialFooterConfig(overrides)' y 'getOfficialFooterSnapshot(overrides)' para que los tests que pasan 'overrides' por argumento sigan funcionando al 100%."
+    },
+    {
+      "id": "feat-024",
+      "name": "Rediseño Ergonómico del Monitor en Tiempo Real serverdmente (Modular Dashboard con Uptime, JetBrains Mono y Cero Ellipsis)",
+      "description": "Rediseñar la tarjeta de telemetría física de serverdmente en 'src/ui/components/HeroSection.tsx' implementando la Propuesta A (Modular Dashboard): (1) Migrar la tipografía de 'Share Tech Mono' a 'JetBrains Mono' (12-13px) con cifras tabulares ('tnum') y mayúsculas/minúsculas naturales sin clases que fuercen 'uppercase' destructivo ni 'truncate' que recorte con '...'; (2) Organizar la información en 4 micro-bloques temáticos (Host & Kernel, Temperaturas & Disipación, Memoria RAM & Cgroup Next.js en 2 columnas, y Almacenamiento NVMe); (3) Integrar las barras de progreso directamente en cada métrica eliminando la duplicación inferior; (4) Retirar los badges de 'pgvector' y 'tailscale' de la parte inferior de la tarjeta e incorporar en su lugar la métrica destacada de tiempo de funcionamiento continuo ('⏱ TIEMPO ACTIVO (UPTIME): 9d 15h 34m (231.6h continuo)'); y (5) Actualizar 'tests/telemetry-and-contact.test.ts' verificando que el nuevo marcado contenga las métricas de hardware sin puntos suspensivos y conserve accesibilidad semántica.",
+      "area": "hero-live-telemetry",
+      "user_visible_behavior": "En la columna derecha del Hero de dekolabs.org, el monitor de serverdmente muestra un dashboard modular en JetBrains Mono perfectamente legible a distancia, sin textos cortados con puntos suspensivos (...), con barras de progreso integradas en cada métrica y el tiempo de funcionamiento continuo visible en la parte inferior en lugar de badges de red.",
+      "priority": "P0",
+      "status": "done",
+      "dependencies": [
+        "feat-023"
+      ],
+      "required_files": [
+        "src/ui/components/HeroSection.tsx",
+        "tests/telemetry-and-contact.test.ts"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS; Puerta 3 typecheck OK, lint OK, vitest 57/57 tests PASS en 13 suites verificando Propuesta A Modular Dashboard en JetBrains Mono con tnum, cero ellipsis, cero truncate, Uptime continuo y progressbars accesibles en tests/telemetry-and-contact.test.ts, next build standalone OK)."
+    },
+    {
+      "id": "feat-025",
+      "name": "Página de Inicio Limpia (Hero + Monitor + Footer), Vistas Independientes (/sistemas, /habilidades-y-stack) y Pie de Página Centrado",
+      "description": "Desacoplar la página de inicio ('/') dejando únicamente el Hero con el monitor de serverdmente y el pie de página institucional, creando vistas independientes dedicadas en la navegación superior: (1) Crear la ruta '/sistemas' ('src/app/sistemas/page.tsx') que aloje de forma exclusiva el catálogo de Sistemas en Producción; (2) Crear la ruta '/habilidades-y-stack' ('src/app/habilidades-y-stack/page.tsx') que aloje la sección técnica y actualizar en 'src/config/site.config.ts' el título y etiqueta del botón de la barra de navegación a 'HABILIDADES Y STACK TECNOLÓGICO' (href: '/habilidades-y-stack'); (3) Limpiar 'src/app/page.tsx' retirando 'ProductionSystemsSection' y 'TechStackSection' para que quede austera y enfocada exclusivamente en el Hero, el Monitor y el Footer; (4) En 'src/ui/components/OfficialFooter.tsx', simplificar la franja de copyright retirando el texto técnico derecho ('footer.technicalNote') y dejando únicamente centrado el texto con la fecha y 'Creado por Sebastián Jiménez / Deko Labs' manteniendo el acceso de administrador; y (5) Actualizar los tests de navegación, footer y home page en 'tests/official-footer.test.ts', 'tests/telemetry-and-contact.test.ts' y 'tests/site.service.test.ts'.",
+      "area": "site-navigation-and-clean-home",
+      "user_visible_behavior": "La página de inicio de dekolabs.org luce completamente limpia y sobria (Hero + Monitor + Footer centrado), mientras que 'Sistemas en Producción' y 'Habilidades y Stack Tecnológico' cuentan con sus propias páginas independientes accesibles directamente desde los botones de la barra de navegación superior.",
+      "priority": "P1",
+      "status": "not-started",
+      "dependencies": [
+        "feat-024"
+      ],
+      "required_files": [
+        "src/app/page.tsx",
+        "src/app/sistemas/page.tsx",
+        "src/app/habilidades-y-stack/page.tsx",
+        "src/config/site.config.ts",
+        "src/ui/components/Navbar.tsx",
+        "src/ui/components/OfficialFooter.tsx"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ]
+    },
+    {
+      "id": "feat-026",
+      "name": "Nuevo Layout de Proyectos (Título a la Izquierda, Mayor Distancia y Micro-interacción Hover con Borde Iluminado en Azul)",
+      "description": "Rediseñar la presentación de tarjetas de proyectos en 'src/ui/components/ProductionSystemsSection.tsx' y 'src/ui/components/AiProjectsCatalogView.tsx' para eliminar la sensación de monotonía y proximidad excesiva: (1) Aumentar la separación vertical entre tarjetas (a 'space-y-16 lg:space-y-24') con separadores sutiles o mayor aire visual; (2) Reestructurar cada proyecto en un layout split editorial de 2 columnas donde el título del proyecto, número de orden y categoría se ubiquen en una columna izquierda dedicada ('col-span-12 lg:col-span-4' o columna sticky), dejando la tarjeta interactiva a la derecha ('col-span-12 lg:col-span-8') para que al hacer scroll se distinga de inmediato la transición entre proyectos; (3) Incorporar micro-interacciones hover sutiles y elegantes en las tarjetas y botones ('transition-all duration-300', leve elevación 'hover:-translate-y-0.5', sombreado suave y borde exterior que se ilumina con el azul característico de la barra de navegación '#2563EB'); y (4) Actualizar la suite de pruebas 'tests/postgres-catalog-and-gallery.test.ts', 'tests/ai-projects-page.test.ts' y 'tests/systems.service.test.ts' para verificar el nuevo layout y comportamiento.",
+      "area": "projects-showcase-ux-redesign",
+      "user_visible_behavior": "En las páginas de sistemas en producción y más proyectos de IA, cada proyecto se presenta con su título claramente identificado en el lado izquierdo y con generosa separación vertical; al pasar el cursor sobre las tarjetas, estas responden con un elegante borde azul iluminado y una sutil elevación que da vida al sitio sin perder sobriedad.",
+      "priority": "P1",
+      "status": "not-started",
+      "dependencies": [
+        "feat-025"
+      ],
+      "required_files": [
+        "src/ui/components/ProductionSystemsSection.tsx",
+        "src/ui/components/AiProjectsCatalogView.tsx"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ]
     }
   ]
 }

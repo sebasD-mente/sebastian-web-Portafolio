@@ -1,16 +1,29 @@
 # Session Handoff
 
 ## Current Objective
-- **Goal:** Completar y verificar **`feat-023`** (*Fuente Única de Verdad para Redes Sociales en `src/config/site.config.ts` (Sin Variables `NEXT_PUBLIC_SOCIAL_*` en `.env`) y Perfil Oficial de LinkedIn (`sebastian-jimenez-aibuilder`)*).
-- **Current status:** `clean-state` (`feat-001` a `feat-023` en `"done"`, `WIP = 0`; `Overall: 100/100`; `57/57` tests PASS en 13 suites; `0 CRLF`; `0 UTF-8 BOM`)
+- **Goal:** Ejecución, integración visual y verificación en 3 puertas de `feat-024`: Rediseño Ergonómico del Monitor en Tiempo Real `serverdmente` (Modular Dashboard con Uptime, JetBrains Mono y Cero Ellipsis).
+- **Current status:** `clean-state` (`feat-001` a `feat-024` en `"done"`; `feat-025` y `feat-026` declaradas en `"not-started"`; `WIP = 0`; `Overall: 100/100`; `57/57` tests PASS en 13 suites; `0 CRLF`; `0 UTF-8 BOM`)
 - **Branch / commit:** `main`
 
 ## Completed This Session
-- [x] **Implementación completa de `feat-023` (`src/config/site.config.ts`, `.env.example` y `tests/official-footer.test.ts`)**:
-  - Actualizado `DEFAULT_SOCIAL_LINKS_URLS.linkedin` en `src/config/site.config.ts` a `"https://www.linkedin.com/in/sebastian-jimenez-aibuilder/"` junto con Facebook (`"https://www.facebook.com/sebastian.jimenez.561437"`), Instagram (`"https://www.instagram.com/sebastian.1969c/"`) y WhatsApp (`"https://wa.me/50240275763"`).
-  - Retirada la lectura de `process.env.NEXT_PUBLIC_SOCIAL_*` en `getOfficialFooterConfig` (`src/config/site.config.ts`), dejando el código como fuente única de verdad de redes sociales.
-  - Eliminadas únicamente las 4 variables `NEXT_PUBLIC_SOCIAL_*` en `.env.example`, manteniendo 100% intactas todas las llaves y secretos (`ADMIN_*`, `POSTGRES_*`, `DATABASE_URL`, `CATALOG_UPLOADS_DIR`, `HOMELAB_*`).
-  - Sincronizada `tests/official-footer.test.ts` (`4/4` tests PASS, `57/57` tests globales PASS).
+- [x] **Implementación de la Propuesta A en `src/ui/components/HeroSection.tsx`**:
+  - Migración a `JetBrains Mono` (`font-mono-tech`, cifras tabulares `tnum`, 12-13px).
+  - Eliminadas las clases destructivas de `uppercase` forzado y `truncate` con puntos suspensivos (`...`).
+  - Organizados los 4 micro-bloques temáticos:
+    1. **Host OS & Kernel:** Nombre de distribución, versión de kernel, modelo de CPU y carga en 1m/5m con estado operativo.
+    2. **Temperaturas & Disipación:** Sensores de CPU y NVMe con barra integrada `progressbar` con `aria-label` y porcentajes accesibles.
+    3. **Memoria RAM & Cgroup Next.js:** Grid de 2 columnas para RAM del host y contenedor cgroup con valores exactos en GiB/MiB y sus barras individuales.
+    4. **Almacenamiento NVMe + Uptime Continuo:** Espacio usado/total en NVMe y sección destacada de tiempo de actividad continuo (`⏱ TIEMPO ACTIVO (UPTIME): ...`) en reemplazo de los badges de red `pgvector` y `tailscale`.
+- [x] **Actualización de la Suite de Pruebas `tests/telemetry-and-contact.test.ts`**:
+  - Validación del marcado modular en `HeroSection` y `HomePage`.
+  - Invariantes de accesibilidad (`role="progressbar"`) y verificación estricta de cero `...` y cero `truncate`.
+- [x] **Certificación de las 3 Puertas del Arnés (`init.sh`)**:
+  - Puerta 1 (Estática/Arquitectura): 0 violaciones de 6 capas, 0 CRLF, 0 BOM.
+  - Puerta 2 (Comportamiento/Subsistemas): `Overall: 100/100` (25/25 checks PASS).
+  - Puerta 3 (Sistema Completo): 57/57 tests PASS en 13 suites, typecheck sin errores, build standalone exitoso en Next.js.
+- [x] **Actualización de Artefactos de Gobierno**:
+  - `feature_list.json` (`feat-024` en `"done"` con evidencia ejecutable registrada).
+  - `sprint-contract.md`, `progress.md` y `session-handoff.md`.
 
 ## Verification Evidence
 
@@ -18,28 +31,28 @@
 | :--- | :--- | :--- | :--- |
 | Verificación Completa en 3 Puertas | `bash ./init.sh` | `PASS (Exit code 0)` | Puertas 1, 2 y 3 en verde (`CLEAN STATE`) |
 | Vigilante Arquitectónico y Higiene (Puerta 1) | `bash scripts/check-architecture.sh` | `PASS (Exit code 0)` | 6 capas en `src/` sin violaciones direccionales, `0 CRLF`, `0 BOM` |
-| Validación de los 5 Subsistemas (Puerta 2) | `node scripts/validate-harness.mjs --min-score 100` | `PASS (100/100)` | `25/25` checks PASS (`feat-001`..`feat-023` en `done`, `WIP = 0`) |
-| Suite de Tests y Build Standalone (Puerta 3) | `npm test && npm run build` | `PASS (57/57 tests)` | 13 suites en verde incluyendo `tests/official-footer.test.ts` |
+| Validación de los 5 Subsistemas (Puerta 2) | `node scripts/validate-harness.mjs --min-score 100` | `PASS (100/100)` | `25/25` checks PASS (`feat-024` en `done`, `WIP = 0`) |
+| Suite de Tests y Build Standalone (Puerta 3) | `npm test && npm run build` | `PASS (57/57 tests)` | 13 suites en verde, build de Next.js sin errores |
 
 ## Files Changed
-- `src/config/site.config.ts`
-- `.env.example`
-- `tests/official-footer.test.ts`
-- `feature_list.json`
-- `sprint-contract.md`
-- `progress.md`
-- `session-handoff.md`
+- `src/ui/components/HeroSection.tsx` - Monitor en tiempo real modular en JetBrains Mono
+- `tests/telemetry-and-contact.test.ts` - Suite de tests actualizada con aserciones del nuevo monitor
+- `feature_list.json` - `feat-024` completada y registrada en `"done"`
+- `sprint-contract.md` - Contrato de sprint para `feat-024`
+- `progress.md` - Registro de avance y estado
+- `session-handoff.md` - Acta de entrega y estado limpio
 
 ## Decisions Made
-- Mantener los 4 enlaces públicos de redes sociales exclusivamente en `src/config/site.config.ts` (`DEFAULT_SOCIAL_LINKS_URLS`) sin leer `process.env.NEXT_PUBLIC_SOCIAL_*`, evitando que archivos `.env` antiguos del servidor sobrescriban las URLs públicas mientras se conservan intactas todas las llaves y secretos de administración y base de datos.
+1. **Monitor `serverdmente`:** Implementada la Propuesta A con tipografía `JetBrains Mono` a 12.5px con cifras tabulares (`tnum`), integrando las barras de progreso dentro de cada métrica y ubicando el Uptime en la parte inferior en lugar de los badges de red, eliminando completamente los textos recortados con `...`.
 
 ## Blockers / Risks
-- Ninguno activo.
+- Ninguno activo. La línea base está 100% limpia y verificada.
 
 ## Next Session Startup
 1. Confirmar `pwd` en `sebastian web Portafolio`.
-2. Leer `AGENTS.md`, `harness.config.json`, `progress.md`, `session-handoff.md`, `sprint-contract.md` y `feature_list.json`.
-3. Ejecutar `bash ./init.sh` para verificar que la línea base está en verde (`100/100`).
+2. Leer `AGENTS.md`, `harness.config.json`, `progress.md`, `session-handoff.md` y `docs/design-docs/serverdmente-monitor-redesign-plan.md`.
+3. Ejecutar `bash ./init.sh` para verificar que la línea base está sana (`100/100`).
+4. Iniciar la ejecución de **`feat-025`** estableciendo `"status": "in-progress"` (`WIP = 1`) y actualizando `sprint-contract.md`.
 
 ## Recommended Next Step
-- Todas las tareas (`feat-001` a `feat-023`) están completadas y verificadas en `"done"` (`100/100`). Publicar en GitHub y desplegar en `serverdmente`.
+- Iniciar **`feat-025`**: Página de Inicio Limpia (Hero + Monitor + Footer), Vistas Independientes (`/sistemas`, `/habilidades-y-stack`) y Pie de Página Centrado.
