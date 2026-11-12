@@ -801,6 +801,32 @@
         "npm run build"
       ],
       "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS con WIP=0; Puerta 3 typecheck OK, vitest 57/57 tests PASS en 13 suites verificando layout split editorial 2 columnas con lg:col-span-4 sticky, lg:col-span-8, separación vertical space-y-16 lg:space-y-24, divisores de ritmo y micro-interacción hover con borde iluminado #2563EB, next build standalone OK)."
+    },
+    {
+      "id": "feat-027",
+      "name": "Rediseño Unificado de Tarjetas de Proyectos: Scroll Fluido Natural, Fondo Blanco Delimitador, Título Superior Destacado y Foto Enlazada en Sistemas y Proyectos IA",
+      "description": "Reemplazar el layout split-sticky en 'src/ui/components/ProductionSystemsSection.tsx' y 'src/ui/components/AiProjectsCatalogView.tsx' por una estructura unificada y fluida fiel al mockup del usuario: (1) Eliminar el comportamiento 'sticky' y las columnas asíncronas para que el scroll sea continuo y natural; (2) Organizar cada proyecto en un bloque claramente diferenciado con fondo blanco y separación visual generosa sobre el fondo del catálogo; (3) Destacar el título del proyecto en la parte superior en tipografía display mayúscula y audaz ('DECO VINTAGE PLATFORM'); (4) Debajo del título, disponer la tarjeta técnica en 2 paneles (aprox 60/40 en desktop): a la izquierda el marco de navegador con punto verde, URL y la captura grande de pantalla enlazada directamente a 'system.liveUrl' ('target=\"_blank\"', 'cursor-pointer') para que al hacer clic en la foto abra el sitio en vivo igual que el botón de acción; a la derecha la ficha técnica con metadata bar, descripción detallada, grid/chips de stack tecnológico, recuadro de especificaciones de arquitectura y los botones de acción ('PROBAR SISTEMA EN VIVO ↗' y '{} ARQUITECTURA & REPO'); (5) Asegurar que este mismo componente y estilo rija idénticamente en '/sistemas' (Sistemas en Producción) y en '/proyectos-ia' (Más Proyectos de IA); y (6) Actualizar las suites de prueba en 'tests/' verificando el nuevo layout fluido, el enlace en la foto, la eliminación de 'lg:sticky' y superando 'bash ./init.sh' al 100/100.",
+      "area": "projects-showcase-ux-redesign",
+      "user_visible_behavior": "Al navegar tanto por Sistemas en Producción como por Más Proyectos de IA, el usuario experimenta un scroll natural y fluido sin elementos pegajosos ni desfasados; cada proyecto se distingue claramente en su propio contenedor de fondo blanco con su título destacado en grande arriba; y al hacer clic directamente en la foto del proyecto, se abre el sitio web en vivo en una nueva pestaña al igual que el botón 'Probar sistema en vivo'.",
+      "priority": "P1",
+      "status": "done",
+      "dependencies": [
+        "feat-026"
+      ],
+      "required_files": [
+        "src/ui/components/ProductionSystemsSection.tsx",
+        "src/ui/components/AiProjectsCatalogView.tsx"
+      ],
+      "verification": [
+        "bash ./init.sh",
+        "bash scripts/check-architecture.sh",
+        "node scripts/validate-harness.mjs --min-score 100",
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "evidence": "bash ./init.sh -> Exit code 0 (CLEAN STATE: Puerta 1 check-architecture.sh OK 0 violaciones de 6 capas y 0 CRLF; Puerta 2 validate-harness.mjs Overall: 100/100 25/25 PASS con WIP=0; Puerta 3 typecheck OK, vitest 57/57 tests PASS en 13 suites verificando layout continuo sin sticky, contenedor blanco delimitador, título destacado arriba, foto enlazada a liveUrl y botones sincronizados, next build standalone OK).",
+      "notes": "Garantizar que tanto /sistemas como /proyectos-ia compartan exactamente el mismo componente ProjectPreviewCard y que la imagen grande sea un enlace <a> con href a liveUrl, target='_blank' y rel='noopener noreferrer'."
     }
   ]
 }

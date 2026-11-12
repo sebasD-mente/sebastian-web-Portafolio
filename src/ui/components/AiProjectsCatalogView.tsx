@@ -101,22 +101,14 @@ export function AiProjectsCatalogView({
           </div>
 
           {visibleProjects.length > 0 ? (
-            <div className="space-y-16 lg:space-y-24">
+            <div className="space-y-12 sm:space-y-16">
               {visibleProjects.map((project, idx) => (
-                <div
+                <ProjectPreviewCard
                   key={project.id}
-                  className={
-                    idx > 0
-                      ? "pt-12 sm:pt-16 lg:pt-20 border-t border-[#CBD5E1]"
-                      : undefined
-                  }
-                >
-                  <ProjectPreviewCard
-                    system={project}
-                    isFirstCard={idx === 0}
-                    headingTag="h2"
-                  />
-                </div>
+                  system={project}
+                  isFirstCard={idx === 0}
+                  headingTag="h2"
+                />
               ))}
             </div>
           ) : (

@@ -85,14 +85,16 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
     expect(sectionHtml).toContain("DECO VINTAGE PLATFORM");
     expect(sectionHtml).not.toContain('id="mas-proyectos-ia"');
     expect(sectionHtml).not.toContain("MÁS PROYECTOS DE IA");
-    // feat-026: Verificación de layout split editorial (4 cols izquierda, 8 cols derecha, hover iluminado en azul)
-    expect(sectionHtml).toContain("lg:col-span-4");
-    expect(sectionHtml).toContain("lg:col-span-8");
-    expect(sectionHtml).toContain("lg:sticky");
-    expect(sectionHtml).toContain("space-y-16 lg:space-y-24");
-    expect(sectionHtml).toContain("hover:border-[#2563EB]");
-    expect(sectionHtml).toContain("hover:-translate-y-0.5");
-    expect(sectionHtml).toContain("hover:shadow-[0_12px_30px_-8px_rgba(37,99,235,0.18)]");
+    // feat-027: Scroll continuo natural (cero sticky), contenedor blanco delimitador, título destacado arriba y foto grande enlazada
+    expect(sectionHtml).toContain("bg-white border border-[#CBD5E1]");
+    expect(sectionHtml).toContain("lg:col-span-7");
+    expect(sectionHtml).toContain("lg:col-span-5");
+    expect(sectionHtml).not.toContain("lg:sticky");
+    expect(sectionHtml).toContain("space-y-12 sm:space-y-16");
+    expect(sectionHtml).toMatch(
+      /<a[^>]*href="https:\/\/www\.decovintage\.online"[^>]*target="_blank"[^>]*class="[^"]*group\/preview/
+    );
+    expect(sectionHtml).toContain("PROBAR SISTEMA EN VIVO ↗");
 
     // HomePage austera y limpia: contiene Hero y NO contiene los catálogos empotrados
     const homeElement = await HomePage();
@@ -276,13 +278,17 @@ describe("feat-014: Página de Inicio (/) Exclusiva para Producción y Ruta Púb
     expect(populatedHtml).toContain("PGVECTOR HYBRID RAG ENGINE");
     expect(populatedHtml).toContain("<h2");
     expect(populatedHtml).not.toContain("CATÁLOGO EN CONSTRUCCIÓN");
-    // feat-026: Split layout editorial de 2 columnas, mayor separación vertical y divisores
-    expect(populatedHtml).toContain("lg:col-span-4");
-    expect(populatedHtml).toContain("lg:col-span-8");
-    expect(populatedHtml).toContain("space-y-16 lg:space-y-24");
-    expect(populatedHtml).toContain("border-t border-[#CBD5E1]");
-    expect(populatedHtml).toContain("hover:border-[#2563EB]");
-    expect(populatedHtml).toContain("hover:-translate-y-0.5");
+    // feat-027: Layout continuo natural, contenedor blanco delimitador, título destacado arriba y foto grande enlazada
+    expect(populatedHtml).toContain("bg-white border border-[#CBD5E1]");
+    expect(populatedHtml).toContain("lg:col-span-7");
+    expect(populatedHtml).toContain("lg:col-span-5");
+    expect(populatedHtml).not.toContain("lg:sticky");
+    expect(populatedHtml).toContain("space-y-12 sm:space-y-16");
+    expect(populatedHtml).toMatch(
+      /<a[^>]*target="_blank"[^>]*rel="noopener noreferrer"[^>]*class="[^"]*group\/preview/
+    );
+    expect(populatedHtml).toContain("href=\"/sistemas/adk-multiagent-orchestrator\"");
+    expect(populatedHtml).toContain("PROBAR SISTEMA EN VIVO ↗");
     // Primera tarjeta priorizada para LCP y segunda con carga diferida limpia
     expect(populatedHtml.toLowerCase()).toContain('fetchpriority="high"');
     expect(populatedHtml).toContain('loading="lazy"');

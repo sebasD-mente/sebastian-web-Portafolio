@@ -92,7 +92,7 @@ if [ -f "harness.config.json" ]; then
     const VALID_LAYERS = new Set(["types", "config", "repo", "service", "runtime", "ui"]);
     const RESERVED_DIRS = new Set([
       ".git", "node_modules", ".venv", "venv", "env", "dist", "build", "coverage",
-      ".next", ".astro", ".svelte-kit", "scripts", "docs", "memory", ".agents",
+      ".next", ".next-dev", ".astro", ".svelte-kit", "scripts", "docs", "memory", ".agents",
       "tests", "test", "__pycache__", "deliverables"
     ]);
     const FORBIDDEN_SINGLE_LAYER_DIRS = new Set([...RESERVED_DIRS, "src", "backend", "packages", "apps"]);
@@ -560,7 +560,7 @@ if [ "$HARNESS_MODE" != "non-dev" ]; then
     const packageRootsList = Array.from(new Set(["src", "app", "backend", ...sanitizedPyRoots]));
     const SKIP_CODE_DIRS = new Set([
       ".git", "node_modules", ".venv", "venv", "env", "dist", "build", "coverage",
-      ".next", ".astro", ".svelte-kit", "scripts", "docs", "memory", ".agents",
+      ".next", ".next-dev", ".astro", ".svelte-kit", "scripts", "docs", "memory", ".agents",
       "tests", "test", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"
     ]);
     const KNOWN_ROOTS = new Set(packageRootsList);
@@ -1891,7 +1891,7 @@ encoding_issue="$(node -e '
   const path = require("node:path");
   const skipDirs = new Set([
     ".git", "node_modules", ".venv", "venv", "env", "dist", "build",
-    "coverage", ".next", ".astro", ".svelte-kit", "__pycache__",
+    "coverage", ".next", ".next-dev", ".astro", ".svelte-kit", "__pycache__",
     ".pytest_cache", ".mypy_cache", ".ruff_cache"
   ]);
   const textExts = new Set([
@@ -1957,7 +1957,7 @@ invalid_json_file="$(node -e '
   const fs = require("node:fs");
   const path = require("node:path");
   const skipDirs = new Set([
-    ".git", "node_modules", "dist", "build", ".next", ".astro", ".svelte-kit",
+    ".git", "node_modules", "dist", "build", ".next", ".next-dev", ".astro", ".svelte-kit",
     "coverage", ".venv", "venv", "env", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"
   ]);
   const jsoncRe = /(?:^|\/)(?:[jt]sconfig(?:\.[^/]+)?\.json|\.vscode\/.*\.json)$/i;
@@ -1994,7 +1994,7 @@ non_py_secret="$(node -e '
   const path = require("node:path");
   const skipDirs = new Set([
     ".git", "node_modules", ".venv", "venv", "env", "dist", "build",
-    "coverage", ".next", ".astro", ".svelte-kit", "scripts", "tests",
+    "coverage", ".next", ".next-dev", ".astro", ".svelte-kit", "scripts", "tests",
     "test", "docs", ".agents", "memory", "__pycache__",
     ".pytest_cache", ".mypy_cache", ".ruff_cache"
   ]);

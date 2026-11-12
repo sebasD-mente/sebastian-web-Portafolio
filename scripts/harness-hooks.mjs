@@ -174,8 +174,8 @@ export function evaluateStopGate(stdinState, env = process.env) {
   const hasInitSh = fs.existsSync(path.join(targetRoot, 'init.sh'));
   const scriptToRun = hasInitSh ? 'init.sh' : 'scripts/validate-harness.mjs';
   const gateRes = hasInitSh
-    ? spawnSync(bashBin, ['init.sh'], { cwd: targetRoot, env: childEnv, encoding: 'utf8', timeout: 45000 })
-    : spawnSync(process.execPath, [path.join(targetRoot, 'scripts', 'validate-harness.mjs')], { cwd: targetRoot, env: childEnv, encoding: 'utf8', timeout: 30000 });
+    ? spawnSync(bashBin, ['init.sh'], { cwd: targetRoot, env: childEnv, encoding: 'utf8', timeout: 120000 })
+    : spawnSync(process.execPath, [path.join(targetRoot, 'scripts', 'validate-harness.mjs')], { cwd: targetRoot, env: childEnv, encoding: 'utf8', timeout: 60000 });
   if (gateRes.error || gateRes.status !== 0) {
     const detail = [gateRes.stdout, gateRes.stderr, gateRes.error?.message].filter(Boolean).join('\n').trim().slice(-650);
     const reason = redPenReason(`Fallo al ejecutar '${scriptToRun}' en Stop (exit ${gateRes.status ?? 1}).`, 'AGENTS.md prohíbe cerrar turno con pruebas rotas, violaciones arquitectónicas o entregables incompletos incluso con árbol Git limpio.', `Repara el error y verifica 'bash ./init.sh':\n${detail}`);

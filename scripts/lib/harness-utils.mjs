@@ -27,7 +27,7 @@ const DEFAULT_PACKAGE_ROOTS = ['src', 'app', 'backend'];
 const DEFAULT_DELIVERABLE_DIRS = ['deliverables', 'content', 'research', 'reports'];
 const RESERVED_CONFIG_DIRS = new Set([
   '.git', 'node_modules', '.venv', 'venv', 'env', 'dist', 'build', 'coverage',
-  '.next', '.astro', '.svelte-kit', 'scripts', 'docs', 'memory', '.agents',
+  '.next', '.next-dev', '.astro', '.svelte-kit', 'scripts', 'docs', 'memory', '.agents',
   'tests', 'test', '__pycache__', 'deliverables'
 ]);
 const FORBIDDEN_SINGLE_LAYER_DIRS = new Set([...RESERVED_CONFIG_DIRS, 'src', 'backend', 'packages', 'apps']);

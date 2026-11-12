@@ -246,17 +246,19 @@ describe("feat-009: Cimiento PostgreSQL (pgvector), Volumen /app/data/uploads, 2
     expect(homeSectionCode).toContain("SISTEMAS EN PRODUCCIÓN");
     expect(homeSectionCode).not.toContain('id="mas-proyectos-ia"');
     expect(homeSectionCode).not.toContain("MÁS PROYECTOS DE IA");
-    // feat-026: Split layout editorial de 2 columnas, hover iluminado en azul y separación vertical
-    expect(homeSectionCode).toContain("lg:col-span-4");
-    expect(homeSectionCode).toContain("lg:col-span-8");
-    expect(homeSectionCode).toContain("space-y-16 lg:space-y-24");
-    expect(homeSectionCode).toContain("hover:border-[#2563EB]");
-    expect(homeSectionCode).toContain("hover:-translate-y-0.5");
+    // feat-027: Layout continuo natural, contenedor blanco delimitador, título destacado arriba y foto grande enlazada
+    expect(homeSectionCode).toContain("bg-white border border-[#CBD5E1]");
+    expect(homeSectionCode).toContain("lg:col-span-7");
+    expect(homeSectionCode).toContain("lg:col-span-5");
+    expect(homeSectionCode).not.toContain("lg:sticky");
+    expect(homeSectionCode).toContain("space-y-12 sm:space-y-16");
+    expect(homeSectionCode).toContain("group/preview");
+    expect(homeSectionCode).toContain("PROBAR SISTEMA EN VIVO ↗");
 
     const aiProjectsViewCode = readRepoFile("src/ui/components/AiProjectsCatalogView.tsx");
     expect(aiProjectsViewCode).toContain("mas-proyectos-ia");
     expect(aiProjectsViewCode).toContain("MÁS PROYECTOS DE IA");
-    expect(aiProjectsViewCode).toContain("space-y-16 lg:space-y-24");
+    expect(aiProjectsViewCode).toContain("space-y-12 sm:space-y-16");
 
     const detailViewCode = readRepoFile("src/ui/components/SystemDetailView.tsx");
     expect(detailViewCode).toContain("01 // VISTAS DE INTERFAZ Y OPERACIÓN DEL SISTEMA");

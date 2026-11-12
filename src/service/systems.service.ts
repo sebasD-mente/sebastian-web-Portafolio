@@ -236,25 +236,24 @@ export function splitSystemsByHomeCatalogSection(
   aiProjects: ProductionSystem[];
 } {
   const ordered = [...systems].sort((a, b) => a.order.localeCompare(b.order));
-  const productionFeatured = ordered.filter(
-    (s) =>
-      (s.catalogSection ?? "production-systems") === "production-systems" &&
-      s.featuredOnHome === true
-  );
   const allProduction = ordered.filter(
     (s) => (s.catalogSection ?? "production-systems") === "production-systems"
   );
+  const visibleProduction = allProduction.filter(
+    (s) => s.featuredOnHome !== false
+  );
 
-  const aiFeatured = ordered.filter(
-    (s) => s.catalogSection === "ai-projects" && s.featuredOnHome === true
+  const allAi = ordered.filter(
+    (s) => (s.catalogSection ?? "ai-projects") === "ai-projects"
+  );
+  const visibleAi = allAi.filter(
+    (s) => s.featuredOnHome !== false
   );
 
   return {
     productionSystems:
-      productionFeatured.length > 0
-        ? productionFeatured
-        : allProduction.slice(0, 1),
-    aiProjects: aiFeatured
+      visibleProduction.length > 0 ? visibleProduction : allProduction,
+    aiProjects: visibleAi.length > 0 ? visibleAi : allAi
   };
 }
 
